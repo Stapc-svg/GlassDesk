@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GlassDesk installer: per-user (no admin prompt), starts with Windows, Start menu shortcut -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="GlassDesk" Language="1033" Version="1.2.0" Manufacturer="GlassDesk"
+           UpgradeCode="792e2b05-a71e-4aa8-821c-740870d15968">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser"
+             Description="GlassDesk - glass desktop organizer and widgets" Comments="Runs on startup" />
+    <Media Id="1" Cabinet="glassdesk.cab" EmbedCab="yes" />
+
+    <Property Id="ARPPRODUCTICON" Value="GlassDeskIcon" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPCOMMENTS" Value="Glass desktop organizer with widgets" />
+    <Icon Id="GlassDeskIcon" SourceFile="../assets/GlassDesk.ico" />
+
+    <Upgrade Id="792e2b05-a71e-4aa8-821c-740870d15968">
+      <UpgradeVersion Minimum="0.0.1" Maximum="1.2.0" IncludeMinimum="yes" IncludeMaximum="no" Property="OLDERVERSIONFOUND" />
+      <UpgradeVersion Minimum="1.2.0" IncludeMinimum="no" OnlyDetect="yes" Property="NEWERVERSIONFOUND" />
+    </Upgrade>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsDir" Name="Programs">
+          <Directory Id="INSTALLDIR" Name="GlassDesk">
+            <Component Id="AppFiles" Guid="e9f9bd37-7ead-40d7-8aa2-36187c6a9bba">
+              <RegistryValue Root="HKCU" Key="Software\GlassDesk" Name="InstallDir" Type="string" Value="[INSTALLDIR]" KeyPath="yes" />
+              <File Id="GlassDeskExe" Name="GlassDesk.exe" Source="../build/GlassDesk.exe" />
+              <File Id="GlassDeskConfig" Name="GlassDesk.exe.config" Source="../build/GlassDesk.exe.config" />
+              <RemoveFolder Id="RemoveInstallDir" On="uninstall" />
+            </Component>
+            <!-- Run on startup -->
+            <Component Id="Startup" Guid="181fb38c-c8e0-44db-a48d-03d706f4b346">
+              <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="GlassDesk" Type="string"
+                             Value="&quot;[INSTALLDIR]GlassDesk.exe&quot; --startup" KeyPath="yes" />
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Component Id="StartMenu" Guid="86bb18fa-1a53-49b2-bae4-9f157b04251a">
+          <Shortcut Id="StartMenuShortcut" Name="GlassDesk" Description="Glass desktop organizer and widgets"
+                    Target="[INSTALLDIR]GlassDesk.exe" WorkingDirectory="INSTALLDIR" Icon="GlassDeskIcon" />
+          <RegistryValue Root="HKCU" Key="Software\GlassDesk" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </Directory>
+
+    <Feature Id="Main" Title="GlassDesk" Level="1">
+      <ComponentRef Id="AppFiles" />
+      <ComponentRef Id="Startup" />
+      <ComponentRef Id="StartMenu" />
+    </Feature>
+
+    <!-- Close a running GlassDesk before upgrading / uninstalling (asks it to exit cleanly) -->
+    <CustomAction Id="CloseRunningApp" FileKey="GlassDeskExe" ExeCommand="--exit" Return="ignore" Execute="immediate" />
+    <!-- Start GlassDesk right after installing -->
+    <CustomAction Id="LaunchApp" FileKey="GlassDeskExe" ExeCommand="" Return="asyncNoWait" Execute="immediate" />
+
+    <InstallExecuteSequence>
+      <Custom Action="CloseRunningApp" After="CostFinalize">Installed</Custom>
+      <RemoveExistingProducts After="InstallInitialize" />
+      <Custom Action="LaunchApp" After="InstallFinalize">NOT REMOVE</Custom>
+    </InstallExecuteSequence>
+  </Product>
+</Wix>
