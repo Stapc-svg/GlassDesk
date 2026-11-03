@@ -15,6 +15,15 @@
   <img src="https://img.shields.io/badge/language-C%23-239120" alt="Language: C#">
 </p>
 
+<p align="center">
+  <a href="docs/media/glassdesk-demo.mp4?raw=true">
+    <img src="docs/media/glassdesk-preview.gif" width="800" alt="GlassDesk demo: desktop icons dragged into frosted-glass fences">
+  </a>
+</p>
+<p align="center">
+  <a href="docs/media/glassdesk-demo.mp4?raw=true"><b>▶ Watch the full demo with sound (43 s)</b></a>
+</p>
+
 ![GlassDesk on a desktop, dark theme](docs/screenshots/desktop-dark.png)
 
 ## What it does
@@ -133,6 +142,7 @@ src/
 assets/            app icon and runtime config
 installer/         GlassDesk.wxs, the MSI definition (WiX format, built with wixl)
 docs/screenshots/  images used in this README
+docs/media/        demo video and preview GIF used in this README
 ```
 
 ## Troubleshooting
