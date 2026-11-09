@@ -1,4 +1,6 @@
 # Changelog
+## v1.7.2
+-new icon (logo) and fixed bugs
 
 ## 1.7.1
 - Fixed: a grid of tiny squares on the glass panels (the grain texture was removed).
