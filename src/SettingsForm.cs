@@ -218,6 +218,7 @@ namespace GlassDesk
             Section("Startup");
             Row("Start with Windows", "Launch GlassDesk automatically when you sign in", Toggle(S.StartWithWindows, v => S.StartWithWindows = v));
             Row("Show / hide shortcut", "Press Ctrl + Alt + G to show or hide every panel", Toggle(S.Hotkey, v => S.Hotkey = v));
+            Row("Quick search shortcut", "Press Ctrl + Alt + F to find anything on your desktop", Toggle(S.SearchHotkey, v => S.SearchHotkey = v));
             Section("Behavior");
             Row("Lock positions", "Stop panels from being moved or resized by accident", Toggle(S.LockPositions, v => S.LockPositions = v));
             Row("Keep behind windows", "Panels stay on the desktop, underneath your apps", Toggle(S.KeepBehindWindows, v => S.KeepBehindWindows = v));
@@ -227,6 +228,10 @@ namespace GlassDesk
         void PageAppearance()
         {
             H1("Appearance", "Glass, colors and size of everything on your desktop.");
+            Section("Themes");
+            Row("Dark themes", "One click sets the color, glass and corners", ThemeButtons(0, 4));
+            Row("Light themes", "You can still fine-tune everything below", ThemeButtons(4, 2));
+
             Section("Theme");
             string[] modes = { "Auto", "Dark", "Light" };
             var seg = new Segmented(P, k, modes, Math.Max(0, Array.IndexOf(modes, S.Theme))) { Font = fSmall };
@@ -257,10 +262,42 @@ namespace GlassDesk
             Row("Accent color", "Highlights and bars", sw);
 
             Section("Glass");
-            Row("Blur behind panels", "Frosted-glass look (Windows 10 and 11)", Toggle(S.Blur, v => S.Blur = v));
-            SliderRow("Glass opacity", "{0}%  ·  lower is more see-through", 20, 95, 5, S.Opacity, v => S.Opacity = v);
+            string[] styles = { "frosted", "blur", "clear", "transparent" };
+            var gs = new Segmented(P, k, new[] { "Frosted", "Blur", "Clear", "See-through" }, Math.Max(0, Array.IndexOf(styles, S.GlassStyle))) { Font = fSmall };
+            gs.Width = (int)(gs.Width * 1.1);
+            gs.SelectionChanged += delegate { S.GlassStyle = styles[gs.SelectedIndex]; S.Blur = S.GlassOn; S.Save(); app.ApplySettings(); };
+            Row("Glass style", Native.AcrylicSupported || !Native.IsWindows ? "Real blurred glass, like the Start menu" : "Frosted needs Windows 10 1803+", gs);
+            SliderRow("Glass tint", "{0}%  ·  lower is clearer glass", 5, 95, 5, S.Opacity, v => S.Opacity = v);
             SliderRow("Corner radius", "{0} px", 0, 28, 2, S.Radius, v => S.Radius = v);
             SliderRow("Panel size", "{0}%  ·  scales text, icons and widgets", 80, 150, 5, S.UiScale, v => S.UiScale = v);
+
+            Section("Wallpaper changer");
+            Row("Change my wallpaper", "Rotates your desktop background from a folder of pictures", Toggle(S.WallpaperOn, v => S.WallpaperOn = v));
+            Row("Folder", app.Wallpaper != null ? app.Wallpaper.Folder : "", Button("Choose…", false, delegate
+            {
+                using (var fb = new FolderBrowserDialog { Description = "Choose a folder of wallpapers" })
+                    if (fb.ShowDialog(this) == DialogResult.OK) { S.WallpaperFolder = fb.SelectedPath; S.Save(); if (app.Wallpaper != null) app.Wallpaper.FolderChanged(); Refresh(0); }
+            }));
+            SliderRow("Change every", "{0} minutes", 1, 120, 1, S.WallpaperMinutes, v => S.WallpaperMinutes = v);
+            Row("Next wallpaper", "Skip to the next picture now", Button("Next", false, delegate { if (app.Wallpaper == null || !app.Wallpaper.Next()) MessageBox.Show("No pictures found in that folder (JPG, PNG or BMP).", "GlassDesk"); }));
+        }
+
+        Control ThemeButtons(int start, int count)
+        {
+            var flow = new FlowLayoutPanel { WrapContents = false, AutoSize = false, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = P.Card };
+            int w = 0;
+            for (int i = start; i < start + count; i++)
+            {
+                var preset = Themes.All[i];
+                var b = Button(preset.Name, false, delegate { Themes.Apply(S, preset); S.Save(); app.ApplySettings(); });
+                b.Margin = new Padding(0, 0, (int)(6 * k), 0);
+                flow.Controls.Add(b); w += b.Width + (int)(6 * k);
+                var dot = preset.Accent;
+                b.Paint += (s, e) => { e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; using (var br = new SolidBrush(dot)) e.Graphics.FillEllipse(br, 7 * k, b.Height / 2f - 4 * k, 8 * k, 8 * k); };
+                b.Text = "   " + preset.Name; b.Width += (int)(10 * k); w += (int)(10 * k);
+            }
+            flow.Size = new Size(w, (int)(34 * k));
+            return flow;
         }
 
         void SliderRow(string title, string fmt, int min, int max, int step, int value, Action<int> set)
@@ -284,6 +321,29 @@ namespace GlassDesk
             Row("System monitor", "CPU, memory, disk and battery", Toggle(S.ShowSystem, v => S.ShowSystem = v));
             Row("Calendar", "Month view — click the arrows to change month", Toggle(S.ShowCalendar, v => S.ShowCalendar = v));
             Row("Notes", "A sticky note — double-click it to write", Toggle(S.ShowNotes, v => S.ShowNotes = v));
+            Row("To-do list", "Tick tasks off right on the desktop — double-click to edit the list", Toggle(S.ShowTodo, v => S.ShowTodo = v));
+            Row("Quote of the day", "A new quote every morning — double-click for another", Toggle(S.ShowQuote, v => S.ShowQuote = v));
+            Row("GitHub stats", "Stars, followers, repos and your last 14 days" + (string.IsNullOrEmpty(S.GitHubUser) ? "" : " — @" + S.GitHubUser), Toggle(S.ShowGitHub, v => S.ShowGitHub = v));
+            Row("GitHub username", "Public data only, no sign-in needed", Button("Change…", false, delegate { if (app.GitHubW != null) app.GitHubW.ChooseUser(); }));
+            Row("Network meter", "Live download and upload speed", Toggle(S.ShowNetwork, v => S.ShowNetwork = v));
+            Row("Focus timer", "Pomodoro: " + S.FocusMinutes + " min focus, " + S.BreakMinutes + " min break — click the widget to start", Toggle(S.ShowFocus, v => S.ShowFocus = v));
+
+            Section("Countdown");
+            Row("Countdown", "Days left until a birthday, a trip or the holidays", Toggle(S.ShowCountdown, v => S.ShowCountdown = v));
+            Row(string.IsNullOrEmpty(S.CountdownTitle) ? "Event" : S.CountdownTitle, string.IsNullOrEmpty(S.CountdownDate) ? "Not set yet" : S.CountdownDate,
+                Button("Change…", false, delegate { app.CountdownW.Edit(); Refresh(0); }));
+
+            Section("Weather");
+            Row("Weather", "Today and the next 3 days, from Open-Meteo (free, no account)", Toggle(S.ShowWeather, v => S.ShowWeather = v));
+            Row("City", string.IsNullOrEmpty(S.WeatherCity) ? "Not set yet" : (string.IsNullOrEmpty(S.WeatherPlace) ? S.WeatherCity : S.WeatherPlace),
+                Button("Change…", false, delegate { app.WeatherW.ChooseCity(); Refresh(0); }));
+            Row("Use °F and mph", "Turn off for °C and km/h", Toggle(S.WeatherF, v => { S.WeatherF = v; app.WeatherW.UnitsChanged(); }));
+
+            Section("Photo frame");
+            Row("Photo frame", "Shows your pictures one at a time — click the arrow for the next one", Toggle(S.ShowPhotos, v => S.ShowPhotos = v));
+            Row("Folder", app.PhotosW.Folder, Button("Choose…", false, delegate { app.PhotosW.ChooseFolder(); Refresh(0); }));
+            SliderRow("Change photo every", "{0} minutes", 1, 60, 1, S.PhotoMinutes, v => S.PhotoMinutes = v);
+
             Section("Layout");
             Row("Reset widget positions", "Move all widgets back to the right side of the screen",
                 Button("Reset", false, delegate { app.ResetLayout(false); }));
@@ -319,6 +379,18 @@ namespace GlassDesk
                 Row(name, count == 1 ? "1 item" : count + " items", both);
             }
             Row("New fence", "Make your own fence, then drag icons into it", Button("New fence…", true, delegate { app.NewFence(); }));
+
+            Section("Rules");
+            foreach (var rule in S.Rules.ToArray())
+            {
+                var rr = rule;
+                Row(rr[0], "goes to " + app.FenceName(rr[1]), Button("Delete", false, delegate { S.Rules.Remove(rr); S.Save(); app.Rebuild(); Refresh(0); }));
+            }
+            Row("Add a rule", "For example: *.pdf goes to School, Screenshot* goes to Images", Button("Add rule…", true, delegate { app.AddRule(null); }));
+
+            Section("Find & sort");
+            Row("Quick search", "Press Ctrl + Alt + F, type a few letters and press Enter to open", Button("Open search", false, delegate { app.ShowSearch(); }));
+            Row("Sort a fence", "Right-click a fence's title and choose Sort by: name, type, date or size", null);
 
             Section("Drag & drop");
             Row("Between fences", "Drag an icon to another fence to keep it there", null);
@@ -417,6 +489,29 @@ namespace GlassDesk
             Row("Drag a title bar", "Move a fence. Drag the bottom-right corner to resize it", null);
             Row("Double-click a fence title", "Roll the fence up / down", null);
             Row("Right-click", "Menus for items, fences and widgets", null);
+            Row("Ctrl + Alt + F", "Find anything on your desktop", null);
+
+            Section("Updates");
+            Row("Version", "GlassDesk " + App.Version, Button("Check now", true, delegate { app.Updates.Check(true); }));
+            Row("Check automatically", "Look for a new version once a day and let you know", Toggle(S.AutoUpdate, v => S.AutoUpdate = v));
+            Row("Update source", Updater.RepoConfigured(S.UpdateRepo) ? "github.com/" + S.UpdateRepo : "Not set — add your GitHub repository", Button("Change…", false, delegate
+            {
+                string r = InputBox.Ask("GitHub repository (owner/name)", Updater.RepoConfigured(S.UpdateRepo) ? S.UpdateRepo : "", app.Theme);
+                if (r == null) return;
+                r = r.Trim().Replace("https://", "").Replace("http://", "").Replace("github.com/", "").Trim('/');
+                if (r.Split('/').Length != 2) { MessageBox.Show("Use the form  owner/repository, for example  yourname/GlassDesk.", "GlassDesk"); return; }
+                S.UpdateRepo = r; S.Save(); Refresh(0);
+            }));
+
+            Section("Backup & sync");
+            Row("Save my layout", "Fences, rules, widgets and look in one .glassdesk file", Button("Export…", true, delegate { Backup.Export(app); }));
+            Row("Load a layout", "From a backup, or to copy your setup to another PC", Button("Import…", false, delegate { Backup.Import(app); }));
+            Row("Daily backups", "Keeps the last 7 days, just in case", Toggle(S.AutoBackup, v => S.AutoBackup = v));
+            Row("Backups folder", Backup.BackupFolder, Button("Open", false, delegate
+            {
+                try { System.IO.Directory.CreateDirectory(Backup.BackupFolder); Process.Start("explorer.exe", "\"" + Backup.BackupFolder + "\""); } catch { }
+            }));
+
             Section("App");
             Row("Settings file", Settings.Folder, Button("Open folder", false, delegate
             {

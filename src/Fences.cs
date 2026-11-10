@@ -14,6 +14,8 @@ namespace GlassDesk
     {
         public const string RecycleBinPath = "::RecycleBin";
         public string Path, Name, Ext;
+        public DateTime Modified;
+        public long Size;
         public bool IsDir;
         public bool IsRecycleBin { get { return Path == RecycleBinPath; } }
         Bitmap icon; bool iconTried;
@@ -119,13 +121,41 @@ namespace GlassDesk
             {
                 var di = new DirectoryInfo(folder);
                 foreach (var d in di.GetDirectories())
-                    if ((d.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0) items.Add(new DesktopItem(d.FullName, true));
+                    if ((d.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0) items.Add(new DesktopItem(d.FullName, true) { Modified = d.LastWriteTime });
                 foreach (var f in di.GetFiles())
                     if ((f.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0 && !f.Name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase))
-                        items.Add(new DesktopItem(f.FullName, false));
+                        items.Add(new DesktopItem(f.FullName, false) { Modified = f.LastWriteTime, Size = f.Length });
             }
             catch { }
             return items;
+        }
+
+        /// <summary>Wildcard match on a file name: * = anything, ? = one character, case doesn't matter.
+        /// A pattern with no wildcards matches names that contain it ("homework" matches "Math homework.pdf").</summary>
+        public static bool Matches(string pattern, string fileName)
+        {
+            pattern = (pattern ?? "").Trim();
+            if (pattern.Length == 0 || string.IsNullOrEmpty(fileName)) return false;
+            if (pattern.IndexOf('*') < 0 && pattern.IndexOf('?') < 0)
+                return fileName.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0;
+            return Wild(pattern.ToLowerInvariant(), 0, fileName.ToLowerInvariant(), 0);
+        }
+        static bool Wild(string p, int i, string s, int j)
+        {
+            while (i < p.Length)
+            {
+                char c = p[i];
+                if (c == '*')
+                {
+                    while (i < p.Length && p[i] == '*') i++;
+                    if (i == p.Length) return true;
+                    for (int k = j; k <= s.Length; k++) if (Wild(p, i, s, k)) return true;
+                    return false;
+                }
+                if (j >= s.Length || (c != '?' && c != s[j])) return false;
+                i++; j++;
+            }
+            return j == s.Length;
         }
 
         public static string Hash(string s)
@@ -164,10 +194,44 @@ namespace GlassDesk
             AllowDrop = true;
         }
 
-        bool Collapsed { get { return Cfg.Collapsed.Contains(Id); } }
+        bool peek;                                   // an auto-hiding fence that is open because you're pointing at it
+        System.Windows.Forms.Timer leaveTimer;
+        bool Collapsed { get { return Cfg.Collapsed.Contains(Id) || (Cfg.AutoHide.Contains(Id) && !peek); } }
         int TitleH { get { return T.S(40); } }
-        int TileW { get { return T.S(84); } }
-        int TileH { get { return T.S(84); } }
+        float IconScale
+        {
+            get { string s; Cfg.FenceIcons.TryGetValue(Id, out s); return s == "small" ? 0.8f : s == "large" ? 1.3f : 1f; }
+        }
+        int TileW { get { return T.S(84 * IconScale); } }
+        int TileH { get { return T.S(84 * IconScale); } }
+        /// <summary>The fence's own color (set from its menu), or empty for the normal glass.</summary>
+        protected override Color PanelColor
+        {
+            get
+            {
+                string hex; int v;
+                if (Cfg.FenceColor.TryGetValue(Id, out hex) && int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out v)) return Color.FromArgb(255, Color.FromArgb(v));
+                return Color.Empty;
+            }
+        }
+
+        void Peek()
+        {
+            if (!Cfg.AutoHide.Contains(Id) || peek) return;
+            peek = true; App.PlaceWindow(this);
+            if (leaveTimer == null)
+            {
+                leaveTimer = new System.Windows.Forms.Timer { Interval = 450 };
+                leaveTimer.Tick += delegate
+                {
+                    if (!peek) { leaveTimer.Stop(); return; }
+                    if (PanelBounds.Contains(Cursor.Position) || (Control.MouseButtons & MouseButtons.Left) != 0) return;
+                    peek = false; leaveTimer.Stop(); hover = -1; App.PlaceWindow(this);
+                };
+            }
+            leaveTimer.Start();
+        }
+        protected override void Dispose(bool disposing) { if (disposing && leaveTimer != null) leaveTimer.Dispose(); base.Dispose(disposing); }
         int Gap { get { return T.S(10); } }
 
         public override Size PreferredPanelSize(Size saved)
@@ -196,14 +260,20 @@ namespace GlassDesk
             foreach (var n in items)
             {
                 DesktopItem o;
-                if (map.TryGetValue(n.Path, out o)) { if (o.IsRecycleBin) o.ResetIcon(); result.Add(o); }
+                if (map.TryGetValue(n.Path, out o)) { if (o.IsRecycleBin) o.ResetIcon(); o.Modified = n.Modified; o.Size = n.Size; result.Add(o); }
                 else result.Add(n);
             }
+            string order;
+            if (!Cfg.Sort.TryGetValue(Id, out order)) order = "name";
             result.Sort((a, b) =>
             {
                 if (a.IsRecycleBin != b.IsRecycleBin) return a.IsRecycleBin ? -1 : 1;
                 if (a.IsDir != b.IsDir) return a.IsDir ? -1 : 1;
-                return string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase);
+                int c = 0;
+                if (order == "date") c = b.Modified.CompareTo(a.Modified);                 // newest first
+                else if (order == "size") c = b.Size.CompareTo(a.Size);                     // biggest first
+                else if (order == "type") c = string.Compare(a.Ext, b.Ext, StringComparison.OrdinalIgnoreCase);
+                return c != 0 ? c : string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase);
             });
             Items = result;
             ClampScroll();
@@ -241,12 +311,15 @@ namespace GlassDesk
         {
             var titleR = new Rectangle(Panel.X + T.S(14), Panel.Y, Panel.Width - T.S(28), TitleH);
             float dot = T.Sf(8);
-            using (var b = new SolidBrush(T.Accent))
+            using (var b = new SolidBrush(PanelColor.IsEmpty ? T.Accent : PanelColor))
             {
                 if (Kind == FenceKind.Custom) g.FillRectangle(b, titleR.X, titleR.Y + (TitleH - dot) / 2, dot, dot);
                 else g.FillEllipse(b, titleR.X, titleR.Y + (TitleH - dot) / 2, dot, dot);
             }
             var capR = new Rectangle(titleR.X + T.S(16), titleR.Y, titleR.Width - T.S(70), TitleH);
+            if (Cfg.GlassStyle == "transparent")
+                using (var sh = new SolidBrush(Color.FromArgb(150, 0, 0, 0)))
+                    g.DrawString(Caption, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), sh, new Rectangle(capR.X, capR.Y + 1, capR.Width, capR.Height), Gfx.Left);
             using (var b = new SolidBrush(T.Text)) g.DrawString(Caption, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), b, capR, Gfx.Left);
             using (var b = new SolidBrush(T.SubText))
                 g.DrawString(Items.Count.ToString(), Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), b, new Rectangle(titleR.Right - T.S(56), titleR.Y, T.S(34), TitleH), Gfx.Right);
@@ -269,8 +342,9 @@ namespace GlassDesk
                 using (var b = new SolidBrush(T.SubText))
                     g.DrawString(empty, Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Regular), b, c, Gfx.Center);
             }
-            int iconSize = T.S(36);
-            var label = Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular);
+            int iconSize;
+            var label = Gfx.F(T.FontName, T.Sf(12 * Math.Min(1.1f, IconScale)), FontStyle.Regular);
+            iconSize = T.S(36 * IconScale);
             for (int i = 0; i < Items.Count; i++)
             {
                 Rectangle r = TileRect(i);
@@ -284,10 +358,10 @@ namespace GlassDesk
                 else if (i == hover) Gfx.FillRound(g, T.Hover, tile, T.Sf(10));
                 var ir = new Rectangle(r.X + (r.Width - iconSize) / 2, r.Y + T.S(8), iconSize, iconSize);
                 Bitmap icon = Items[i].Icon;
-                if (icon != null) g.DrawImage(icon, ir);
+                if (icon != null) { var im = g.InterpolationMode; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(icon, ir); g.InterpolationMode = im; }
                 else DrawFallbackIcon(g, ir, Items[i]);
                 var lr = new RectangleF(r.X + T.S(4), ir.Bottom + T.S(4), r.Width - T.S(8), T.Sf(32));
-                if (T.Dark)
+                if (T.Dark || Cfg.GlassStyle == "transparent")
                     using (var sb = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
                         g.DrawString(Items[i].Name, label, sb, new RectangleF(lr.X, lr.Y + 1, lr.Width, lr.Height), Gfx.TopCenterWrap);
                 using (var b = new SolidBrush(T.Text)) g.DrawString(Items[i].Name, label, b, lr, Gfx.TopCenterWrap);
@@ -346,6 +420,7 @@ namespace GlassDesk
         // ================================================================ mouse
         protected override void OnHover(Point p)
         {
+            if (p.X >= 0) Peek();
             int h = HitItem(p);
             bool ht = p.Y >= 0 && p.Y < Panel.Y + TitleH && Panel.Contains(p);
             if (h != hover || ht != hoverTitle) { hover = h; hoverTitle = ht; Redraw(); }
@@ -521,7 +596,7 @@ namespace GlassDesk
             Redraw();
         }
 
-        protected override void OnDragEnter(DragEventArgs e) { base.OnDragEnter(e); UpdateDrag(e); }
+        protected override void OnDragEnter(DragEventArgs e) { base.OnDragEnter(e); Peek(); UpdateDrag(e); }
         protected override void OnDragOver(DragEventArgs e) { base.OnDragOver(e); UpdateDrag(e); }
         protected override void OnDragLeave(EventArgs e) { base.OnDragLeave(e); SetDropHighlight(-1, false); }
 
@@ -648,6 +723,42 @@ namespace GlassDesk
                 Cfg.Save(); App.Rebuild();
             });
             m.Items.Add("New fence…", null, delegate { App.NewFence(); });
+            string cur;
+            if (!Cfg.Sort.TryGetValue(Id, out cur)) cur = "name";
+            // look: color, icon size, auto-hide
+            string curColor; Cfg.FenceColor.TryGetValue(Id, out curColor);
+            var color = new ToolStripMenuItem("Color");
+            foreach (var c in new[] { new[] { "", "None (glass)" }, new[] { "7C9CFF", "Periwinkle" }, new[] { "22BE82", "Green" }, new[] { "FF7A45", "Orange" }, new[] { "EC4899", "Pink" }, new[] { "8A63FF", "Violet" }, new[] { "EAAA1E", "Amber" }, new[] { "14B0C4", "Teal" }, new[] { "E5484D", "Red" } })
+            {
+                string hex = c[0];
+                var mi = new ToolStripMenuItem(c[1], null, delegate { if (hex.Length == 0) Cfg.FenceColor.Remove(Id); else Cfg.FenceColor[Id] = hex; Cfg.Save(); Redraw(); })
+                    { Checked = (curColor ?? "") == hex };
+                if (hex.Length > 0) { var bmp = new Bitmap(12, 12); using (var g = Graphics.FromImage(bmp)) { g.SmoothingMode = SmoothingMode.AntiAlias; using (var br = new SolidBrush(Color.FromArgb(255, Color.FromArgb(int.Parse(hex, System.Globalization.NumberStyles.HexNumber))))) g.FillEllipse(br, 0, 0, 11, 11); } mi.Image = bmp; }
+                color.DropDownItems.Add(mi);
+            }
+            m.Items.Add(color);
+            string curSize; if (!Cfg.FenceIcons.TryGetValue(Id, out curSize)) curSize = "medium";
+            var size = new ToolStripMenuItem("Icon size");
+            foreach (var o in new[] { "small", "medium", "large" })
+            {
+                string key = o;
+                size.DropDownItems.Add(new ToolStripMenuItem(char.ToUpper(o[0]) + o.Substring(1), null, delegate { if (key == "medium") Cfg.FenceIcons.Remove(Id); else Cfg.FenceIcons[Id] = key; Cfg.Save(); ClampScroll(); Redraw(); }) { Checked = curSize == key });
+            }
+            m.Items.Add(size);
+            m.Items.Add(new ToolStripMenuItem(Cfg.AutoHide.Contains(Id) ? "Stop rolling up by itself" : "Roll up until I point at it", null, delegate
+            {
+                if (Cfg.AutoHide.Contains(Id)) Cfg.AutoHide.Remove(Id); else { Cfg.AutoHide.Add(Id); peek = true; Peek(); }
+                Cfg.Save(); App.PlaceWindow(this);
+            }) { Checked = Cfg.AutoHide.Contains(Id) });
+            var sort = new ToolStripMenuItem("Sort by");
+            foreach (var o in new[] { new[] { "name", "Name" }, new[] { "type", "Type" }, new[] { "date", "Date modified (newest first)" }, new[] { "size", "Size (biggest first)" } })
+            {
+                string key = o[0];
+                var mi = new ToolStripMenuItem(o[1], null, delegate { Cfg.Sort[Id] = key; Cfg.Save(); App.Rebuild(); }) { Checked = cur == key };
+                sort.DropDownItems.Add(mi);
+            }
+            m.Items.Add(sort);
+            if (HoldsDesktopItems) m.Items.Add("Add a rule for this fence…", null, delegate { App.AddRule(Id); });
             if (Kind == FenceKind.Folder)
             {
                 m.Items.Add("Open folder", null, delegate { try { Process.Start("explorer.exe", "\"" + Key + "\""); } catch { } });

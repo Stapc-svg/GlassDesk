@@ -19,11 +19,27 @@ namespace GlassDesk
         public Icon AppIcon;
         public bool Paused;
 
+        /// <summary>Where the updater looks for new versions ("owner/repo" on GitHub). Can also be changed in Settings > About.</summary>
+        public const string DefaultRepo = "YOUR-USERNAME/GlassDesk";
+        public static Version VersionNumber { get { return typeof(App).Assembly.GetName().Version; } }
+        public static string Version { get { return Updater.Short(VersionNumber); } }
+        public bool Preview { get { return preview; } }
+        public Control Invoker { get { return invoker; } }
+        public Updater Updates;
+        public WeatherWidget WeatherW { get { return weather; } }
+        public PhotoWidget PhotosW { get { return photos; } }
+        public TodoWidget TodoW { get { return todo; } }
+        public CountdownWidget CountdownW { get { return countdown; } }
+
         readonly bool preview;
         public DateTime? FixedNow;
         public DateTime Now { get { return FixedNow ?? DateTime.Now; } }
 
         ClockWidget clock; SystemWidget system; CalendarWidget calendar; NotesWidget notes;
+        WeatherWidget weather; TodoWidget todo; PhotoWidget photos;
+        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus;
+        internal GitHubWidget GitHubW { get { return github; } } internal FocusWidget FocusW { get { return focus; } }
+        public WallpaperChanger Wallpaper;
         readonly Dictionary<string, FenceWindow> fences = new Dictionary<string, FenceWindow>();
         NotifyIcon tray;
         HotkeyWindow hotkey;
@@ -50,6 +66,8 @@ namespace GlassDesk
 
             tray = new NotifyIcon { Icon = AppIcon, Text = "GlassDesk", Visible = true };
             tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) ShowSettings(); };
+            tray.BalloonTipClicked += delegate { var a = balloonClick; balloonClick = null; if (a != null) a(); };
+            tray.BalloonTipClosed += delegate { balloonClick = null; };
             BuildTrayMenu();
 
             CreateWidgets();
@@ -69,6 +87,10 @@ namespace GlassDesk
             again.Start();
             SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             SystemEvents.UserPreferenceChanged += OnUserPrefChanged;
+            Updates = new Updater(this);
+            Updates.Start();
+            Wallpaper = new WallpaperChanger(this);
+            Safe("backup", delegate { Backup.Daily(this); });
 
             if (!File.Exists(Path.Combine(Settings.Folder, "welcomed")))
             {
@@ -88,6 +110,77 @@ namespace GlassDesk
             clock = new ClockWidget(this); system = new SystemWidget(this);
             calendar = new CalendarWidget(this); notes = new NotesWidget(this);
             Windows.Add(clock); Windows.Add(system); Windows.Add(calendar); Windows.Add(notes);
+            weather = new WeatherWidget(this); todo = new TodoWidget(this); photos = new PhotoWidget(this);
+            Windows.Add(weather); Windows.Add(todo); Windows.Add(photos);
+            countdown = new CountdownWidget(this); quote = new QuoteWidget(this);
+            Windows.Add(countdown); Windows.Add(quote);
+            github = new GitHubWidget(this); network = new NetworkWidget(this); focus = new FocusWidget(this);
+            Windows.Add(github); Windows.Add(network); Windows.Add(focus);
+        }
+
+        Action balloonClick;
+        /// <summary>A Windows notification from the tray icon; clicking it runs onClick.</summary>
+        public void Notify(string title, string text, Action onClick)
+        {
+            balloonClick = onClick;
+            tray.ShowBalloonTip(8000, title, text, ToolTipIcon.Info);
+        }
+
+        // =============================================================== rules + search
+        /// <summary>Fences that can hold desktop items, as (id, name) pairs for menus and dialogs.</summary>
+        /// <summary>After importing a layout: read settings again and redraw everything.</summary>
+        public void ReloadSettings()
+        {
+            Settings = Settings.Load();
+            ApplySettings();
+            PlaceAll();
+            if (settingsForm != null && !settingsForm.IsDisposed) settingsForm.RestyleSoon();
+        }
+
+        /// <summary>The wallpaper changed: make a new blurred copy and repaint every panel.</summary>
+        public void RefreshBackdrop()
+        {
+            Backdrop.Clear();
+            foreach (var w in Windows) if (w.Visible) w.Redraw();
+        }
+
+        public List<KeyValuePair<string, string>> FenceChoices()
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            foreach (string id in Settings.CustomFences) { string t; list.Add(new KeyValuePair<string, string>(id, Settings.Titles.TryGetValue(id, out t) ? t : "My fence")); }
+            foreach (var c in Organizer.Categories) { string t; list.Add(new KeyValuePair<string, string>("cat." + c[0], Settings.Titles.TryGetValue("cat." + c[0], out t) ? t : c[1])); }
+            return list;
+        }
+        public string FenceName(string id)
+        {
+            foreach (var kv in FenceChoices()) if (kv.Key == id) return kv.Value;
+            return "a deleted fence";
+        }
+
+        public void AddRule(string preselect)
+        {
+            using (var d = new RuleDialog(this, FenceChoices(), preselect))
+                if (d.ShowDialog() == DialogResult.OK)
+                {
+                    Settings.Rules.Add(new[] { d.Pattern, d.FenceId });
+                    Settings.Save(); Rebuild();
+                    if (settingsForm != null && !settingsForm.IsDisposed) settingsForm.RefreshPage();
+                }
+        }
+
+        SearchForm search;
+        public void ShowSearch()
+        {
+            if (search != null && !search.IsDisposed) { search.Activate(); return; }
+            var items = new List<KeyValuePair<DesktopItem, string>>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in fences.Values)
+                foreach (var it in f.Items)
+                    if (seen.Add(it.Path)) items.Add(new KeyValuePair<DesktopItem, string>(it, f.Caption));
+            items.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
+            search = new SearchForm(this, items);
+            search.FormClosed += delegate { search = null; };
+            search.Show(); search.Activate();
         }
 
         // =============================================================== organizer
@@ -122,7 +215,12 @@ namespace GlassDesk
             {
                 present.Add(it.Path);
                 string pin;
+                string ruled = null;
+                if (!it.IsRecycleBin)
+                    foreach (var rule in Settings.Rules)
+                        if (holders.ContainsKey(rule[1]) && Organizer.Matches(rule[0], Path.GetFileName(it.Path))) { ruled = rule[1]; break; }
                 if (Settings.Pins.TryGetValue(it.Path, out pin) && holders.ContainsKey(pin)) holders[pin].Add(it);
+                else if (ruled != null) holders[ruled].Add(it);
                 else
                 {
                     string id = "cat." + Organizer.CategoryOf(it);
@@ -172,6 +270,8 @@ namespace GlassDesk
                 }
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
+            weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
+            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus;
             if (!preview) UpdateWatchers();
             PlaceAll();
         }
@@ -406,6 +506,8 @@ namespace GlassDesk
             Rebuild();
             ScheduleClock();
             statsTimer.Interval = Settings.LowPower ? 5000 : 2000;
+            photos.IntervalChanged();
+            if (Wallpaper != null) Wallpaper.Apply();
             ApplySystemSettings();
             if (wasDark != Theme.Dark || oldAccent.ToArgb() != Theme.Accent.ToArgb())
             {
@@ -430,8 +532,8 @@ namespace GlassDesk
             }
             catch { }
             // hotkey
-            if (Settings.Hotkey && hotkey == null) { hotkey = new HotkeyWindow(this); if (!hotkey.Register()) { hotkey.Destroy(); hotkey = null; } }
-            else if (!Settings.Hotkey && hotkey != null) { hotkey.Unregister(); hotkey.Destroy(); hotkey = null; }
+            if (hotkey == null && Native.IsWindows) hotkey = new HotkeyWindow(this);
+            if (hotkey != null) { hotkey.Set(1, Settings.Hotkey, Keys.G); hotkey.Set(2, Settings.SearchHotkey, Keys.F); }
             // desktop icons
             if (Settings.HideDesktopIcons) { Native.SetDesktopIconsVisible(false); iconsHiddenByUs = true; }
             else if (iconsHiddenByUs) { Native.SetDesktopIconsVisible(true); iconsHiddenByUs = false; }
@@ -468,6 +570,7 @@ namespace GlassDesk
         {
             ScheduleClock();
             CheckPause();
+            if (!Paused && Backdrop.Changed()) RefreshBackdrop();   // e.g. a slideshow changed the wallpaper
             // keep the Windows desktop icons hidden (Explorer can bring them back when it restarts)
             if (Settings.HideDesktopIcons && !hiddenByUser && (++iconCheck % (Settings.ShowSeconds ? 30 : 1)) == 0)
             {
@@ -475,7 +578,7 @@ namespace GlassDesk
             }
             if (Paused || hiddenByUser) return;
             if (clock.Visible) clock.Redraw();
-            if (Now.Date != lastDay) { lastDay = Now.Date; if (calendar.Visible) calendar.Redraw(); }
+            if (Now.Date != lastDay) { lastDay = Now.Date; if (calendar.Visible) calendar.Redraw(); if (countdown.Visible) countdown.Redraw(); if (quote.Visible) quote.Redraw(); Backup.Daily(this); }
         }
 
         void StatsTick()
@@ -517,6 +620,7 @@ namespace GlassDesk
 
         void OnUserPrefChanged(object s, UserPreferenceChangedEventArgs e)
         {
+            if (e.Category == UserPreferenceCategory.Desktop) { try { invoker.BeginInvoke(new Action(RefreshBackdrop)); } catch { } return; }
             if (e.Category != UserPreferenceCategory.General || Settings.Theme != "Auto") return;
             try { invoker.BeginInvoke(new Action(delegate { if (Theme.Dark == Native.AppsUseLightTheme()) ApplySettings(); })); } catch { }
         }
@@ -545,9 +649,12 @@ namespace GlassDesk
             };
             m.Items.Add("Settings", null, delegate { ShowSettings(); });
             m.Items.Add((hiddenByUser ? "Show" : "Hide") + " panels    Ctrl+Alt+G", null, delegate { ToggleVisible(); });
+            m.Items.Add("Find on desktop…    Ctrl+Alt+F", null, delegate { ShowSearch(); });
             m.Items.Add("New fence…", null, delegate { NewFence(); });
+            m.Items.Add("Add a rule…", null, delegate { AddRule(null); });
             m.Items.Add("Edit note", null, delegate { if (!notes.Visible) { Settings.ShowNotes = true; ApplySettings(); } notes.Edit(); });
             m.Items.Add("Rescan desktop", null, delegate { Rebuild(); });
+            m.Items.Add("Check for updates", null, delegate { Updates.Check(true); });
             m.Items.Add(new ToolStripSeparator());
             m.Items.Add("Exit GlassDesk", null, delegate { Exit(); });
             var old = tray.ContextMenuStrip;
@@ -559,6 +666,18 @@ namespace GlassDesk
         {
             var m = NewMenu();
             if (w == notes) m.Items.Add("Edit note", null, delegate { notes.Edit(); });
+            if (w == countdown) m.Items.Add("Change event…", null, delegate { countdown.Edit(); });
+            if (w == quote) m.Items.Add("Another quote", null, delegate { quote.Next(); });
+            if (w == github) { m.Items.Add("Open profile", null, delegate { github.OpenProfile(); }); m.Items.Add("Change username…", null, delegate { github.ChooseUser(); }); m.Items.Add("Refresh now", null, delegate { github.Fetch(); }); }
+            if (w == focus) { m.Items.Add("Start / pause", null, delegate { focus.Toggle(); }); m.Items.Add("Reset", null, delegate { focus.Reset(); }); }
+            if (w == todo) { m.Items.Add("Edit list", null, delegate { todo.Edit(); }); m.Items.Add("Clear finished tasks", null, delegate { todo.ClearDone(); }); }
+            if (w == weather)
+            {
+                m.Items.Add("Refresh", null, delegate { weather.Fetch(); });
+                m.Items.Add("Change city…", null, delegate { weather.ChooseCity(); });
+                m.Items.Add(Settings.WeatherF ? "Use °C" : "Use °F", null, delegate { Settings.WeatherF = !Settings.WeatherF; Settings.Save(); weather.UnitsChanged(); });
+            }
+            if (w == photos) { m.Items.Add("Next photo", null, delegate { photos.Next(); }); m.Items.Add("Choose folder…", null, delegate { photos.ChooseFolder(); }); }
             if (w == clock)
             {
                 m.Items.Add((Settings.ShowSeconds ? "Hide" : "Show") + " seconds", null, delegate { Settings.ShowSeconds = !Settings.ShowSeconds; Settings.Save(); ApplySettings(); });
@@ -568,6 +687,8 @@ namespace GlassDesk
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;
                 else if (w == calendar) Settings.ShowCalendar = false; else if (w == notes) Settings.ShowNotes = false;
+                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false;
+                else if (w == weather) Settings.ShowWeather = false; else if (w == todo) Settings.ShowTodo = false; else if (w == photos) Settings.ShowPhotos = false;
                 Settings.Save(); ApplySettings();
             });
             m.Items.Add(new ToolStripSeparator());
@@ -584,7 +705,7 @@ namespace GlassDesk
                 SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
                 SystemEvents.UserPreferenceChanged -= OnUserPrefChanged;
                 if (iconsHiddenByUs) Native.SetDesktopIconsVisible(true);
-                if (hotkey != null) { hotkey.Unregister(); hotkey.Destroy(); }
+                if (hotkey != null) { hotkey.Set(1, false, Keys.G); hotkey.Set(2, false, Keys.F); hotkey.Destroy(); }
                 foreach (var w in watchers) w.Dispose();
                 tray.Visible = false; tray.Dispose();
                 if (settingsForm != null) settingsForm.Close();
@@ -595,8 +716,15 @@ namespace GlassDesk
         }
 
         // =============================================================== logo / icon
+        static Image logoImg; static bool logoTried;
         public static void DrawLogo(Graphics g, RectangleF r, Color accent)
         {
+            if (!logoTried) { logoTried = true; try { var st = typeof(App).Assembly.GetManifestResourceStream("GlassDesk.logo.png"); if (st != null) logoImg = Image.FromStream(st); } catch { } }
+            if (logoImg != null)
+            {
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(logoImg, r); return;
+            }
             g.SmoothingMode = SmoothingMode.AntiAlias;
             Color light = Color.FromArgb(255, Math.Min(255, accent.R + 70), Math.Min(255, accent.G + 70), Math.Min(255, accent.B + 70));
             Color dark = Color.FromArgb(255, accent.R * 7 / 10, accent.G * 7 / 10, accent.B * 7 / 10);
@@ -633,11 +761,18 @@ namespace GlassDesk
             readonly App app;
             public HotkeyWindow(App app) { this.app = app; CreateControl(); }
             public void Destroy() { Dispose(); }
-            public bool Register() { return Native.IsWindows && Native.RegisterHotKey(Handle, 1, 0x1 | 0x2 | 0x4000, (uint)Keys.G); }
-            public void Unregister() { if (Native.IsWindows && IsHandleCreated) Native.UnregisterHotKey(Handle, 1); }
+            readonly bool[] on = new bool[3];
+            /// <summary>Turns Ctrl + Alt + key on or off for the given id.</summary>
+            public void Set(int id, bool want, Keys key)
+            {
+                if (!IsHandleCreated || want == on[id]) return;
+                if (want) on[id] = Native.RegisterHotKey(Handle, id, 0x1 | 0x2 | 0x4000, (uint)key);
+                else { Native.UnregisterHotKey(Handle, id); on[id] = false; }
+            }
             protected override void WndProc(ref Message m)
             {
                 if (m.Msg == 0x312 && m.WParam.ToInt32() == 1) app.ToggleVisible();
+                if (m.Msg == 0x312 && m.WParam.ToInt32() == 2) app.ShowSearch();
                 base.WndProc(ref m);
             }
         }
@@ -647,10 +782,11 @@ namespace GlassDesk
         {
             Settings = new Settings();
             Settings.Theme = dark ? "Dark" : "Light";
-            Settings.Blur = false;
-            Settings.Opacity = dark ? 52 : 58;
+            Settings.GlassStyle = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_CLEAR") == "1" ? "clear" : (Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_STYLE") ?? "frosted");
+            Settings.Opacity = dark ? 30 : 34;
             Settings.FolderFences.Clear();
             DpiScale = 1f;
+            Backdrop.PreviewWallpaper = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WALL");
             Theme = Theme.From(Settings, DpiScale);
             FixedNow = new DateTime(2026, 10, 22, 9, 41, 0);
             PreviewData.FakeStats(Stats);
@@ -659,8 +795,19 @@ namespace GlassDesk
             Settings.Titles["cust.demo"] = "School";
             foreach (string n in new[] { "Report final.docx", "Notes.txt", "School", "Budget 2026.xlsx" })
                 Settings.Pins[Path.Combine(demoDesk, n)] = "cust.demo";
+            Settings.Rules.Add(new[] { "*.pdf", "cust.demo" });
+            Settings.Sort["cat.images"] = "date";
+            Settings.FenceColor["cust.demo"] = "22BE82";
+            Settings.FenceIcons["cat.folders"] = "large";
+            Settings.CountdownTitle = "Summer trip"; Settings.CountdownDate = "2026-11-29";
+            Settings.ShowWeather = false; Settings.ShowPhotos = false;
+            Settings.ShowPhotos = true;
+            Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             CreateWidgets();
+            weather.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample();
             Rebuild();
+            string sample = Environment.GetEnvironmentVariable("GLASSDESK_SAMPLE_PHOTO");
+            if (!string.IsNullOrEmpty(sample) && File.Exists(sample)) photos.SetSampleFile(sample);
         }
     }
 

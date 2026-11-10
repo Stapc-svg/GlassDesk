@@ -1,6 +1,8 @@
 # Changelog
-## v1.7.2
--new icon (logo) and fixed bugs
+
+## 1.7.2
+- **GlassDesk for Linux (beta):** fences, all 12 widgets, glass blur, settings, search, tray icon, backup and start at login, as a .deb, an AppImage and a tar.gz installer
+- New glassy logo and app icon
 
 ## 1.7.1
 - Fixed: a grid of tiny squares on the glass panels (the grain texture was removed).

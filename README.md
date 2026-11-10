@@ -5,12 +5,13 @@
 <h1 align="center">GlassDesk</h1>
 
 <p align="center">
-  A lightweight, glass-style desktop organizer for Windows 10 and 11.<br>
+  A lightweight, glass-style desktop organizer for Windows and Linux.<br>
   Auto-sorting fences, drag &amp; drop, and simple widgets in one small, native app.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6" alt="Platform: Windows 10 | 11">
+  <img src="https://img.shields.io/badge/platform-Linux%20(beta)-FCC624?logo=linux&logoColor=black" alt="Platform: Linux (beta)">
   <img src="https://img.shields.io/badge/.NET%20Framework-4.5%2B-512BD4" alt=".NET Framework 4.5+">
   <img src="https://img.shields.io/badge/language-C%23-239120" alt="Language: C#">
 </p>
@@ -25,6 +26,12 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - **Auto-sorting fences:** desktop items go into *Apps & Shortcuts, Folders, Documents, Images, Music & Video, Archives* and *Other files*. New files appear in the right fence on their own.
 - **Your own fences:** make fences like "School" or "Games" and drag icons into them.
 - **Folder fences:** show any folder, such as Downloads, as its own fence.
+- **Rules:** send files to a fence by name, for example `*.pdf` → School or `Screenshot*` → Images.
+- **Sort** each fence by name, type, date modified or size.
+- **Fence colors, icon sizes and auto roll-up** from each fence's right-click menu.
+- **Backup & sync:** export your layout to a `.glassdesk` file and import it anywhere.
+- **Themes and a wallpaper changer** in Settings → Appearance.
+- **Quick search:** press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd>, type a few letters, press Enter to open.
 - **Drag & drop:** drag icons between fences, onto a folder to move them inside, in from File Explorer, out to other apps, or onto the Recycle Bin.
 - **Clean desktop:** the normal Windows desktop icons are hidden, so nothing overlaps. The Recycle Bin lives in a fence.
 - Roll fences up and down, resize them, and scroll them. Panels snap to the screen edges and to each other.
@@ -34,9 +41,17 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - **System monitor:** live CPU (with a small graph), memory, disk and battery.
 - **Calendar:** month view with today highlighted.
 - **Notes:** a sticky note. Double-click it to write.
+- **To-do:** a checklist you tick off right on the desktop.
+- **Weather:** today and the next 3 days for your city, from [Open-Meteo](https://open-meteo.com) (free, no account).
+- **Photo frame:** pictures from a folder you choose, one at a time.
+- **Countdown** to a date and **Quote of the day**.
+- **GitHub stats:** your stars, followers, repos, most-starred project and a 14-day activity chart. Double-click and type your username (public data, no sign-in).
+- **Network meter:** live download and upload speed with small graphs.
+- **Focus timer:** Pomodoro (25 min focus, 5 min break) with a progress ring and a notification when time is up.
 
 ### Looks
-- Blur behind the panels on Windows 10 and 11, with adjustable opacity, corner radius and size.
+- **Real frosted glass:** your wallpaper shows softly blurred through every panel (GlassDesk makes the blur itself, so it works on every Windows 10 and 11 PC), with a light-catching rim, sheen and fine grain.
+- Three glass styles (Frosted, Light blur, Clear) plus adjustable tint, corner radius and size.
 - Dark, light, or **Auto**, which follows your Windows setting.
 - Choose an accent color.
 
@@ -45,12 +60,28 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - File changes are detected by Windows events, without polling.
 - Updates pause while you play full-screen games or watch videos.
 - Memory goes back to Windows when idle.
-- A single ~160 KB `.exe` using the .NET Framework that already comes with Windows. No browser engine and nothing extra to install.
+- A single ~250 KB `.exe` using the .NET Framework that already comes with Windows. No browser engine and nothing extra to install.
 
 <p align="center">
   <img src="docs/screenshots/desktop-light.png" width="49%" alt="Light theme">
   <img src="docs/screenshots/settings-organizer.png" width="49%" alt="Organizer settings">
 </p>
+
+## GlassDesk for Linux (beta)
+
+> **Beta:** the Linux version is new. It works, but it hasn't been tested on every distro and desktop yet. Please [open an issue](../../issues) if something looks wrong, and attach `~/.config/glassdesk/error.log`.
+
+GlassDesk also runs on **Ubuntu, Linux Mint, Debian, Fedora, Arch, openSUSE** and more, on GNOME, KDE Plasma, Cinnamon, XFCE and MATE. It has the same fences, widgets, glass blur and settings, rebuilt with Python and GTK.
+
+![GlassDesk on Linux](docs/screenshots/linux-desktop-dark.png)
+
+| Your Linux | Download from [Releases](../../releases) | How |
+|---|---|---|
+| Ubuntu, Mint, Debian, Pop!_OS, Zorin | `glassdesk_<version>_all.deb` | Double-click it, or `sudo apt install ./glassdesk_*_all.deb` |
+| Any distro (one file) | `GlassDesk-<version>-x86_64.AppImage` | Allow executing, then double-click |
+| Fedora, Arch, openSUSE, others | `GlassDesk-<version>-linux.tar.gz` | Unzip, then run `./install.sh` |
+
+More details: [linux/README.md](linux/README.md).
 
 ## Download & install
 
@@ -67,12 +98,13 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 | Action | What happens |
 |---|---|
 | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>G</kbd> | Show or hide all panels |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> | Find anything on your desktop |
 | Click the tray icon | Open Settings |
 | Drag a fence's title bar | Move it. Drag the bottom-right corner to resize |
 | Double-click a fence title | Roll the fence up or down |
 | Double-click an icon | Open it (single-click is an option) |
 | Right-click an icon | Open, show in File Explorer, copy path, **Move to fence**, delete, properties |
-| Right-click a fence title | Rename, new fence, hide, delete |
+| Right-click a fence title | Rename, sort by, add a rule, new fence, hide, delete |
 
 ### Drag & drop
 
@@ -95,6 +127,18 @@ Settings has six pages: **General** (start with Windows, hotkey, lock positions)
 
 Your settings are saved in `%AppData%\GlassDesk\settings.ini`. Delete that file to start fresh.
 
+## Updates
+
+GlassDesk checks this repository's [Releases](../../releases) once a day. When a newer version is there, it shows a notification. One click downloads the `.msi` from GitHub and installs it; your fences, widgets and settings are kept. You can also click **Check now** in Settings → About.
+
+**Publishing a new version** (for maintainers):
+
+1. Raise the version in `src/Program.cs` (`AssemblyVersion`) and in `installer/GlassDesk.wxs` (`Version` and the two `UpgradeVersion` lines).
+2. Build the `.msi` (`./build.sh msi`).
+3. On GitHub, create a release with a tag like `v1.7.2` and attach `GlassDesk-Setup.msi`. The release notes are shown to people in the update window.
+
+The updater only downloads installers from `github.com` over HTTPS, and only runs files that are real Windows Installer packages.
+
 ## Build from source
 
 The `.exe` and `.msi` are not stored in the repository. Build them yourself, or download them from Releases.
@@ -107,7 +151,7 @@ build.bat
 
 This uses the C# compiler that ships with Windows (`csc.exe` from .NET Framework 4.x) and writes `build\GlassDesk.exe`.
 
-### On Linux (exe + MSI)
+### Windows app, built on Linux (exe + MSI)
 
 ```sh
 sudo apt install mono-devel wixl
@@ -125,6 +169,12 @@ src/
   App.cs           tray icon, timers, layout, fence management
   Fences.cs        the organizer: fences, sorting, drag & drop
   Widgets.cs       clock, system monitor, calendar, notes
+  Widgets2.cs      weather, to-do list, photo frame, countdown, quote
+  Widgets3.cs      GitHub stats, network meter, focus timer
+  Search.cs        quick search (Ctrl + Alt + F) and the "add rule" dialog
+  Updater.cs       GitHub Releases updater, small web and JSON helpers
+  Extras.cs        wallpaper changer, backup & restore, themes
+  Backdrop.cs      the glass blur: a blurred copy of your wallpaper drawn behind panels
   GlassWindow.cs   base class for glass panels (layered windows)
   SettingsForm.cs  the settings window
   Controls.cs      toggle, slider and other small UI controls
@@ -133,6 +183,7 @@ src/
 assets/            app icon and runtime config
 installer/         GlassDesk.wxs, the MSI definition (WiX format, built with wixl)
 docs/screenshots/  images used in this README
+linux/             GlassDesk for Linux (Python + GTK) and its packaging (build-linux.sh)
 ```
 
 ## Troubleshooting
@@ -143,7 +194,7 @@ docs/screenshots/  images used in this README
 
 ## Requirements
 
-- Windows 10 or Windows 11
+- Windows 10 or Windows 11, or Linux with Python 3 and GTK 3 (preinstalled on most desktops)
 - .NET Framework 4.5 or newer, which is already included in Windows 10 and 11
 
 ## Changelog

@@ -118,7 +118,7 @@ namespace GlassDesk
 
         public void SetPanelBounds(Rectangle r)
         {
-            pad = Cfg.Blur ? 0 : T.S(14);
+            pad = T.S(14);   // GlassDesk paints its own blur now, so every style keeps its soft shadow
             Bounds = new Rectangle(r.X - pad, r.Y - pad, r.Width + 2 * pad, r.Height + 2 * pad);
             Panel = new Rectangle(pad, pad, r.Width, r.Height);
             ApplyStyle();
@@ -137,17 +137,54 @@ namespace GlassDesk
         public void ApplyStyle()
         {
             if (!Native.IsWindows || !IsHandleCreated) return;
-            Native.SetBlur(Handle, Cfg.Blur);
-            if (Cfg.Blur)
-            {
-                int d = T.S(Cfg.Radius) * 2 + 1;
-                Native.SetWindowRgn(Handle, Native.CreateRoundRectRgn(0, 0, Width + 1, Height + 1, d, d), true);
-            }
-            else Native.SetWindowRgn(Handle, IntPtr.Zero, true);
+            SetGlass(false);
+            UpdateRegion();
             Native.SetOwner(Handle, Cfg.KeepBehindWindows ? Native.DesktopOwner() : IntPtr.Zero);
             if (Cfg.KeepBehindWindows)
                 Native.SetWindowPos(Handle, Native.HWND_BOTTOM, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
         }
+
+        /// <summary>With glass on, the window is cut to the panel's rounded shape so the blur doesn't show past the corners.</summary>
+        void UpdateRegion()
+        {
+            if (!Native.IsWindows || !IsHandleCreated) return;
+            // no window cut-out any more: our blur is drawn inside the panel's own rounded shape
+            Native.SetWindowRgn(Handle, IntPtr.Zero, true);
+        }
+
+        /// <summary>Windows draws the real blur of whatever is behind the panel; we only paint tint, light and grain on top.
+        /// While a panel is being dragged, acrylic is swapped for the lighter blur because acrylic lags when moved.</summary>
+        void SetGlass(bool moving)
+        {
+            int mode = 0;    // Windows' blur stays off; it didn't show on many PCs. See Backdrop.cs.
+            Color c = T.Dark ? Color.FromArgb(18, 20, 28) : Color.FromArgb(242, 244, 248);
+            int tint = (0x30 << 24) | (c.B << 16) | (c.G << 8) | c.R;
+            Native.SetGlass(Handle, mode, tint);
+        }
+
+        int lastMoveDraw;
+        bool UsesBackdrop { get { return Cfg.GlassStyle == "frosted" || Cfg.GlassStyle == "blur"; } }
+
+        /// <summary>Paints the matching piece of the blurred wallpaper inside the panel: the actual glass blur.</summary>
+        void DrawBackdrop(Graphics g, GraphicsPath path)
+        {
+            if (!UsesBackdrop) return;
+            try
+            {
+                Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
+                Bitmap blur = Backdrop.For(scr, Cfg.GlassStyle == "frosted" ? 2 : 1);
+                var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.DrawImage(blur, new Rectangle(Panel.X, Panel.Y, Panel.Width, Panel.Height), src, GraphicsUnit.Pixel);
+                g.Restore(st);
+            }
+            catch (Exception ex) { Program.Log(ex); }
+        }
+
+        /// <summary>A color washed over the glass; fences can have their own.</summary>
+        protected virtual Color PanelColor { get { return Color.Empty; } }
 
         // ---------------- painting ----------------
         protected abstract void PaintContent(Graphics g);
@@ -179,20 +216,74 @@ namespace GlassDesk
                 }
             }
             var pr = new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height);
+            if (pr.Width < 4 || pr.Height < 4) return;
+            bool glass = Cfg.GlassOn;
             using (var path = Gfx.Round(pr, r))
             {
+                // 1. tint: how much the glass colors what's behind it
+                DrawBackdrop(g, path);
                 using (var b = new SolidBrush(T.Tint)) g.FillPath(b, path);
-                // glass sheen
-                var sheen = new RectangleF(pr.X, pr.Y, pr.Width, Math.Max(2, pr.Height * 0.55f));
+                if (!PanelColor.IsEmpty) using (var b = new SolidBrush(Color.FromArgb(T.Dark ? 52 : 44, PanelColor))) g.FillPath(b, path);
+
                 var st = g.Save();
-                g.SetClip(sheen);
-                using (var lg = new LinearGradientBrush(new PointF(0, sheen.Top - 1), new PointF(0, sheen.Bottom + 1),
-                    Color.FromArgb(T.Dark ? 22 : 70, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+                g.SetClip(path, CombineMode.Intersect);
+                // 2. frosted grain, the fine texture real frosted glass has
+                // (grain removed in 1.7.1: it showed up as a grid of little squares)
+
+                // 3. light falling across the pane from the top-left
+                var a = new PointF(pr.X, pr.Y);
+                var z = new PointF(pr.Right + 2, pr.Bottom + 2);
+                using (var lg = new LinearGradientBrush(new PointF(a.X - 2, a.Y - 2), z, Color.White, Color.White))
+                {
+                    lg.WrapMode = WrapMode.TileFlipXY;
+                    var cb = new ColorBlend(4);
+                    cb.Colors = new[] { Color.FromArgb(T.Dark ? 34 : 70, 255, 255, 255), Color.FromArgb(T.Dark ? 10 : 24, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), Color.FromArgb(T.Dark ? 18 : 10, 0, 0, 0) };
+                    cb.Positions = new[] { 0f, 0.22f, 0.5f, 1f };
+                    lg.InterpolationColors = cb;
                     g.FillPath(lg, path);
+                }
+                // 4. soft glow just inside the edge, like light trapped in thick glass
+                using (var pen = new Pen(Color.FromArgb(T.Dark ? 10 : 18, 255, 255, 255), T.Sf(8))) g.DrawPath(pen, path);
+                using (var pen = new Pen(Color.FromArgb(T.Dark ? 12 : 22, 255, 255, 255), T.Sf(3))) g.DrawPath(pen, path);
                 g.Restore(st);
             }
-            var br = new RectangleF(pr.X + 0.5f, pr.Y + 0.5f, pr.Width - 1, pr.Height - 1);
-            using (var p = Gfx.Round(br, Math.Max(0, r - 0.5f))) using (var pen = new Pen(T.Border, 1f)) g.DrawPath(pen, p);
+            // 5. the rim: bright where light hits (top-left and bottom-right corners), faint along the sides
+            var br = new RectangleF(pr.X + 0.6f, pr.Y + 0.6f, pr.Width - 1.2f, pr.Height - 1.2f);
+            using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
+            using (var lg = new LinearGradientBrush(new PointF(br.X - 1, br.Y - 1), new PointF(br.Right + 1, br.Bottom + 1), Color.White, Color.White))
+            {
+                lg.WrapMode = WrapMode.TileFlipXY;
+                var cb = new ColorBlend(4);
+                int k = T.Dark ? 1 : 0;
+                cb.Colors = new[] { Color.FromArgb(200 - 20 * k, 255, 255, 255), Color.FromArgb(46, 255, 255, 255), Color.FromArgb(34, 255, 255, 255), Color.FromArgb(130 - 20 * k, 255, 255, 255) };
+                cb.Positions = new[] { 0f, 0.35f, 0.7f, 1f };
+                lg.InterpolationColors = cb;
+                using (var pen = new Pen(lg, T.Sf(1.25f))) g.DrawPath(pen, p);
+            }
+            // 6. a hairline highlight along the top edge, just inside the rim
+            if (r < pr.Width / 2 - 2)
+                using (var lg = new LinearGradientBrush(new PointF(pr.X + r, 0), new PointF(pr.Right - r, 0), Color.FromArgb(90, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+                using (var pen = new Pen(lg, 1f))
+                    g.DrawLine(pen, pr.X + r * 0.8f, pr.Y + 1.8f, pr.Right - r, pr.Y + 1.8f);
+        }
+
+        static Bitmap grainDark, grainLight;
+        /// <summary>A small tile of random light and dark specks, made once and reused everywhere.</summary>
+        static Bitmap Grain(bool dark)
+        {
+            Bitmap b = dark ? grainDark : grainLight;
+            if (b != null) return b;
+            b = new Bitmap(96, 96, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            var rnd = new Random(7);
+            for (int y = 0; y < 96; y++)
+                for (int x = 0; x < 96; x++)
+                {
+                    int v = rnd.Next(256);
+                    int a = (int)(Math.Abs(v - 128) / 128.0 * (dark ? 16 : 12));
+                    b.SetPixel(x, y, v > 128 ? Color.FromArgb(a, 255, 255, 255) : Color.FromArgb(a, 0, 0, 0));
+                }
+            if (dark) grainDark = b; else grainLight = b;
+            return b;
         }
 
         public void Redraw()
@@ -247,7 +338,7 @@ namespace GlassDesk
             base.OnMouseDown(e);
             if (e.Button != MouseButtons.Left || Cfg.LockPositions) return;
             downScreen = Cursor.Position; downBounds = PanelBounds;
-            if (InGrip(e.Location)) { resizing = true; Capture = true; }
+            if (InGrip(e.Location)) { resizing = true; Capture = true; if (IsHandleCreated) SetGlass(true); }
             else if (IsDragArea(e.Location)) { armed = true; Capture = true; }
         }
 
@@ -262,17 +353,19 @@ namespace GlassDesk
                 int h = Math.Max(T.S(MinPanel.Height), downBounds.Height + dy);
                 Size = new Size(w + 2 * pad, h + 2 * pad);
                 Panel = new Rectangle(pad, pad, w, h);
-                if (Cfg.Blur) ApplyStyle();
+                UpdateRegion();
                 OnResized();
                 Redraw();
                 return;
             }
-            if (armed && !dragging && (Math.Abs(dx) > 4 || Math.Abs(dy) > 4)) dragging = true;
+            if (armed && !dragging && (Math.Abs(dx) > 4 || Math.Abs(dy) > 4)) { dragging = true; if (IsHandleCreated) SetGlass(true); }
             if (dragging)
             {
                 var r = new Rectangle(downBounds.X + dx, downBounds.Y + dy, downBounds.Width, downBounds.Height);
                 r = Snap(r);
                 Location = new Point(r.X - pad, r.Y - pad);
+                // the blurred wallpaper behind the panel has to follow it while it moves
+                if (UsesBackdrop && Environment.TickCount - lastMoveDraw > 30) { lastMoveDraw = Environment.TickCount; Redraw(); }
                 return;
             }
             Cursor = InGrip(e.Location) && !Cfg.LockPositions ? Cursors.SizeNWSE : Cursors.Default;
@@ -304,7 +397,7 @@ namespace GlassDesk
         {
             base.OnMouseUp(e);
             bool wasMoving = dragging || resizing;
-            if (wasMoving) App.SavePosition(Id, PanelBounds);
+            if (wasMoving) { App.SavePosition(Id, PanelBounds); if (IsHandleCreated) SetGlass(false); }
             armed = dragging = resizing = false;
             Capture = false;
             if (!wasMoving) OnClickAt(e.Location, e.Button);
@@ -345,8 +438,12 @@ namespace GlassDesk
         // ------------- small drawing helpers for subclasses -------------
         protected void Title(Graphics g, string text, Rectangle r)
         {
+            var f = Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold);
+            if (Cfg.GlassStyle == "transparent")
+                using (var sh = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
+                    g.DrawString(text.ToUpperInvariant(), f, sh, new RectangleF(r.X, r.Y + T.Sf(1.2f), r.Width, r.Height), Gfx.Left);
             using (var b = new SolidBrush(T.SubText))
-                g.DrawString(text.ToUpperInvariant(), Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold), b, r, Gfx.Left);
+                g.DrawString(text.ToUpperInvariant(), f, b, r, Gfx.Left);
         }
         protected void Bar(Graphics g, RectangleF r, float frac, Color c)
         {

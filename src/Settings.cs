@@ -20,8 +20,10 @@ namespace GlassDesk
         // Appearance
         public string Theme = "Auto";            // Auto | Dark | Light
         public Color Accent = Color.FromArgb(124, 156, 255);
-        public bool Blur = true;
-        public int Opacity = 55;                 // 20..95 (%)
+        public bool Blur = true;                 // kept for older settings files; GlassStyle decides
+        public string GlassStyle = "frosted";    // frosted | blur | clear
+        public bool GlassOn { get { return GlassStyle != "clear" && GlassStyle != "transparent"; } }
+        public int Opacity = 30;                 // 5..95 (%) tint over the glass
         public int Radius = 16;                  // 0..28 px
         public int UiScale = 100;                // 80..150 (%)
 
@@ -29,6 +31,24 @@ namespace GlassDesk
         public bool ShowClock = true, ShowSeconds = false, Clock24 = true;
         public bool ShowSystem = true, ShowCalendar = true, ShowNotes = true;
         public string NotesText = "Double-click to write a note.\n\n- Tidy desktop\n- Try the settings (tray icon)";
+        public bool ShowWeather = true, WeatherF = false;
+        public string WeatherCity = "", WeatherPlace = "";          // what you typed / what Open-Meteo found
+        public double WeatherLat = double.NaN, WeatherLon = double.NaN;
+        public bool ShowTodo = true;
+        public string TodoText = "[ ] Try dragging an icon to another fence\n[ ] Make a rule in Settings > Organizer\n[x] Install GlassDesk";
+        public bool ShowPhotos = false;
+        public bool ShowCountdown = true, ShowQuote = true;
+        public bool ShowGitHub = true, ShowNetwork = true, ShowFocus = true; public string GitHubUser = ""; public int FocusMinutes = 25, BreakMinutes = 5;
+        public string CountdownTitle = "", CountdownDate = "";      // date as yyyy-MM-dd
+        public bool WallpaperOn = false;
+        public string WallpaperFolder = "";
+        public int WallpaperMinutes = 30;
+        public bool AutoBackup = true;
+        public Dictionary<string, string> FenceColor = new Dictionary<string, string>();   // fence id -> RRGGBB
+        public Dictionary<string, string> FenceIcons = new Dictionary<string, string>();   // fence id -> small | medium | large
+        public HashSet<string> AutoHide = new HashSet<string>();                           // fences that roll up until hovered
+        public string PhotoFolder = "";
+        public int PhotoMinutes = 10;
 
         // Organizer
         public bool ShowFences = true, HideEmptyFences = true, HideDesktopIcons = true;
@@ -36,6 +56,15 @@ namespace GlassDesk
         public List<string> FolderFences = new List<string>();
         public List<string> CustomFences = new List<string>();     // ids of fences you made yourself
         public Dictionary<string, string> Pins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // item path -> fence id
+        public List<string[]> Rules = new List<string[]>();          // { name pattern, fence id }, first match wins
+        public Dictionary<string, string> Sort = new Dictionary<string, string>();   // fence id -> name | type | date | size
+        public bool SearchHotkey = true;                              // Ctrl + Alt + F
+
+        // Updates
+        public bool AutoUpdate = true;
+        public string UpdateRepo = App.DefaultRepo;                   // "owner/repo" on GitHub
+        public long LastUpdateCheck = 0;                              // UTC ticks
+        public string SkipVersion = "";
 
         // Performance
         public bool LowPower = false, PauseFullscreen = true, TrimMemory = true;
@@ -51,7 +80,7 @@ namespace GlassDesk
         }
         static string FilePath { get { return Path.Combine(Folder, "settings.ini"); } }
 
-        bool startupV2, iconsV2;
+        bool startupV2, iconsV2, glassV2;
 
         public bool CategoryOn(string key) { bool v; return !Categories.TryGetValue(key, out v) || v; }
 
@@ -72,6 +101,13 @@ namespace GlassDesk
             catch { }
             if (!s.startupV2) s.StartWithWindows = true;   // 1.1: run on startup by default
             if (!s.iconsV2) s.HideDesktopIcons = true;     // 1.2: fences replace the Windows desktop icons
+            if (!s.glassV2)                                  // 1.4: real frosted glass, with a lighter tint so it shows
+            {
+                s.GlassStyle = s.Blur ? "frosted" : "clear";
+                if (s.Opacity == 55) s.Opacity = 30;
+            }
+            if (s.GlassStyle != "frosted" && s.GlassStyle != "blur" && s.GlassStyle != "clear" && s.GlassStyle != "transparent") s.GlassStyle = "frosted";
+            s.Blur = s.GlassOn;
             return s;
         }
 
@@ -103,7 +139,8 @@ namespace GlassDesk
                 case "Theme": Theme = v.Trim(); return;
                 case "Accent": Accent = Color.FromArgb(255, Color.FromArgb(int.Parse(v.Trim(), NumberStyles.HexNumber))); return;
                 case "Blur": Blur = B(v); return;
-                case "Opacity": Opacity = Math.Max(20, Math.Min(95, I(v))); return;
+                case "Opacity": Opacity = Math.Max(5, Math.Min(95, I(v))); return;
+                case "GlassStyle": GlassStyle = v.Trim(); glassV2 = true; return;
                 case "Radius": Radius = Math.Max(0, Math.Min(28, I(v))); return;
                 case "UiScale": UiScale = Math.Max(80, Math.Min(150, I(v))); return;
                 case "ShowClock": ShowClock = B(v); return;
@@ -119,6 +156,34 @@ namespace GlassDesk
                 case "LowPower": LowPower = B(v); return;
                 case "PauseFullscreen": PauseFullscreen = B(v); return;
                 case "TrimMemory": TrimMemory = B(v); return;
+                case "ShowWeather": ShowWeather = B(v); return;
+                case "WeatherF": WeatherF = B(v); return;
+                case "WeatherCity": WeatherCity = Unesc(v); return;
+                case "WeatherPlace": WeatherPlace = Unesc(v); return;
+                case "WeatherLat": WeatherLat = double.Parse(v, CultureInfo.InvariantCulture); return;
+                case "WeatherLon": WeatherLon = double.Parse(v, CultureInfo.InvariantCulture); return;
+                case "ShowTodo": ShowTodo = B(v); return;
+                case "TodoText": TodoText = Unesc(v); return;
+                case "ShowPhotos": ShowPhotos = B(v); return;
+                case "PhotoFolder": PhotoFolder = Unesc(v); return;
+                case "PhotoMinutes": PhotoMinutes = Math.Max(1, Math.Min(240, I(v))); return;
+                case "SearchHotkey": SearchHotkey = B(v); return;
+                case "AutoUpdate": AutoUpdate = B(v); return;
+                case "UpdateRepo": UpdateRepo = v.Trim(); return;
+                case "LastUpdateCheck": LastUpdateCheck = long.Parse(v.Trim(), CultureInfo.InvariantCulture); return;
+                case "SkipVersion": SkipVersion = v.Trim(); return;
+                case "ShowCountdown": ShowCountdown = B(v); return;
+                case "ShowQuote": ShowQuote = B(v); return;
+                case "ShowGitHub": ShowGitHub = B(v); return; case "ShowNetwork": ShowNetwork = B(v); return; case "ShowFocus": ShowFocus = B(v); return;
+                case "GitHubUser": GitHubUser = v; return;
+                case "FocusMinutes": { int n; if (int.TryParse(v, out n)) FocusMinutes = Math.Max(1, Math.Min(120, n)); } return;
+                case "BreakMinutes": { int n; if (int.TryParse(v, out n)) BreakMinutes = Math.Max(1, Math.Min(60, n)); } return;
+                case "CountdownTitle": CountdownTitle = Unesc(v); return;
+                case "CountdownDate": CountdownDate = v.Trim(); return;
+                case "WallpaperOn": WallpaperOn = B(v); return;
+                case "WallpaperFolder": WallpaperFolder = Unesc(v); return;
+                case "WallpaperMinutes": WallpaperMinutes = Math.Max(1, Math.Min(1440, I(v))); return;
+                case "AutoBackup": AutoBackup = B(v); return;
             }
             if (k.StartsWith("cat.")) Categories[k.Substring(4)] = B(v);
             else if (k.StartsWith("folder.")) { string p = Unesc(v); if (p.Length > 0 && !FolderFences.Contains(p)) FolderFences.Add(p); }
@@ -128,6 +193,15 @@ namespace GlassDesk
                 int bar = v.IndexOf('|');
                 if (bar > 0) Pins[Unesc(v.Substring(bar + 1))] = v.Substring(0, bar);
             }
+            else if (k.StartsWith("rule."))
+            {
+                int bar = v.IndexOf('|');
+                if (bar > 0) Rules.Add(new[] { Unesc(v.Substring(bar + 1)), v.Substring(0, bar) });
+            }
+            else if (k.StartsWith("sort.")) Sort[k.Substring(5)] = v.Trim();
+            else if (k.StartsWith("fcolor.")) FenceColor[k.Substring(7)] = v.Trim();
+            else if (k.StartsWith("ficon.")) FenceIcons[k.Substring(6)] = v.Trim();
+            else if (k.StartsWith("fauto.")) { if (B(v)) AutoHide.Add(k.Substring(6)); }
             else if (k.StartsWith("col.")) { if (B(v)) Collapsed.Add(k.Substring(4)); }
             else if (k.StartsWith("title.")) Titles[k.Substring(6)] = Unesc(v);
             else if (k.StartsWith("pos."))
@@ -148,13 +222,28 @@ namespace GlassDesk
                 w("StartWithWindows", b(StartWithWindows)); w("StartupV2", "1"); w("IconsV2", "1"); w("Hotkey", b(Hotkey)); w("LockPositions", b(LockPositions));
                 w("KeepBehindWindows", b(KeepBehindWindows)); w("SingleClickOpen", b(SingleClickOpen));
                 w("Theme", Theme); w("Accent", (Accent.ToArgb() & 0xFFFFFF).ToString("X6"));
-                w("Blur", b(Blur)); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
+                w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
                 w("Radius", Radius.ToString(CultureInfo.InvariantCulture)); w("UiScale", UiScale.ToString(CultureInfo.InvariantCulture));
                 w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24));
                 w("ShowSystem", b(ShowSystem)); w("ShowCalendar", b(ShowCalendar)); w("ShowNotes", b(ShowNotes));
                 w("NotesText", Esc(NotesText));
                 w("ShowFences", b(ShowFences)); w("HideEmptyFences", b(HideEmptyFences)); w("HideDesktopIcons", b(HideDesktopIcons));
                 w("LowPower", b(LowPower)); w("PauseFullscreen", b(PauseFullscreen)); w("TrimMemory", b(TrimMemory));
+                w("ShowWeather", b(ShowWeather)); w("WeatherF", b(WeatherF)); w("WeatherCity", Esc(WeatherCity)); w("WeatherPlace", Esc(WeatherPlace));
+                if (!double.IsNaN(WeatherLat)) { w("WeatherLat", WeatherLat.ToString("R", CultureInfo.InvariantCulture)); w("WeatherLon", WeatherLon.ToString("R", CultureInfo.InvariantCulture)); }
+                w("ShowTodo", b(ShowTodo)); w("TodoText", Esc(TodoText));
+                w("ShowPhotos", b(ShowPhotos)); w("PhotoFolder", Esc(PhotoFolder)); w("PhotoMinutes", PhotoMinutes.ToString(CultureInfo.InvariantCulture));
+                w("SearchHotkey", b(SearchHotkey));
+                w("AutoUpdate", b(AutoUpdate)); w("UpdateRepo", UpdateRepo); w("LastUpdateCheck", LastUpdateCheck.ToString(CultureInfo.InvariantCulture)); w("SkipVersion", SkipVersion);
+                for (int i = 0; i < Rules.Count; i++) w("rule." + i, Rules[i][1] + "|" + Esc(Rules[i][0]));
+                foreach (var kv in Sort) w("sort." + kv.Key, kv.Value);
+                w("ShowGitHub", b(ShowGitHub)); w("ShowNetwork", b(ShowNetwork)); w("ShowFocus", b(ShowFocus)); w("GitHubUser", GitHubUser ?? ""); w("FocusMinutes", FocusMinutes.ToString()); w("BreakMinutes", BreakMinutes.ToString());
+                w("ShowCountdown", b(ShowCountdown)); w("ShowQuote", b(ShowQuote)); w("CountdownTitle", Esc(CountdownTitle)); w("CountdownDate", CountdownDate);
+                w("WallpaperOn", b(WallpaperOn)); w("WallpaperFolder", Esc(WallpaperFolder)); w("WallpaperMinutes", WallpaperMinutes.ToString(CultureInfo.InvariantCulture));
+                w("AutoBackup", b(AutoBackup));
+                foreach (var kv in FenceColor) w("fcolor." + kv.Key, kv.Value);
+                foreach (var kv in FenceIcons) w("ficon." + kv.Key, kv.Value);
+                foreach (string a in AutoHide) w("fauto." + a, "1");
                 foreach (var kv in Categories) w("cat." + kv.Key, b(kv.Value));
                 for (int i = 0; i < FolderFences.Count; i++) w("folder." + i, Esc(FolderFences[i]));
                 for (int i = 0; i < CustomFences.Count; i++) w("custom." + i, CustomFences[i]);
@@ -192,6 +281,7 @@ namespace GlassDesk
             t.Scale = dpiScale * s.UiScale / 100f;
             t.Accent = s.Accent;
             int a = (int)(255 * s.Opacity / 100f);
+            if (s.GlassStyle == "transparent") a = (int)(a * 0.3f);   // see-through: only a whisper of tint
             if (t.Dark)
             {
                 t.Tint = Color.FromArgb(a, 18, 20, 28);

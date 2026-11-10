@@ -58,6 +58,9 @@ namespace GlassDesk
         protected Rectangle Inner { get { int m = T.S(18); return new Rectangle(Panel.X + m, Panel.Y + T.S(14), Panel.Width - 2 * m, Panel.Height - T.S(28)); } }
         protected void Txt(Graphics g, string s, Font f, Color c, RectangleF r, StringFormat sf)
         {
+            if (Cfg.GlassStyle == "transparent")
+                using (var sh = new SolidBrush(Color.FromArgb(T.Dark ? 150 : 110, 0, 0, 0)))
+                    g.DrawString(s, f, sh, new RectangleF(r.X, r.Y + T.Sf(1.2f), r.Width, r.Height), sf);
             using (var b = new SolidBrush(c)) g.DrawString(s, f, b, r, sf);
         }
         protected override void OnClickAt(Point p, MouseButtons b)
@@ -274,7 +277,8 @@ namespace GlassDesk
         readonly TextBox box;
         public string Result;
         bool closing;
-        public NoteEditor(App app, Rectangle bounds, string text)
+        public NoteEditor(App app, Rectangle bounds, string text) : this(app, bounds, text, "Esc or click outside to save") { }
+        public NoteEditor(App app, Rectangle bounds, string text, string hintText)
         {
             Theme t = app.Theme;
             Result = text;
@@ -282,7 +286,7 @@ namespace GlassDesk
             Bounds = bounds; TopMost = true;
             BackColor = t.Dark ? Color.FromArgb(28, 30, 38) : Color.FromArgb(250, 250, 252);
             Padding = new Padding(t.S(16));
-            var hint = new Label { Dock = DockStyle.Bottom, Height = t.S(22), Text = "Esc or click outside to save", ForeColor = t.Dark ? Color.FromArgb(150, 160, 175) : Color.Gray, Font = Gfx.SafeFont(t.FontName, t.Sf(11), FontStyle.Regular) };
+            var hint = new Label { Dock = DockStyle.Bottom, Height = t.S(22), Text = hintText, ForeColor = t.Dark ? Color.FromArgb(150, 160, 175) : Color.Gray, Font = Gfx.SafeFont(t.FontName, t.Sf(11), FontStyle.Regular) };
             box = new TextBox
             {
                 Multiline = true, Dock = DockStyle.Fill, BorderStyle = BorderStyle.None, Text = (text ?? "").Replace("\n", "\r\n"),

@@ -35,12 +35,19 @@ namespace GlassDesk
         [StructLayout(LayoutKind.Sequential)] struct WinCompAttrData { public int Attribute; public IntPtr Data; public int SizeOfData; }
         [DllImport("user32.dll")] static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WinCompAttrData data);
 
-        public static void SetBlur(IntPtr hwnd, bool on)
+        public static void SetBlur(IntPtr hwnd, bool on) { SetGlass(hwnd, on ? 3 : 0, 0); }
+
+        /// <summary>Acrylic (the Start menu's frosted glass) needs Windows 10 version 1803 or newer.</summary>
+        public static bool AcrylicSupported { get { return IsWindows && WinBuild >= 17134; } }
+
+        /// <summary>mode: 0 = none, 3 = light blur, 4 = acrylic frosted glass. tintAbgr = acrylic tint as 0xAABBGGRR.</summary>
+        public static void SetGlass(IntPtr hwnd, int mode, int tintAbgr)
         {
             if (!IsWindows || WinBuild < 10240) return;
+            if (mode == 4 && !AcrylicSupported) mode = 3;
             try
             {
-                var accent = new AccentPolicy { AccentState = on ? 3 : 0 }; // 3 = ACCENT_ENABLE_BLURBEHIND
+                var accent = new AccentPolicy { AccentState = mode, GradientColor = mode == 4 ? tintAbgr : 0 };
                 int size = Marshal.SizeOf(accent);
                 IntPtr p = Marshal.AllocHGlobal(size);
                 try
@@ -197,9 +204,51 @@ namespace GlassDesk
         static extern int SHGetImageList(int list, ref Guid riid, out IImageList ppv);
 
         /// <summary>Returns the shell icon of a file/folder as a 48px bitmap (falls back to 32px).</summary>
+        // ---------- sharp, large icons (the same ones File Explorer uses for "Large icons") ----------
+        [ComImport, Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        interface IShellItemImageFactory { [PreserveSig] int GetImage(SIZE size, int flags, out IntPtr phbm); }
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+        static extern void SHCreateItemFromParsingName(string path, IntPtr pbc, [MarshalAs(UnmanagedType.LPStruct)] Guid riid, [MarshalAs(UnmanagedType.Interface)] out IShellItemImageFactory item);
+        [StructLayout(LayoutKind.Sequential)] struct BITMAP { public int bmType, bmWidth, bmHeight, bmWidthBytes; public ushort bmPlanes, bmBitsPixel; public IntPtr bmBits; }
+        [DllImport("gdi32.dll")] static extern int GetObject(IntPtr h, int size, out BITMAP bm);
+
+        /// <summary>A crisp icon at the given size, with transparency and without the shortcut-arrow box. Null if Windows can't give one.</summary>
+        static Bitmap GetLargeIcon(string path, int size)
+        {
+            IShellItemImageFactory f = null; IntPtr hbm = IntPtr.Zero;
+            try
+            {
+                SHCreateItemFromParsingName(path, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out f);
+                // 0x4 = icon only (not a photo thumbnail), 0x1 = allow a bigger image scaled down
+                if (f.GetImage(new SIZE(size, size), 0x4 | 0x1, out hbm) != 0 || hbm == IntPtr.Zero) return null;
+                BITMAP bm;
+                if (GetObject(hbm, Marshal.SizeOf(typeof(BITMAP)), out bm) == 0 || bm.bmBits == IntPtr.Zero || bm.bmBitsPixel != 32) return null;
+                int w = bm.bmWidth, h = Math.Abs(bm.bmHeight);
+                var outp = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                var data = outp.LockBits(new Rectangle(0, 0, w, h), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                var row = new byte[w * 4];
+                for (int y = 0; y < h; y++)
+                {
+                    int srcRow = bm.bmHeight > 0 ? h - 1 - y : y;   // positive height = stored bottom-up
+                    Marshal.Copy(new IntPtr(bm.bmBits.ToInt64() + (long)srcRow * bm.bmWidthBytes), row, 0, row.Length);
+                    Marshal.Copy(row, 0, new IntPtr(data.Scan0.ToInt64() + (long)y * data.Stride), row.Length);
+                }
+                outp.UnlockBits(data);
+                return outp;
+            }
+            catch { return null; }
+            finally
+            {
+                if (hbm != IntPtr.Zero) DeleteObject(hbm);
+                if (f != null) try { Marshal.ReleaseComObject(f); } catch { }
+            }
+        }
+
         public static Bitmap GetShellIcon(string path)
         {
             if (!IsWindows) return null;
+            Bitmap big = GetLargeIcon(path, 96);
+            if (big != null) return big;
             try
             {
                 const uint SHGFI_ICON = 0x100, SHGFI_LARGEICON = 0x0;
