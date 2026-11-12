@@ -1,0 +1,6 @@
+# build output and local-only files
+build/
+sdk/
+keystore/
+*.apk
+*.jks

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/img" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:contentDescription="GlassDesk widget"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical" android:paddingLeft="18dp" android:paddingRight="16dp">
+        <TextView android:id="@+id/greet" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:fontFamily="sans-serif-medium" android:textAllCaps="true" android:letterSpacing="0.08" android:singleLine="true"/>
+        <TextClock android:id="@+id/time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="50sp" android:fontFamily="sans-serif-light" android:letterSpacing="-0.02" android:includeFontPadding="false" android:singleLine="true" android:format12Hour="h:mm" android:format24Hour="H:mm"/>
+        <TextClock android:id="@+id/day" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" android:fontFamily="sans-serif-medium" android:singleLine="true" android:paddingTop="2dp" android:format12Hour="EEEE, MMMM d" android:format24Hour="EEEE, MMMM d"/>
+    </LinearLayout>
+</FrameLayout>

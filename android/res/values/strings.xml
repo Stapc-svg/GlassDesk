@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GlassDesk</string>
+    <string name="d_clock">Time, date and a greeting</string>
+    <string name="d_sys">Battery, memory and storage</string>
+    <string name="d_cal">This month at a glance</string>
+    <string name="d_notes">A note to yourself</string>
+    <string name="d_todo">Tasks you can tick off</string>
+    <string name="d_weather">Now and the next three days</string>
+    <string name="d_quote">A new thought each day</string>
+    <string name="d_count">Days until your big day</string>
+    <string name="d_fencea">Your favorite apps</string>
+    <string name="d_fenceb">A second set of apps</string>
+    <string name="d_fencec">A third set of apps</string>
+</resources>
