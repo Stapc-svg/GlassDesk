@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.2 for Android
+- **GlassDesk for Android:** 11 home-screen widgets: Clock, System, Calendar, Notes, To-do, Weather, Quote, Countdown and three Fences of up to 8 apps
+- **Two designs:** GlassDesk (frosted glass with a soft glow, the default) and Clean (bright and simple), each with light and dark themes and accent colors
+- A settings app with live previews that follows the design you pick
+- Tick off to-dos, open apps, refresh the weather and change the quote right from the home screen
+
 ## 1.7.2
 - **GlassDesk for Linux (beta):** fences, all 12 widgets, glass blur, settings, search, tray icon, backup and start at login, as a .deb, an AppImage and a tar.gz installer
 - New glassy logo and app icon
