@@ -269,7 +269,3 @@ Android: see [android/README.md](android/README.md).
 ### Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
-
-<p align="center"><img src="docs/divider.svg" width="100%" alt=""></p>
-
-<p align="center"><sub>Made with care for tidy desktops. If GlassDesk makes your desktop nicer, a ⭐ on this repo helps others find it.</sub></p>
