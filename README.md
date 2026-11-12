@@ -1,14 +1,7 @@
-<p align="center">
-  <img src="docs/screenshots/logo.png" width="112" alt="GlassDesk logo">
-</p>
-
-<h1 align="center">GlassDesk</h1>
-
-<p align="center">
-  <b>Your desktop, made of glass.</b><br>
-  Self-sorting fences and beautiful widgets in one small, fast app.<br>
-  For Windows, Linux and Android.
-</p>
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/banner-light.svg">
+  <img src="docs/banner-dark.svg" width="100%" alt="GlassDesk: your desktop, made of glass. Self-sorting fences and beautiful widgets for Windows, Linux and Android.">
+</picture>
 
 <p align="center">
   <a href="../../releases/tag/v1.7.2"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
@@ -22,6 +15,8 @@
   <img src="https://img.shields.io/badge/Linux-beta-FCC624" alt="Linux beta">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84" alt="Android 8+">
   <img src="https://img.shields.io/badge/size-~250%20KB-B57BFF" alt="About 250 KB">
+  <a href="../../stargazers"><img src="https://img.shields.io/github/stars/Stapc-svg/GlassDesk?style=flat&color=FFD60A&logo=github" alt="GitHub stars"></a>
+  <img src="https://img.shields.io/github/downloads/Stapc-svg/GlassDesk/total?color=5BD68A&label=downloads" alt="Total downloads">
 </p>
 
 <p align="center">
@@ -109,7 +104,7 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 
 **Uninstall:** Settings → Apps → Installed apps → GlassDesk → Uninstall. This closes the app, removes the startup entry and brings your normal desktop icons back.
 
----
+<p align="center"><img src="docs/divider.svg" width="100%" alt=""></p>
 
 <a id="linux"></a>
 
@@ -129,7 +124,7 @@ GlassDesk also runs on **Ubuntu, Linux Mint, Debian, Fedora, Arch, openSUSE** an
 
 More details: [linux/README.md](linux/README.md).
 
----
+<p align="center"><img src="docs/divider.svg" width="100%" alt=""></p>
 
 <a id="android"></a>
 
@@ -159,7 +154,7 @@ GlassDesk is on your phone too, as **home-screen widgets**: clock, weather, cale
 
 More details: [android/README.md](android/README.md).
 
----
+<p align="center"><img src="docs/divider.svg" width="100%" alt=""></p>
 
 <a id="help"></a>
 
@@ -275,6 +270,6 @@ Android: see [android/README.md](android/README.md).
 
 See [CHANGELOG.md](CHANGELOG.md).
 
----
+<p align="center"><img src="docs/divider.svg" width="100%" alt=""></p>
 
 <p align="center"><sub>Made with care for tidy desktops. If GlassDesk makes your desktop nicer, a ⭐ on this repo helps others find it.</sub></p>
