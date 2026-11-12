@@ -5,13 +5,14 @@
 <h1 align="center">GlassDesk</h1>
 
 <p align="center">
-  A lightweight, glass-style desktop organizer for Windows and Linux.<br>
+  A lightweight, glass-style desktop organizer for Windows, Linux and Android.<br>
   Auto-sorting fences, drag &amp; drop, and simple widgets in one small, native app.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6" alt="Platform: Windows 10 | 11">
   <img src="https://img.shields.io/badge/platform-Linux%20(beta)-FCC624?logo=linux&logoColor=black" alt="Platform: Linux (beta)">
+  <img src="https://img.shields.io/badge/platform-Android%208%2B-3DDC84?logo=android&logoColor=white" alt="Platform: Android 8+">
   <img src="https://img.shields.io/badge/.NET%20Framework-4.5%2B-512BD4" alt=".NET Framework 4.5+">
   <img src="https://img.shields.io/badge/language-C%23-239120" alt="Language: C#">
 </p>
@@ -82,6 +83,28 @@ GlassDesk also runs on **Ubuntu, Linux Mint, Debian, Fedora, Arch, openSUSE** an
 | Fedora, Arch, openSUSE, others | `GlassDesk-<version>-linux.tar.gz` | Unzip, then run `./install.sh` |
 
 More details: [linux/README.md](linux/README.md).
+
+## GlassDesk for Android
+
+GlassDesk is on your phone too, as **home-screen widgets**: clock, weather, calendar, to-do, notes, system, countdown, quote and three **fences** that hold up to 8 apps each.
+
+<p align="center">
+  <img src="docs/screenshots/android-glassdesk.jpg" width="24%" alt="GlassDesk widgets on Android">
+  <img src="docs/screenshots/android-fences.jpg" width="24%" alt="Fences on Android">
+  <img src="docs/screenshots/android-productive.jpg" width="24%" alt="To-do, notes and more on Android">
+  <img src="docs/screenshots/android-clean.jpg" width="24%" alt="The Clean design on Android">
+</p>
+
+- **Two designs:** *GlassDesk* (frosted glass with a soft glow, the default) and *Clean* (bright and simple), each in light and dark, with your choice of accent color.
+- **Tap to act:** tick off to-dos, open apps from a fence, refresh the weather, or get a new quote, right on the home screen.
+- **Resizable** widgets that redraw to fit, and a settings app that follows the design you pick.
+- **No account, ads or tracking.** Weather comes from [Open-Meteo](https://open-meteo.com).
+
+**Install:** download **`GlassDesk-Android-1.7.2.apk`** from [Releases](../../releases) on your phone, open it and tap Install (Android 8.0 or newer). Then open GlassDesk and tap **Add** under a widget.
+
+▶ [Watch the launch video](../../releases/download/android-v1.7.2/GlassDesk-1.7.2-Android-Film.mp4)
+
+More details: [android/README.md](android/README.md).
 
 ## Download & install
 
@@ -184,6 +207,7 @@ assets/            app icon and runtime config
 installer/         GlassDesk.wxs, the MSI definition (WiX format, built with wixl)
 docs/screenshots/  images used in this README
 linux/             GlassDesk for Linux (Python + GTK) and its packaging (build-linux.sh)
+android/           GlassDesk for Android: home-screen widgets and their settings app (Java, build.sh)
 ```
 
 ## Troubleshooting
@@ -194,7 +218,7 @@ linux/             GlassDesk for Linux (Python + GTK) and its packaging (build-l
 
 ## Requirements
 
-- Windows 10 or Windows 11, or Linux with Python 3 and GTK 3 (preinstalled on most desktops)
+- Windows 10 or Windows 11, or Linux with Python 3 and GTK 3 (preinstalled on most desktops), or Android 8.0 or newer
 - .NET Framework 4.5 or newer, which is already included in Windows 10 and 11
 
 ## Changelog
