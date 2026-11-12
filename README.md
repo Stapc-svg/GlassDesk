@@ -50,6 +50,10 @@
 
 GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as Apps, Folders, Documents and Images. It also adds a few widgets beside them. It sits behind your windows like part of the wallpaper, and it uses almost no CPU while nothing on the desktop is changing.
 
+<p align="center">
+  <img src="docs/screenshots/windows-demo.gif" width="100%" alt="GlassDesk fences and widgets appearing on the desktop (animated)">
+</p>
+
 ### Organizer
 - **Auto-sorting fences:** desktop items go into *Apps & Shortcuts, Folders, Documents, Images, Music & Video, Archives* and *Other files*. New files appear in the right fence on their own.
 - **Your own fences:** make fences like "School" or "Games" and drag icons into them.
