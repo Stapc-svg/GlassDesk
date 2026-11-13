@@ -405,18 +405,28 @@ namespace GlassDesk
         protected virtual void OnWheel(int delta) { }
         protected virtual void OnResized() { }
 
-        protected bool InGrip(Point p)
+        protected bool InGrip(Point p) { return ResizeZone(p) != 0; }
+
+        /// <summary>Where a resize would start: 1 = right edge, 2 = bottom edge, 3 = bottom-right corner, 0 = not on an edge.</summary>
+        protected int ResizeZone(Point p)
         {
-            int g = T.S(18);
-            return Resizable && p.X >= Panel.Right - g && p.Y >= Panel.Bottom - g && p.X <= Panel.Right && p.Y <= Panel.Bottom;
+            if (!Resizable || p.X < Panel.X || p.Y < Panel.Y || p.X > Panel.Right + 1 || p.Y > Panel.Bottom + 1) return 0;
+            int corner = App.Theme.S(20), edge = App.Theme.S(7);
+            bool right = p.X >= Panel.Right - edge, bottom = p.Y >= Panel.Bottom - edge;
+            if ((p.X >= Panel.Right - corner && p.Y >= Panel.Bottom - corner) || (right && bottom)) return 3;
+            if (right) return 1;
+            if (bottom) return 2;
+            return 0;
         }
+        int zone;
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
             if (e.Button != MouseButtons.Left || Cfg.LockPositions) return;
             downScreen = Cursor.Position; downBounds = PanelBounds; downZoom = Zoom;
-            if (InGrip(e.Location)) { resizing = true; Capture = true; if (IsHandleCreated) SetGlass(true); }
+            zone = ResizeZone(e.Location);
+            if (zone != 0) { resizing = true; Capture = true; if (IsHandleCreated) SetGlass(true); }
             else if (IsDragArea(e.Location)) { armed = true; Capture = true; }
         }
 
@@ -429,7 +439,8 @@ namespace GlassDesk
             {
                 // keep the widget's shape and scale everything inside it
                 float bw = downBounds.Width / downZoom, bh = downBounds.Height / downZoom;
-                float z = Math.Max((downBounds.Width + dx) / bw, (downBounds.Height + dy) / bh);
+                float zx = (downBounds.Width + dx) / bw, zy = (downBounds.Height + dy) / bh;
+                float z = zone == 1 ? zx : zone == 2 ? zy : Math.Max(zx, zy);
                 Zoom = Math.Max(0.6f, Math.Min(2.2f, (float)Math.Round(z * 50) / 50f));
                 int zw = (int)Math.Round(bw * Zoom), zh = (int)Math.Round(bh * Zoom);
                 Size = new Size(zw + 2 * pad, zh + 2 * pad);
@@ -440,8 +451,11 @@ namespace GlassDesk
             }
             if (resizing)
             {
-                int w = Math.Max(T.S(MinPanel.Width), downBounds.Width + dx);
-                int h = Math.Max(T.S(MinPanel.Height), downBounds.Height + dy);
+                int w = zone == 2 ? downBounds.Width : Math.Max(T.S(MinPanel.Width), downBounds.Width + dx);
+                int h = zone == 1 ? downBounds.Height : Math.Max(T.S(MinPanel.Height), downBounds.Height + dy);
+                // never wider or taller than the screen it is on
+                Rectangle wa = Screen.FromRectangle(downBounds).WorkingArea;
+                w = Math.Min(w, wa.Right - downBounds.X); h = Math.Min(h, wa.Bottom - downBounds.Y);
                 Size = new Size(w + 2 * pad, h + 2 * pad);
                 Panel = new Rectangle(pad, pad, w, h);
                 UpdateRegion();
@@ -459,8 +473,9 @@ namespace GlassDesk
                 if (UsesBackdrop && Environment.TickCount - lastMoveDraw > 30) { lastMoveDraw = Environment.TickCount; Redraw(); }
                 return;
             }
-            bool g = InGrip(e.Location) && !Cfg.LockPositions;
-            Cursor = g ? Cursors.SizeNWSE : Cursors.Default;
+            int zn = Cfg.LockPositions ? 0 : ResizeZone(e.Location);
+            bool g = zn != 0;
+            Cursor = zn == 1 ? Cursors.SizeWE : zn == 2 ? Cursors.SizeNS : zn == 3 ? Cursors.SizeNWSE : Cursors.Default;
             if (Resizable && !hoverPanel) { hoverPanel = true; hoverGrip = g; Redraw(); }
             else if (g != hoverGrip) { hoverGrip = g; Redraw(); }
             OnHover(e.Location);

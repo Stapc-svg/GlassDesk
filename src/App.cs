@@ -416,6 +416,7 @@ namespace GlassDesk
                 if (Settings.Positions.TryGetValue(w.Id, out saved) && (preview || OnSomeScreen(saved)))
                 {
                     var r = new Rectangle(saved.Location, w.PreferredPanelSize(saved.Size));
+                    if (!preview) r = KeepOnScreen(r);
                     taken.Add(r); placed.Add(new KeyValuePair<GlassWindow, Rectangle>(w, r));
                 }
                 else pending.Add(w);
@@ -441,6 +442,16 @@ namespace GlassDesk
                 });
             }
             if (changed && !preview) Settings.Save();
+        }
+
+        /// <summary>A panel that hangs past the edge of its screen (after a resolution or monitor change) is moved fully back on.</summary>
+        static Rectangle KeepOnScreen(Rectangle r)
+        {
+            Rectangle wa = Screen.FromRectangle(r).WorkingArea;
+            int w = Math.Min(r.Width, wa.Width), h = Math.Min(r.Height, wa.Height);
+            int x = Math.Max(wa.Left, Math.Min(r.X, wa.Right - w));
+            int y = Math.Max(wa.Top, Math.Min(r.Y, wa.Bottom - h));
+            return new Rectangle(x, y, r.Width, r.Height);
         }
 
         Point FindFreeSpot(Size s, bool fromRight, List<Rectangle> taken, Rectangle wa, int m)

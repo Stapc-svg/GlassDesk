@@ -240,7 +240,7 @@ namespace GlassDesk
                 g.Restore(st);
             }
             // name and description
-            using (var b = new SolidBrush(P.Text)) using (var f = new Font(Font.FontFamily, Font.Size, FontStyle.Bold))
+            using (var b = new SolidBrush(P.Text)) using (var f = new Font(Font.FontFamily, Font.Size, FontStyle.Bold, Font.Unit))
                 g.DrawString(L.Name, f, b, new RectangleF(2, stage.Bottom + 6 * k, Width - 4, 18 * k), Gfx.Left);
             using (var b = new SolidBrush(P.Sub))
                 g.DrawString(L.Desc, Font, b, new RectangleF(2, stage.Bottom + 22 * k, Width - 4, 16 * k), new StringFormat(Gfx.Left) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
