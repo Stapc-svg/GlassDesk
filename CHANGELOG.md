@@ -1,5 +1,10 @@
 # Changelog
 
+## Linux (beta) fixes
+- Panels that ended up off-screen (after changing the resolution or unplugging a monitor) now come back on screen, and GlassDesk re-arranges itself when the screen changes
+- The Photo frame now shows your photo right away at startup, and when you turn it on after choosing a folder
+- Broken shortcuts (links to deleted files) show up in the Other fence again, so you can delete them
+
 ## 1.7.2 for Android
 - **GlassDesk for Android:** 11 home-screen widgets: Clock, System, Calendar, Notes, To-do, Weather, Quote, Countdown and three Fences of up to 8 apps
 - **Two designs:** GlassDesk (frosted glass with a soft glow, the default) and Clean (bright and simple), each with light and dark themes and accent colors

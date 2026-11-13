@@ -467,7 +467,10 @@ class PhotoWidget(Widget):
         self.pb = None
         if self.files:
             try:
-                x, y, w, h = self.panel_rect()
+                # Use the planned panel size: before the window is shown (at startup, or while the
+                # widget is turned off) its allocation is 1x1, which made the photo fail to load.
+                w, h = self.panel_size()
+                w, h = max(w, 64), max(h, 64)
                 self.pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(self.files[self.idx % len(self.files)], int(w * 1.6), int(h * 1.6), True)
             except Exception:
                 self.pb = None

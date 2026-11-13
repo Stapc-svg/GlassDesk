@@ -41,6 +41,7 @@ class GlassDeskApp(Gtk.Application):
         self.indicator = None
         self._hold = False
         self._fixed_now = None
+        self._screen_id = 0
 
     # ------------------------------------------------------------ command line
     def do_command_line(self, cmd):
@@ -97,6 +98,9 @@ class GlassDeskApp(Gtk.Application):
             return
         self.make_tray()
         self.bind_keys()
+        scr = Gdk.Screen.get_default()
+        scr.connect("size-changed", self._screen_changed)
+        scr.connect("monitors-changed", self._screen_changed)
         if not self.settings.get("_first_run_done"):
             self.settings["_first_run_done"] = True
             core.set_autostart(self.settings["start_at_login"])
@@ -131,6 +135,32 @@ class GlassDeskApp(Gtk.Application):
                         getattr(wd, fn)()
 
     # ------------------------------------------------------------ layout
+    def _screen_changed(self, *a):
+        """Resolution changed or a monitor was plugged in/out: put every panel back on screen."""
+        if self._screen_id:
+            GLib.source_remove(self._screen_id)
+        def go():
+            self._screen_id = 0
+            self.place_all()
+            for w in self.all_windows():
+                w.queue_draw()
+            return False
+        self._screen_id = GLib.timeout_add(600, go)
+
+    def _on_screen(self, x, y, pw, ph):
+        """Moves a saved position back onto a monitor if it is no longer on any screen."""
+        disp = Gdk.Display.get_default()
+        for i in range(disp.get_n_monitors()):
+            g = disp.get_monitor(i).get_workarea()
+            # keep it if at least a good part of the panel's top is on this monitor
+            if x + min(pw, 80) > g.x and x + 40 < g.x + g.width and y + 20 > g.y - 10 and y + 30 < g.y + g.height:
+                return x, y
+        wa = self.workarea()
+        gap = int(self.theme.s(14))
+        x = max(wa.x + gap, min(x, wa.x + wa.width - pw - gap))
+        y = max(wa.y + gap, min(y, wa.y + wa.height - min(ph, wa.height // 2) - gap))
+        return x, y
+
     def workarea(self):
         disp = Gdk.Display.get_default()
         mon = disp.get_primary_monitor() or disp.get_monitor(0)
@@ -174,7 +204,7 @@ class GlassDeskApp(Gtk.Application):
             pos = self.settings["positions"].get(f.key)
             pw, ph = f.panel_size()
             if pos:
-                f.place(pos[0], pos[1])
+                f.place(*self._on_screen(pos[0], pos[1], pw, ph))
                 continue
             if y + ph > wa.y + wa.height - gap and y > wa.y + gap:
                 x += colw + gap
@@ -194,7 +224,7 @@ class GlassDeskApp(Gtk.Application):
             pw, ph = wd.panel_size()
             ph = wd.content_height(ph)
             if pos:
-                wd.place(pos[0], pos[1])
+                wd.place(*self._on_screen(pos[0], pos[1], pw, ph))
                 continue
             if y + ph > wa.y + wa.height - gap and y > wa.y + gap:
                 x -= colw + gap
