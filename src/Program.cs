@@ -135,6 +135,8 @@ namespace GlassDesk
             using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher.png"), ImageFormat.Png);
             l.SetQuery("o");
             using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-search.png"), ImageFormat.Png);
+            var o = app.MakeOrganize(); o.Location = new System.Drawing.Point(500, 220);
+            using (var b = o.Render()) b.Save(Path.Combine(dir, "organize.png"), ImageFormat.Png);
             var w = new WelcomeForm(app); w.Location = new System.Drawing.Point(640, 290);
             using (var b = w.Render()) b.Save(Path.Combine(dir, "welcome.png"), ImageFormat.Png);
             return 0;

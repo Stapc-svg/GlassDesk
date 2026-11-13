@@ -72,6 +72,39 @@ namespace GlassDesk
         {
             if (b == MouseButtons.Right) App.ShowWidgetMenu(this);
         }
+
+        // ---- groups: little dots along the bottom; scroll (or click the dots) to switch ----
+        RectangleF Dots(int count)
+        {
+            float d = App.Theme.Sf(6), gap = App.Theme.Sf(5), w = count * d + (count - 1) * gap;
+            return new RectangleF(Panel.X + (Panel.Width - w) / 2, Panel.Bottom - App.Theme.Sf(11), w, d);
+        }
+        protected override void PaintOverlay(Graphics g)
+        {
+            int i, n;
+            if (!App.GroupInfo(Id, out i, out n)) return;
+            var r = Dots(n);
+            float d = r.Height, gap = App.Theme.Sf(5);
+            Gfx.FillRound(g, Color.FromArgb(T.Dark ? 70 : 40, 0, 0, 0), RectangleF.Inflate(r, App.Theme.Sf(5), App.Theme.Sf(3)), App.Theme.Sf(6));
+            for (int k = 0; k < n; k++)
+                using (var b = new SolidBrush(k == i ? T.Accent : Color.FromArgb(150, 255, 255, 255)))
+                    g.FillEllipse(b, r.X + k * (d + gap), r.Y, d, d);
+        }
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            int i, n;
+            if (App.GroupInfo(Id, out i, out n)) { App.SwitchGroup(this, e.Delta < 0 ? 1 : -1); return; }
+            base.OnMouseWheel(e);
+        }
+        protected override bool OnPreClick(Point p) { return OnGroupDots(p); }
+        protected bool OnGroupDots(Point p)
+        {
+            int i, n;
+            if (!App.GroupInfo(Id, out i, out n)) return false;
+            var r = RectangleF.Inflate(Dots(n), App.Theme.Sf(6), App.Theme.Sf(6));
+            if (!r.Contains(p)) return false;
+            App.SwitchGroup(this, 1); return true;
+        }
     }
 
     // ---------------------------------------------------------------- Clock

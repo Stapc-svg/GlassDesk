@@ -16,6 +16,11 @@ namespace GlassDesk
         public bool LockPositions = false;
         public bool KeepBehindWindows = true;
         public bool SingleClickOpen = false;
+        public bool Stacks = true;                 // 4+ files of the same type in a fence become one stack
+        public bool PerDisplayLayouts = true;      // remember a layout for each monitor setup
+        public string DisplayKey = "";             // the monitor setup the current layout belongs to
+        public Dictionary<string, Dictionary<string, Rectangle>> Layouts = new Dictionary<string, Dictionary<string, Rectangle>>();
+        public List<List<string>> Groups = new List<List<string>>();   // widget groups; the first id is the one showing
 
         // Appearance
         public string Look = "glassdesk";        // theme from the gallery (see Themes in Extras.cs)
@@ -143,6 +148,9 @@ namespace GlassDesk
                 case "LockPositions": LockPositions = B(v); return;
                 case "KeepBehindWindows": KeepBehindWindows = B(v); return;
                 case "SingleClickOpen": SingleClickOpen = B(v); return;
+                case "Stacks": Stacks = B(v); return;
+                case "PerDisplayLayouts": PerDisplayLayouts = B(v); return;
+                case "DisplayKey": DisplayKey = v.Trim(); return;
                 case "Theme": Theme = v.Trim(); return;
                 case "Accent": Accent = Color.FromArgb(255, Color.FromArgb(int.Parse(v.Trim(), NumberStyles.HexNumber))); return;
                 case "Blur": Blur = B(v); return;
@@ -215,6 +223,20 @@ namespace GlassDesk
             else if (k.StartsWith("col.")) { if (B(v)) Collapsed.Add(k.Substring(4)); }
             else if (k.StartsWith("title.")) Titles[k.Substring(6)] = Unesc(v);
             else if (k.StartsWith("zoom.")) WidgetZoom[k.Substring(5)] = Math.Max(60, Math.Min(220, I(v)));
+            else if (k.StartsWith("group.")) { var ids = new List<string>(); foreach (string id in v.Split(',')) if (id.Trim().Length > 0) ids.Add(id.Trim()); if (ids.Count >= 2) Groups.Add(ids); }
+            else if (k.StartsWith("lay."))
+            {
+                // lay.<monitor setup>.<panel id> = x,y,w,h
+                string rest = k.Substring(4); int dot = rest.IndexOf('.');
+                string[] p = v.Split(',');
+                if (dot > 0 && p.Length == 4)
+                {
+                    string key = rest.Substring(0, dot);
+                    Dictionary<string, Rectangle> d;
+                    if (!Layouts.TryGetValue(key, out d)) Layouts[key] = d = new Dictionary<string, Rectangle>();
+                    d[rest.Substring(dot + 1)] = new Rectangle(I(p[0]), I(p[1]), I(p[2]), I(p[3]));
+                }
+            }
             else if (k.StartsWith("pos."))
             {
                 string[] p = v.Split(',');
@@ -263,6 +285,12 @@ namespace GlassDesk
                 foreach (string c in Collapsed) w("col." + c, "1");
                 foreach (var kv in Titles) w("title." + kv.Key, Esc(kv.Value));
                 foreach (var kv in WidgetZoom) if (kv.Value != 100) w("zoom." + kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
+                w("Stacks", b(Stacks)); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
+                for (int i = 0; i < Groups.Count; i++) w("group." + i, string.Join(",", Groups[i].ToArray()));
+                if (PerDisplayLayouts && !string.IsNullOrEmpty(DisplayKey)) Layouts[DisplayKey] = new Dictionary<string, Rectangle>(Positions);
+                foreach (var lay in Layouts)
+                    foreach (var kv in lay.Value)
+                        w("lay." + lay.Key + "." + kv.Key, string.Format(CultureInfo.InvariantCulture, "{0},{1},{2},{3}", kv.Value.X, kv.Value.Y, kv.Value.Width, kv.Value.Height));
                 foreach (var kv in Positions)
                     w("pos." + kv.Key, string.Format(CultureInfo.InvariantCulture, "{0},{1},{2},{3}", kv.Value.X, kv.Value.Y, kv.Value.Width, kv.Value.Height));
                 string tmp = FilePath + ".tmp";

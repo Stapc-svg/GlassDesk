@@ -61,6 +61,7 @@ namespace GlassDesk
             try { using (var g = Graphics.FromHwnd(IntPtr.Zero)) DpiScale = g.DpiX / 96f; } catch { DpiScale = 1f; }
             Theme = Theme.From(Settings, DpiScale);
             AppIcon = MakeIcon(Theme.Accent);
+            Safe("monitor layout", delegate { SwitchDisplayLayout(); });
 
             invoker = new Control(); invoker.CreateControl();
 
@@ -185,6 +186,50 @@ namespace GlassDesk
             return new LauncherForm(this, items);
         }
 
+        public const string UnsortedId = "cust.unsorted";
+
+        public void ShowOrganize() { MakeOrganize().Show(); }
+
+        public OrganizeForm MakeOrganize()
+        {
+            var groups = new List<OrganizeForm.Group>();
+            var ticked = new HashSet<DesktopItem>();
+            var byId = new Dictionary<string, OrganizeForm.Group>();
+            foreach (var f in fences.Values)
+            {
+                if (!f.HoldsDesktopItems || f.Id == UnsortedId) continue;
+                var g = new OrganizeForm.Group { Id = f.Id, Title = f.Caption };
+                foreach (var it in f.Items) if (!it.IsRecycleBin) { g.Items.Add(it); ticked.Add(it); }
+                groups.Add(g); byId[f.Id] = g;
+            }
+            FenceWindow un;
+            if (fences.TryGetValue(UnsortedId, out un))
+                foreach (var it in un.Items)
+                {
+                    string id = "cat." + Organizer.CategoryOf(it);
+                    OrganizeForm.Group g;
+                    if (!byId.TryGetValue(id, out g)) { g = new OrganizeForm.Group { Id = id, Title = Organizer.CategoryName(Organizer.CategoryOf(it)) }; groups.Add(g); byId[id] = g; }
+                    g.Items.Add(it);
+                }
+            groups.Sort((a, b) => b.Items.Count.CompareTo(a.Items.Count));
+            return new OrganizeForm(this, groups, ticked, ApplyOrganize);
+        }
+
+        void ApplyOrganize(HashSet<DesktopItem> sorted, List<DesktopItem> unsorted)
+        {
+            foreach (var it in sorted)
+            {
+                string pin;
+                if (Settings.Pins.TryGetValue(it.Path, out pin) && pin == UnsortedId) Settings.Pins.Remove(it.Path);
+            }
+            foreach (var it in unsorted) if (!it.IsRecycleBin) Settings.Pins[it.Path] = UnsortedId;
+            bool anyUnsorted = Settings.Pins.ContainsValue(UnsortedId);
+            if (anyUnsorted && !Settings.CustomFences.Contains(UnsortedId)) { Settings.CustomFences.Add(UnsortedId); Settings.Titles[UnsortedId] = "Unsorted"; }
+            if (!anyUnsorted && Settings.CustomFences.Contains(UnsortedId)) { Settings.CustomFences.Remove(UnsortedId); Settings.Positions.Remove(UnsortedId); }
+            Settings.Save();
+            Rebuild();
+        }
+
         public void ShowWelcome()
         {
             var w = new WelcomeForm(this);
@@ -288,6 +333,7 @@ namespace GlassDesk
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
             weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
             countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic;
+            ApplyGroups();
             if (!preview) UpdateWatchers();
             PlaceAll();
         }
@@ -655,7 +701,102 @@ namespace GlassDesk
 
         void OnDisplayChanged(object s, EventArgs e)
         {
-            try { invoker.BeginInvoke(new Action(delegate { Theme = Theme.From(Settings, DpiScale); Gfx.ClearFonts(); PlaceAll(); })); } catch { }
+            try { invoker.BeginInvoke(new Action(delegate { Theme = Theme.From(Settings, DpiScale); Gfx.ClearFonts(); SwitchDisplayLayout(); PlaceAll(); })); } catch { }
+        }
+
+        /// <summary>A short name for the monitors plugged in right now (their sizes and places).</summary>
+        static string CurrentDisplayKey()
+        {
+            var parts = new List<string>();
+            foreach (var sc in Screen.AllScreens) parts.Add(sc.Bounds.X + "_" + sc.Bounds.Y + "_" + sc.Bounds.Width + "_" + sc.Bounds.Height);
+            parts.Sort(StringComparer.Ordinal);
+            uint h = 2166136261;
+            foreach (char c in string.Join("|", parts.ToArray())) { h ^= c; h *= 16777619; }
+            return "d" + h.ToString("x8");
+        }
+        public int DisplayCount { get { return Screen.AllScreens.Length; } }
+        public int SavedLayouts { get { return Settings.Layouts.Count; } }
+
+        /// <summary>Docked or undocked: keep the old layout for the old monitors, and bring back the one saved for these monitors.</summary>
+        void SwitchDisplayLayout()
+        {
+            if (preview || !Settings.PerDisplayLayouts) return;
+            string key = CurrentDisplayKey();
+            if (key == Settings.DisplayKey) return;
+            if (!string.IsNullOrEmpty(Settings.DisplayKey)) Settings.Layouts[Settings.DisplayKey] = new Dictionary<string, Rectangle>(Settings.Positions);
+            Dictionary<string, Rectangle> saved;
+            if (Settings.Layouts.TryGetValue(key, out saved) && saved.Count > 0) Settings.Positions = new Dictionary<string, Rectangle>(saved);
+            Settings.DisplayKey = key;
+            Settings.Save();
+        }
+
+        // =============================================================== widget groups
+        static readonly Dictionary<string, string> widgetNames = new Dictionary<string, string>
+        {
+            { "clock", "Clock" }, { "system", "System" }, { "calendar", "Calendar" }, { "notes", "Notes" }, { "weather", "Weather" },
+            { "todo", "To-do" }, { "photos", "Photos" }, { "countdown", "Countdown" }, { "quote", "Quote" }, { "github", "GitHub" },
+            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" },
+        };
+        public static string WidgetName(string id) { string n; return widgetNames.TryGetValue(id, out n) ? n : id; }
+
+        List<string> GroupOf(string id) { foreach (var g in Settings.Groups) if (g.Contains(id)) return g; return null; }
+        readonly Dictionary<string, List<string>> liveGroups = new Dictionary<string, List<string>>();   // id -> wanted members of its group
+
+        /// <summary>Only the first wanted widget of each group shows; the rest wait in the same spot.</summary>
+        void ApplyGroups()
+        {
+            liveGroups.Clear();
+            var byId = new Dictionary<string, GlassWindow>();
+            foreach (var w in Windows) if (w is Widget) byId[w.Id] = w;
+            foreach (var g in Settings.Groups)
+            {
+                var wanted = new List<string>();
+                foreach (string id in g) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Wanted) wanted.Add(id); }
+                if (wanted.Count < 2) continue;
+                foreach (string id in wanted) liveGroups[id] = wanted;
+                for (int i = 1; i < wanted.Count; i++) byId[wanted[i]].Wanted = false;
+            }
+        }
+
+        /// <summary>Which member this is (0-based) and how many show in its group; false when not grouped.</summary>
+        public bool GroupInfo(string id, out int index, out int count)
+        {
+            List<string> g; index = 0; count = 0;
+            if (!liveGroups.TryGetValue(id, out g)) return false;
+            index = g.IndexOf(id); count = g.Count; return true;
+        }
+
+        public void SwitchGroup(Widget w, int dir)
+        {
+            List<string> live; var g = GroupOf(w.Id);
+            if (g == null || !liveGroups.TryGetValue(w.Id, out live)) return;
+            string next = live[((live.IndexOf(w.Id) + dir) % live.Count + live.Count) % live.Count];
+            if (next == w.Id) return;
+            // the next one takes this one's spot and moves to the front
+            Rectangle cur = new Rectangle(w.PanelBounds.Location, w.PanelBounds.Size), old;
+            Settings.Positions[next] = Settings.Positions.TryGetValue(next, out old) ? new Rectangle(cur.Location, old.Size) : new Rectangle(cur.Location, Size.Empty);
+            g.Remove(next); g.Insert(0, next);
+            Settings.Save();
+            ApplySettings();
+        }
+
+        public void JoinGroup(Widget w, Widget target)
+        {
+            var mine = GroupOf(w.Id); if (mine != null) { mine.Remove(w.Id); if (mine.Count < 2) Settings.Groups.Remove(mine); }
+            var g = GroupOf(target.Id);
+            if (g == null) { g = new List<string> { target.Id }; Settings.Groups.Add(g); }
+            g.Add(w.Id);
+            Settings.Save();
+            ApplySettings();
+        }
+
+        public void LeaveGroup(Widget w)
+        {
+            var g = GroupOf(w.Id); if (g == null) return;
+            g.Remove(w.Id); if (g.Count < 2) Settings.Groups.Remove(g);
+            Settings.Positions.Remove(w.Id);   // find it a free spot of its own
+            Settings.Save();
+            ApplySettings();
         }
 
         void OnUserPrefChanged(object s, UserPreferenceChangedEventArgs e)
@@ -695,6 +836,7 @@ namespace GlassDesk
             m.Items.Add("New fence…", null, delegate { NewFence(); });
             m.Items.Add("Add a rule…", null, delegate { AddRule(null); });
             m.Items.Add("Edit note", null, delegate { if (!notes.Visible) { Settings.ShowNotes = true; ApplySettings(); } notes.Edit(); });
+            m.Items.Add("Organize desktop…", null, delegate { ShowOrganize(); });
             m.Items.Add("Rescan desktop", null, delegate { Rebuild(); });
             m.Items.Add("Check for updates", null, delegate { Updates.Check(true); });
             m.Items.Add(new ToolStripSeparator());
@@ -711,6 +853,14 @@ namespace GlassDesk
             if (w == countdown) m.Items.Add("Change event…", null, delegate { countdown.Edit(); });
             if (w == quote) m.Items.Add("Another quote", null, delegate { quote.Next(); });
             if (w == github) { m.Items.Add("Open profile", null, delegate { github.OpenProfile(); }); m.Items.Add("Change username…", null, delegate { github.ChooseUser(); }); m.Items.Add("Refresh now", null, delegate { github.Fetch(); }); }
+            {
+                int gi, gc;
+                var grp = new ToolStripMenuItem("Group with");
+                foreach (var o in Windows)
+                    if (o is Widget && o != w && o.Visible) { var ow = (Widget)o; grp.DropDownItems.Add(WidgetName(ow.Id), null, delegate { JoinGroup(w, ow); }); }
+                if (grp.DropDownItems.Count > 0) m.Items.Add(grp);
+                if (GroupInfo(w.Id, out gi, out gc)) { m.Items.Add("Next in group  (scroll)", null, delegate { SwitchGroup(w, 1); }); m.Items.Add("Take out of group", null, delegate { LeaveGroup(w); }); }
+            }
             if (w == music) { m.Items.Add("Play / pause", null, delegate { music.PlayPause(); }); m.Items.Add("Next song", null, delegate { music.Next(); }); m.Items.Add("Previous song", null, delegate { music.Previous(); }); m.Items.Add("Volume mixer", null, delegate { music.OpenMixer(); }); }
             if (w == focus) { m.Items.Add("Start / pause", null, delegate { focus.Toggle(); }); m.Items.Add("Reset", null, delegate { focus.Reset(); }); }
             if (w == todo) { m.Items.Add("Edit list", null, delegate { todo.Edit(); }); m.Items.Add("Clear finished tasks", null, delegate { todo.ClearDone(); }); }
@@ -851,6 +1001,8 @@ namespace GlassDesk
             Settings.ShowWeather = false; Settings.ShowPhotos = false;
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
+            string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote
+            if (!string.IsNullOrEmpty(grp)) Settings.Groups.Add(new List<string>(grp.Split(',')));
             CreateWidgets();
             weather.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
             Rebuild();
@@ -868,7 +1020,7 @@ namespace GlassDesk
             add("apps", new[] { "Chrome.lnk", "Spotify.lnk", "Visual Studio Code.lnk", "Steam.lnk", "Roblox Studio.lnk", "Discord.lnk", "Blender.lnk", "OBS Studio.lnk" }, false);
             add("folders", new[] { "Projects", "School", "Screenshots", "Game assets" }, true);
             add("docs", new[] { "Budget 2026.xlsx", "Notes.txt", "Report final.docx", "Invoice-1042.pdf", "Ideas.md" }, false);
-            add("images", new[] { "wallpaper.jpg", "logo.png", "sketch.png", "photo-0912.heic", "banner.webp" }, false);
+            add("images", new[] { "wallpaper.jpg", "logo.png", "sketch.png", "icon.png", "screenshot-1.png", "photo-0912.heic", "banner.webp" }, false);
             add("media", new[] { "podcast.mp3", "clip.mp4" }, false);
             add("archives", new[] { "backup.zip", "assets.7z" }, false);
         }

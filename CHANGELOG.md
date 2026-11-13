@@ -2,6 +2,11 @@
 
 ## 1.8.0
 
+- **Stacks:** 4 or more files of the same type in a fence become one stack. Click it to open or close it.
+- **Widget groups:** right-click a widget → Group with. Grouped widgets share one spot; scroll over it or click the dots to switch.
+- **Organize desktop:** a preview of where every file goes, with a tick for each one. Unticked files go to an "Unsorted" fence. Open it from the tray menu or Settings → Organizer.
+- **Layouts per monitor setup:** GlassDesk remembers a layout for each set of monitors and brings it back when you dock or undock.
+
 - **New search:** Ctrl + Alt + F opens a launcher with a grid of icons on the blurred wallpaper, drawn in your theme.
 - **Music widget:** shows the song playing in any app (Spotify, YouTube, Apple Music...) with its cover, progress and play / pause / next buttons. When nothing plays, it shows the last song you listened to.
 - **Welcome screen:** shown once, the first time GlassDesk starts. It never comes back, even after updates.

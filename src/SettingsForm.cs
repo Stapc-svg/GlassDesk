@@ -373,6 +373,8 @@ namespace GlassDesk
             SliderRow("Change photo every", "{0} minutes", 1, 60, 1, S.PhotoMinutes, v => S.PhotoMinutes = v);
 
             Section("Layout");
+            Row("Layout for each monitor setup", "Remembers where everything goes when you dock or undock (" + app.DisplayCount + (app.DisplayCount == 1 ? " monitor" : " monitors") + " now, " + app.SavedLayouts + (app.SavedLayouts == 1 ? " layout" : " layouts") + " saved)", Toggle(S.PerDisplayLayouts, v => S.PerDisplayLayouts = v));
+            Row("Group widgets", "Right-click a widget → Group with, then scroll over it to switch", null);
             Row("Reset widget positions", "Move all widgets back to the right side of the screen",
                 Button("Reset", false, delegate { app.ResetLayout(false); }));
         }
@@ -384,6 +386,8 @@ namespace GlassDesk
             Row("Show desktop fences", "Group desktop items by type", Toggle(S.ShowFences, v => S.ShowFences = v));
             Row("Hide empty fences", "Only show a fence when it has something in it", Toggle(S.HideEmptyFences, v => S.HideEmptyFences = v));
             Row("Hide Windows desktop icons", "Recommended: the fences replace the normal icons, so nothing overlaps", Toggle(S.HideDesktopIcons, v => S.HideDesktopIcons = v));
+            Row("Stack similar files", "4 or more files of the same type become one stack — click it to open", Toggle(S.Stacks, v => S.Stacks = v));
+            Row("Organize desktop", "See where every file goes and pick which ones to sort", Button("Preview…", true, delegate { app.ShowOrganize(); }));
 
             Section("Your fences");
             foreach (string id in S.CustomFences.ToArray())

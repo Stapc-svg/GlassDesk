@@ -217,6 +217,8 @@ namespace GlassDesk
 
         // ---------------- painting ----------------
         protected abstract void PaintContent(Graphics g);
+        protected virtual void PaintOverlay(Graphics g) { }
+        protected virtual bool OnPreClick(Point p) { return false; }
 
         public Bitmap RenderBitmap()
         {
@@ -227,6 +229,7 @@ namespace GlassDesk
                 g.Clear(Color.Transparent);
                 DrawChrome(g);
                 PaintContent(g);
+                PaintOverlay(g);
                 if (Resizable && (hoverPanel || resizing) && !Cfg.LockPositions) DrawGrip(g);
             }
             return bmp;
@@ -510,7 +513,7 @@ namespace GlassDesk
             if (wasMoving) { App.SavePosition(Id, PanelBounds); if (IsHandleCreated) SetGlass(false); }
             armed = dragging = resizing = false;
             Capture = false;
-            if (!wasMoving) OnClickAt(e.Location, e.Button);
+            if (!wasMoving && !(e.Button == MouseButtons.Left && OnPreClick(e.Location))) OnClickAt(e.Location, e.Button);
         }
 
         protected override void OnMouseDoubleClick(MouseEventArgs e)

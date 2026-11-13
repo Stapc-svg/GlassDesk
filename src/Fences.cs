@@ -51,6 +51,19 @@ namespace GlassDesk
         public string Parent { get { return IsRecycleBin ? "" : (System.IO.Path.GetDirectoryName(Path) ?? ""); } }
     }
 
+    /// <summary>Several files of the same type shown as one tile in a fence. Click it to open or close the stack.</summary>
+    internal class StackItem : DesktopItem
+    {
+        public readonly List<DesktopItem> Members;
+        public bool Open;
+        public StackItem(string fence, string ext, List<DesktopItem> members) : base("::stack:" + fence + ":" + ext, false)
+        {
+            Members = members;
+            Name = members.Count + " " + ext.TrimStart('.').ToUpperInvariant() + " files";
+            Ext = ext;
+        }
+    }
+
     internal static class Organizer
     {
         public static readonly string[][] Categories =
@@ -179,6 +192,42 @@ namespace GlassDesk
         public bool HoldsDesktopItems { get { return Kind != FenceKind.Folder; } }
         public string Caption;
         public List<DesktopItem> Items = new List<DesktopItem>();
+        /// <summary>What the fence shows: items, with 4+ files of one type folded into a stack.</summary>
+        List<DesktopItem> Tiles = new List<DesktopItem>();
+        readonly HashSet<string> openStacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void BuildTiles()
+        {
+            var tiles = new List<DesktopItem>();
+            if (!Cfg.Stacks || IsFolder) { tiles.AddRange(Items); Tiles = tiles; return; }
+            var byExt = new Dictionary<string, List<DesktopItem>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var it in Items)
+            {
+                if (it.IsDir || it.IsRecycleBin || it.Ext.Length == 0 || it.Ext == ".lnk" || it.Ext == ".url") continue;
+                List<DesktopItem> l; if (!byExt.TryGetValue(it.Ext, out l)) byExt[it.Ext] = l = new List<DesktopItem>();
+                l.Add(it);
+            }
+            var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var it in Items)
+            {
+                List<DesktopItem> l;
+                if (!it.IsDir && !it.IsRecycleBin && byExt.TryGetValue(it.Ext, out l) && l.Count >= 4)
+                {
+                    if (!done.Add(it.Ext)) continue;
+                    var st = new StackItem(Id, it.Ext, l) { Open = openStacks.Contains(it.Ext) };
+                    tiles.Add(st);
+                    if (st.Open) tiles.AddRange(l);
+                }
+                else tiles.Add(it);
+            }
+            Tiles = tiles;
+        }
+
+        void ToggleStack(StackItem st)
+        {
+            if (!openStacks.Remove(st.Ext)) openStacks.Add(st.Ext);
+            BuildTiles(); ClampScroll(); Redraw();
+        }
         int scroll, hover = -1;
         bool hoverTitle;
 
@@ -276,12 +325,13 @@ namespace GlassDesk
                 return c != 0 ? c : string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase);
             });
             Items = result;
+            BuildTiles();
             ClampScroll();
         }
 
         Rectangle Content { get { return new Rectangle(Panel.X + Gap, Panel.Y + TitleH, Panel.Width - 2 * Gap, Panel.Height - TitleH - Gap / 2); } }
         int Cols { get { return Math.Max(1, Content.Width / TileW); } }
-        int ContentHeight { get { int rows = (Items.Count + Cols - 1) / Cols; return rows * TileH; } }
+        int ContentHeight { get { int rows = (Tiles.Count + Cols - 1) / Cols; return rows * TileH; } }
 
         void ClampScroll()
         {
@@ -300,7 +350,7 @@ namespace GlassDesk
         int HitItem(Point p)
         {
             if (Collapsed || !Content.Contains(p)) return -1;
-            for (int i = 0; i < Items.Count; i++) if (TileRect(i).Contains(p)) return i;
+            for (int i = 0; i < Tiles.Count; i++) if (TileRect(i).Contains(p)) return i;
             return -1;
         }
 
@@ -345,7 +395,7 @@ namespace GlassDesk
             int iconSize;
             var label = Gfx.F(T.FontName, T.Sf(12 * Math.Min(1.1f, IconScale)), FontStyle.Regular);
             iconSize = T.S(36 * IconScale);
-            for (int i = 0; i < Items.Count; i++)
+            for (int i = 0; i < Tiles.Count; i++)
             {
                 Rectangle r = TileRect(i);
                 if (r.Bottom < c.Top || r.Top > c.Bottom) continue;
@@ -357,14 +407,18 @@ namespace GlassDesk
                 }
                 else if (i == hover) Gfx.FillRound(g, T.Hover, tile, T.Sf(10));
                 var ir = new Rectangle(r.X + (r.Width - iconSize) / 2, r.Y + T.S(8), iconSize, iconSize);
-                Bitmap icon = Items[i].Icon;
-                if (icon != null) { var im = g.InterpolationMode; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(icon, ir); g.InterpolationMode = im; }
-                else DrawFallbackIcon(g, ir, Items[i]);
+                var stack = Tiles[i] as StackItem;
+                bool inStack = !(Tiles[i] is StackItem) && IsInOpenStack(Tiles[i]);
+                if (inStack) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, 26), tile, T.Sf(10));
+                Bitmap icon = stack != null ? null : Tiles[i].Icon;
+                if (stack != null) DrawStack(g, ir, stack);
+                else if (icon != null) { var im = g.InterpolationMode; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(icon, ir); g.InterpolationMode = im; }
+                else DrawFallbackIcon(g, ir, Tiles[i]);
                 var lr = new RectangleF(r.X + T.S(4), ir.Bottom + T.S(4), r.Width - T.S(8), T.Sf(32));
                 if (T.Dark || Cfg.GlassStyle == "transparent")
                     using (var sb = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
-                        g.DrawString(Items[i].Name, label, sb, new RectangleF(lr.X, lr.Y + 1, lr.Width, lr.Height), Gfx.TopCenterWrap);
-                using (var b = new SolidBrush(T.Text)) g.DrawString(Items[i].Name, label, b, lr, Gfx.TopCenterWrap);
+                        g.DrawString(Tiles[i].Name, label, sb, new RectangleF(lr.X, lr.Y + 1, lr.Width, lr.Height), Gfx.TopCenterWrap);
+                using (var b = new SolidBrush(T.Text)) g.DrawString(Tiles[i].Name, label, b, lr, Gfx.TopCenterWrap);
             }
             g.Restore(state);
 
@@ -392,6 +446,38 @@ namespace GlassDesk
         }
 
         static readonly Color[] fallbackColors = { Color.FromArgb(94, 129, 244), Color.FromArgb(46, 184, 126), Color.FromArgb(240, 160, 60), Color.FromArgb(220, 90, 110), Color.FromArgb(150, 110, 230), Color.FromArgb(70, 170, 200) };
+        bool IsInOpenStack(DesktopItem it)
+        {
+            foreach (var t in Tiles) { var st = t as StackItem; if (st != null && st.Open && st.Members.Contains(it)) return true; }
+            return false;
+        }
+
+        /// <summary>Three of the files fanned out like a pile, with a count badge.</summary>
+        void DrawStack(Graphics g, Rectangle ir, StackItem st)
+        {
+            var im = g.InterpolationMode; g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            int n = Math.Min(3, st.Members.Count);
+            float sz = ir.Width * 0.78f;
+            for (int k = n - 1; k >= 0; k--)
+            {
+                float off = (k - 1) * ir.Width * 0.14f;
+                var r = new RectangleF(ir.X + (ir.Width - sz) / 2 + off, ir.Y + (ir.Height - sz) / 2 - off * 0.5f + T.Sf(2), sz, sz);
+                var ic = st.Members[k].Icon;
+                var st2 = g.Save();
+                g.TranslateTransform(r.X + r.Width / 2, r.Y + r.Height / 2); g.RotateTransform((k - 1) * 9f); g.TranslateTransform(-(r.X + r.Width / 2), -(r.Y + r.Height / 2));
+                if (ic != null) g.DrawImage(ic, r); else DrawFallbackIcon(g, Rectangle.Round(r), st.Members[k]);
+                g.Restore(st2);
+            }
+            g.InterpolationMode = im;
+            // count badge
+            string c = st.Open ? "–" : st.Members.Count.ToString();
+            var f = Gfx.F(T.FontName, T.Sf(10.5f), FontStyle.Bold);
+            float bw = Math.Max(T.Sf(18), g.MeasureString(c, f).Width + T.Sf(6)), bh = T.Sf(18);
+            var br = new RectangleF(ir.Right - bw + T.Sf(6), ir.Y - T.Sf(4), bw, bh);
+            Gfx.FillRound(g, T.Accent, br, bh / 2);
+            using (var b = new SolidBrush(Color.White)) g.DrawString(c, f, b, br, Gfx.Center);
+        }
+
         void DrawFallbackIcon(Graphics g, Rectangle r, DesktopItem it)
         {
             if (it.IsRecycleBin)
@@ -444,7 +530,7 @@ namespace GlassDesk
             if (e.Button == MouseButtons.Left && e.Y >= Panel.Y + TitleH && !InGrip(e.Location))
             {
                 int i = HitItem(e.Location);
-                if (i >= 0 && !Items[i].IsRecycleBin) { pressItem = Items[i]; pressPt = e.Location; }
+                if (i >= 0 && !Tiles[i].IsRecycleBin && !(Tiles[i] is StackItem)) { pressItem = Tiles[i]; pressPt = e.Location; }
             }
         }
 
@@ -496,16 +582,26 @@ namespace GlassDesk
             int i = HitItem(p);
             if (b == MouseButtons.Right)
             {
-                if (i >= 0) ShowItemMenu(Items[i]); else ShowFenceMenu();
+                if (i >= 0 && Tiles[i] is StackItem) ShowStackMenu((StackItem)Tiles[i]);
+                else if (i >= 0) ShowItemMenu(Tiles[i]); else ShowFenceMenu();
             }
-            else if (b == MouseButtons.Left && i >= 0 && Cfg.SingleClickOpen) Open(Items[i]);
+            else if (b == MouseButtons.Left && i >= 0 && Tiles[i] is StackItem) ToggleStack((StackItem)Tiles[i]);
+            else if (b == MouseButtons.Left && i >= 0 && Cfg.SingleClickOpen) Open(Tiles[i]);
         }
 
         protected override void OnDoubleClickAt(Point p)
         {
             if (p.Y < Panel.Y + TitleH) { ToggleCollapsed(); return; }
             int i = HitItem(p);
-            if (i >= 0 && !Cfg.SingleClickOpen) Open(Items[i]);
+            if (i >= 0 && !Cfg.SingleClickOpen && !(Tiles[i] is StackItem)) Open(Tiles[i]);
+        }
+
+        void ShowStackMenu(StackItem st)
+        {
+            var m = App.NewMenu();
+            m.Items.Add(st.Open ? "Close stack" : "Open stack", null, delegate { ToggleStack(st); });
+            m.Items.Add("Turn off stacks", null, delegate { Cfg.Stacks = false; Cfg.Save(); App.Rebuild(); });
+            m.Show(Cursor.Position);
         }
 
         void ToggleCollapsed()
@@ -546,7 +642,7 @@ namespace GlassDesk
             int i = HitItem(p);
             if (i >= 0)
             {
-                DesktopItem t = Items[i];
+                DesktopItem t = Tiles[i];
                 if (t.IsRecycleBin) { tileIndex = i; return DropAct.Recycle; }
                 if (t.IsDir)
                 {
