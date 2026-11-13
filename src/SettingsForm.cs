@@ -240,7 +240,10 @@ namespace GlassDesk
         {
             H1("Appearance", "Glass, colors and size of everything on your desktop.");
             Section("Themes");
-            Block(ThemeGallery());
+            Block(ThemeGallery(Themes.All));
+
+            Section("Windows themes");
+            Block(ThemeGallery(Themes.Windows));
 
             Section("Theme");
             string[] modes = { "Auto", "Dark", "Light" };
@@ -270,6 +273,7 @@ namespace GlassDesk
             sw.Controls.Add(custom);
             sw.Size = new Size(custom.Width * (colors.Length + 1), custom.Height);
             Row("Accent color", "Highlights and bars", sw);
+            Row("Match my wallpaper", "Picks the accent color from your wallpaper, and changes with it", Toggle(S.WallAccent, v => S.WallAccent = v));
 
             Section("Glass");
             string[] styles = { "frosted", "blur", "clear", "transparent" };
@@ -293,7 +297,7 @@ namespace GlassDesk
         }
 
         /// <summary>Every theme as a little live preview card. One click applies it.</summary>
-        Control ThemeGallery()
+        Control ThemeGallery(Themes.Look[] looks)
         {
             int pad = (int)(16 * k), gap = (int)(10 * k);
             int width = CardWidth - 2 * pad;
@@ -301,9 +305,9 @@ namespace GlassDesk
             int cw = (width - gap * (cols - 1)) / cols, ch = (int)(cw * 0.66f) + (int)(42 * k);
             var box = new Panel { Size = new Size(width, 0), BackColor = Color.Transparent };
             bool dark = app.Theme.Dark;
-            for (int i = 0; i < Themes.All.Length; i++)
+            for (int i = 0; i < looks.Length; i++)
             {
-                var look = Themes.All[i];
+                var look = looks[i];
                 var c = new LookCard(P, k, look, dark, string.Equals(S.Look, look.Id, StringComparison.OrdinalIgnoreCase))
                 { Size = new Size(cw, ch), Location = new Point((i % cols) * (cw + gap), (i / cols) * (ch + gap)), Font = fSmall };
                 var tip = new ToolTip(); tip.SetToolTip(c, look.Name + ": " + look.Desc);
@@ -314,7 +318,7 @@ namespace GlassDesk
                 };
                 box.Controls.Add(c);
             }
-            int rows = (Themes.All.Length + cols - 1) / cols;
+            int rows = (looks.Length + cols - 1) / cols;
             box.Height = rows * ch + (rows - 1) * gap;
             return box;
         }
@@ -346,6 +350,8 @@ namespace GlassDesk
             Row("Calendar", "Month view — click the arrows to change month", Toggle(S.ShowCalendar, v => S.ShowCalendar = v));
             Row("Notes", "A sticky note — double-click it to write", Toggle(S.ShowNotes, v => S.ShowNotes = v));
             Row("To-do list", "Tick tasks off right on the desktop — double-click to edit the list", Toggle(S.ShowTodo, v => S.ShowTodo = v));
+            Row("Today", "Rings for how much of the day, week, month and year has passed", Toggle(S.ShowDay, v => S.ShowDay = v));
+            Row("Music", "The song that's playing — or the last one you listened to", Toggle(S.ShowMusic, v => S.ShowMusic = v));
             Row("Quote of the day", "A new quote every morning — double-click for another", Toggle(S.ShowQuote, v => S.ShowQuote = v));
             Row("GitHub stats", "Stars, followers, repos and your last 14 days" + (string.IsNullOrEmpty(S.GitHubUser) ? "" : " — @" + S.GitHubUser), Toggle(S.ShowGitHub, v => S.ShowGitHub = v));
             Row("GitHub username", "Public data only, no sign-in needed", Button("Change…", false, delegate { if (app.GitHubW != null) app.GitHubW.ChooseUser(); }));
@@ -369,6 +375,8 @@ namespace GlassDesk
             SliderRow("Change photo every", "{0} minutes", 1, 60, 1, S.PhotoMinutes, v => S.PhotoMinutes = v);
 
             Section("Layout");
+            Row("Layout for each monitor setup", "Remembers where everything goes when you dock or undock (" + app.DisplayCount + (app.DisplayCount == 1 ? " monitor" : " monitors") + " now, " + app.SavedLayouts + (app.SavedLayouts == 1 ? " layout" : " layouts") + " saved)", Toggle(S.PerDisplayLayouts, v => S.PerDisplayLayouts = v));
+            Row("Group widgets", "Right-click a widget → Group with, then scroll over it to switch", null);
             Row("Reset widget positions", "Move all widgets back to the right side of the screen",
                 Button("Reset", false, delegate { app.ResetLayout(false); }));
         }
@@ -380,6 +388,8 @@ namespace GlassDesk
             Row("Show desktop fences", "Group desktop items by type", Toggle(S.ShowFences, v => S.ShowFences = v));
             Row("Hide empty fences", "Only show a fence when it has something in it", Toggle(S.HideEmptyFences, v => S.HideEmptyFences = v));
             Row("Hide Windows desktop icons", "Recommended: the fences replace the normal icons, so nothing overlaps", Toggle(S.HideDesktopIcons, v => S.HideDesktopIcons = v));
+            Row("Stack similar files", "4 or more files of the same type become one stack — click it to open", Toggle(S.Stacks, v => S.Stacks = v));
+            Row("Organize desktop", "See where every file goes and pick which ones to sort", Button("Preview…", true, delegate { app.ShowOrganize(); }));
 
             Section("Your fences");
             foreach (string id in S.CustomFences.ToArray())

@@ -16,6 +16,13 @@ namespace GlassDesk
         public bool LockPositions = false;
         public bool KeepBehindWindows = true;
         public bool SingleClickOpen = false;
+        public bool Stacks = true;
+        public bool WallAccent = false;            // take the accent color from the wallpaper
+        public bool ShowDay = true;                // the "Today" progress rings widget                 // 4+ files of the same type in a fence become one stack
+        public bool PerDisplayLayouts = true;      // remember a layout for each monitor setup
+        public string DisplayKey = "";             // the monitor setup the current layout belongs to
+        public Dictionary<string, Dictionary<string, Rectangle>> Layouts = new Dictionary<string, Dictionary<string, Rectangle>>();
+        public List<List<string>> Groups = new List<List<string>>();   // widget groups; the first id is the one showing
 
         // Appearance
         public string Look = "glassdesk";        // theme from the gallery (see Themes in Extras.cs)
@@ -38,7 +45,8 @@ namespace GlassDesk
         public bool ShowTodo = true;
         public string TodoText = "[ ] Try dragging an icon to another fence\n[ ] Make a rule in Settings > Organizer\n[x] Install GlassDesk";
         public bool ShowPhotos = false;
-        public bool ShowCountdown = true, ShowQuote = true;
+        public bool ShowCountdown = true, ShowQuote = true, ShowMusic = true;
+        public string LastSong = "", LastArtist = "";   // the music widget shows these when nothing is playing
         public bool ShowGitHub = true, ShowNetwork = true, ShowFocus = true; public string GitHubUser = ""; public int FocusMinutes = 25, BreakMinutes = 5;
         public string CountdownTitle = "", CountdownDate = "";      // date as yyyy-MM-dd
         public bool WallpaperOn = false;
@@ -142,6 +150,11 @@ namespace GlassDesk
                 case "LockPositions": LockPositions = B(v); return;
                 case "KeepBehindWindows": KeepBehindWindows = B(v); return;
                 case "SingleClickOpen": SingleClickOpen = B(v); return;
+                case "Stacks": Stacks = B(v); return;
+                case "WallAccent": WallAccent = B(v); return;
+                case "ShowDay": ShowDay = B(v); return;
+                case "PerDisplayLayouts": PerDisplayLayouts = B(v); return;
+                case "DisplayKey": DisplayKey = v.Trim(); return;
                 case "Theme": Theme = v.Trim(); return;
                 case "Accent": Accent = Color.FromArgb(255, Color.FromArgb(int.Parse(v.Trim(), NumberStyles.HexNumber))); return;
                 case "Blur": Blur = B(v); return;
@@ -180,6 +193,9 @@ namespace GlassDesk
                 case "SkipVersion": SkipVersion = v.Trim(); return;
                 case "ShowCountdown": ShowCountdown = B(v); return;
                 case "ShowQuote": ShowQuote = B(v); return;
+                case "ShowMusic": ShowMusic = B(v); return;
+                case "LastSong": LastSong = Unesc(v); return;
+                case "LastArtist": LastArtist = Unesc(v); return;
                 case "ShowGitHub": ShowGitHub = B(v); return; case "ShowNetwork": ShowNetwork = B(v); return; case "ShowFocus": ShowFocus = B(v); return;
                 case "GitHubUser": GitHubUser = v; return;
                 case "FocusMinutes": { int n; if (int.TryParse(v, out n)) FocusMinutes = Math.Max(1, Math.Min(120, n)); } return;
@@ -211,6 +227,20 @@ namespace GlassDesk
             else if (k.StartsWith("col.")) { if (B(v)) Collapsed.Add(k.Substring(4)); }
             else if (k.StartsWith("title.")) Titles[k.Substring(6)] = Unesc(v);
             else if (k.StartsWith("zoom.")) WidgetZoom[k.Substring(5)] = Math.Max(60, Math.Min(220, I(v)));
+            else if (k.StartsWith("group.")) { var ids = new List<string>(); foreach (string id in v.Split(',')) if (id.Trim().Length > 0) ids.Add(id.Trim()); if (ids.Count >= 2) Groups.Add(ids); }
+            else if (k.StartsWith("lay."))
+            {
+                // lay.<monitor setup>.<panel id> = x,y,w,h
+                string rest = k.Substring(4); int dot = rest.IndexOf('.');
+                string[] p = v.Split(',');
+                if (dot > 0 && p.Length == 4)
+                {
+                    string key = rest.Substring(0, dot);
+                    Dictionary<string, Rectangle> d;
+                    if (!Layouts.TryGetValue(key, out d)) Layouts[key] = d = new Dictionary<string, Rectangle>();
+                    d[rest.Substring(dot + 1)] = new Rectangle(I(p[0]), I(p[1]), I(p[2]), I(p[3]));
+                }
+            }
             else if (k.StartsWith("pos."))
             {
                 string[] p = v.Split(',');
@@ -245,7 +275,7 @@ namespace GlassDesk
                 for (int i = 0; i < Rules.Count; i++) w("rule." + i, Rules[i][1] + "|" + Esc(Rules[i][0]));
                 foreach (var kv in Sort) w("sort." + kv.Key, kv.Value);
                 w("ShowGitHub", b(ShowGitHub)); w("ShowNetwork", b(ShowNetwork)); w("ShowFocus", b(ShowFocus)); w("GitHubUser", GitHubUser ?? ""); w("FocusMinutes", FocusMinutes.ToString()); w("BreakMinutes", BreakMinutes.ToString());
-                w("ShowCountdown", b(ShowCountdown)); w("ShowQuote", b(ShowQuote)); w("CountdownTitle", Esc(CountdownTitle)); w("CountdownDate", CountdownDate);
+                w("ShowCountdown", b(ShowCountdown)); w("ShowQuote", b(ShowQuote)); w("ShowMusic", b(ShowMusic)); w("LastSong", Esc(LastSong ?? "")); w("LastArtist", Esc(LastArtist ?? "")); w("CountdownTitle", Esc(CountdownTitle)); w("CountdownDate", CountdownDate);
                 w("WallpaperOn", b(WallpaperOn)); w("WallpaperFolder", Esc(WallpaperFolder)); w("WallpaperMinutes", WallpaperMinutes.ToString(CultureInfo.InvariantCulture));
                 w("AutoBackup", b(AutoBackup));
                 foreach (var kv in FenceColor) w("fcolor." + kv.Key, kv.Value);
@@ -259,6 +289,12 @@ namespace GlassDesk
                 foreach (string c in Collapsed) w("col." + c, "1");
                 foreach (var kv in Titles) w("title." + kv.Key, Esc(kv.Value));
                 foreach (var kv in WidgetZoom) if (kv.Value != 100) w("zoom." + kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
+                w("Stacks", b(Stacks)); w("WallAccent", b(WallAccent)); w("ShowDay", b(ShowDay)); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
+                for (int i = 0; i < Groups.Count; i++) w("group." + i, string.Join(",", Groups[i].ToArray()));
+                if (PerDisplayLayouts && !string.IsNullOrEmpty(DisplayKey)) Layouts[DisplayKey] = new Dictionary<string, Rectangle>(Positions);
+                foreach (var lay in Layouts)
+                    foreach (var kv in lay.Value)
+                        w("lay." + lay.Key + "." + kv.Key, string.Format(CultureInfo.InvariantCulture, "{0},{1},{2},{3}", kv.Value.X, kv.Value.Y, kv.Value.Width, kv.Value.Height));
                 foreach (var kv in Positions)
                     w("pos." + kv.Key, string.Format(CultureInfo.InvariantCulture, "{0},{1},{2},{3}", kv.Value.X, kv.Value.Y, kv.Value.Width, kv.Value.Height));
                 string tmp = FilePath + ".tmp";

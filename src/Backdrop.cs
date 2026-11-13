@@ -33,6 +33,41 @@ namespace GlassDesk
             return b;
         }
 
+        /// <summary>The wallpaper's strongest color: the most common bright, colorful shade.</summary>
+        public static Color Accent(Rectangle screen)
+        {
+            var b = For(screen, 1);
+            if (b == null) return Color.Empty;
+            var score = new double[24]; var sumR = new double[24]; var sumG = new double[24]; var sumB = new double[24];
+            int step = Math.Max(4, Math.Min(b.Width, b.Height) / 60);
+            for (int y = step / 2; y < b.Height; y += step)
+                for (int x = step / 2; x < b.Width; x += step)
+                {
+                    Color c = b.GetPixel(x, y);
+                    float sat = c.GetSaturation(), bri = c.GetBrightness();
+                    if (sat < 0.25f || bri < 0.18f || bri > 0.92f) continue;
+                    int h = (int)(c.GetHue() / 15) % 24;
+                    double w = sat * (1 - Math.Abs(bri - 0.55));
+                    score[h] += w; sumR[h] += c.R * w; sumG[h] += c.G * w; sumB[h] += c.B * w;
+                }
+            int best = -1;
+            for (int i = 0; i < 24; i++) if (score[i] > 0 && (best < 0 || score[i] > score[best])) best = i;
+            if (best < 0) return Color.Empty;
+            Color avg = Color.FromArgb(255, (int)(sumR[best] / score[best]), (int)(sumG[best] / score[best]), (int)(sumB[best] / score[best]));
+            // make it vivid enough to read as an accent
+            float hh = avg.GetHue(), ss = Math.Max(0.6f, avg.GetSaturation()), ll = Math.Max(0.55f, Math.Min(0.68f, avg.GetBrightness()));
+            return FromHsl(hh, ss, ll);
+        }
+
+        static Color FromHsl(float h, float s, float l)
+        {
+            float c = (1 - Math.Abs(2 * l - 1)) * s, x = c * (1 - Math.Abs(h / 60 % 2 - 1)), m = l - c / 2;
+            float r = 0, g = 0, bl = 0;
+            if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; bl = x; }
+            else if (h < 240) { g = x; bl = c; } else if (h < 300) { r = x; bl = c; } else { r = c; bl = x; }
+            return Color.FromArgb(255, (int)((r + m) * 255), (int)((g + m) * 255), (int)((bl + m) * 255));
+        }
+
         public static void Clear()
         {
             foreach (var b in cache.Values) if (b != null) b.Dispose();
@@ -96,7 +131,7 @@ namespace GlassDesk
         static Bitmap Build(Size size, int strength)
         {
             // work on a small copy: blurring 1/10 of the pixels is ~100x cheaper and looks the same once scaled up
-            int div = strength >= 2 ? 10 : 6;
+            int div = strength >= 3 ? 16 : strength >= 2 ? 10 : 6;
             int sw = Math.Max(8, size.Width / div), sh = Math.Max(8, size.Height / div);
             var small = new Bitmap(sw, sh, PixelFormat.Format32bppArgb);
             using (var g = Graphics.FromImage(small))
@@ -121,7 +156,7 @@ namespace GlassDesk
                     catch { }
                 }
             }
-            BoxBlur(small, strength >= 2 ? 4 : 2, 3);
+            BoxBlur(small, strength >= 3 ? 6 : strength >= 2 ? 4 : 2, strength >= 3 ? 4 : 3);
             // scale back up smoothly to the monitor's size
             var big = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppPArgb);
             using (var g = Graphics.FromImage(big))

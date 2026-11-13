@@ -9,8 +9,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("GlassDesk")]
 [assembly: System.Reflection.AssemblyProduct("GlassDesk")]
 [assembly: System.Reflection.AssemblyDescription("Glass desktop organizer with widgets")]
-[assembly: System.Reflection.AssemblyVersion("1.8.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.7.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.8.6.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.8.6.0")]
 
 namespace GlassDesk
 {
@@ -20,6 +20,7 @@ namespace GlassDesk
         static int Main(string[] args)
         {
             if (args.Length >= 2 && args[0] == "--preview") return Preview(args[1], args.Length > 2 && args[2] == "light");
+            if (args.Length >= 2 && args[0] == "--preview-forms") return PreviewForms(args[1], args.Length > 2 && args[2] == "light");
             if (args.Length >= 2 && args[0] == "--preview-settings") return PreviewSettings(args[1], args.Length > 2 && args[2] == "light");
 
             bool first;
@@ -125,6 +126,26 @@ namespace GlassDesk
             return 0;
         }
 
+        static int PreviewForms(string dir, bool light)
+        {
+            Directory.CreateDirectory(dir);
+            var app = new App(true);
+            app.StartPreview(!light);
+            var l = app.MakeLauncher(); l.Location = new System.Drawing.Point(610, 230);
+            using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher.png"), ImageFormat.Png);
+            l.SetQuery("o");
+            using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-search.png"), ImageFormat.Png);
+            l.SetQuery("12*(3+4)");
+            using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-calc.png"), ImageFormat.Png);
+            l.SetQuery("ocea");
+            using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-theme.png"), ImageFormat.Png);
+            var o = app.MakeOrganize(); o.Location = new System.Drawing.Point(500, 220);
+            using (var b = o.Render()) b.Save(Path.Combine(dir, "organize.png"), ImageFormat.Png);
+            var w = new WelcomeForm(app); w.Location = new System.Drawing.Point(640, 290);
+            using (var b = w.Render()) b.Save(Path.Combine(dir, "welcome.png"), ImageFormat.Png);
+            return 0;
+        }
+
         static int PreviewSettings(string dir, bool light)
         {
             Directory.CreateDirectory(dir);
@@ -134,6 +155,8 @@ namespace GlassDesk
             var f = new SettingsForm(app, 0);
             f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(0, 0);
             f.Show();
+            string tall = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_HEIGHT");
+            if (tall != null) f.Height = int.Parse(tall);
             for (int i = 0; i < 6; i++)
             {
                 f.ShowPage(i);

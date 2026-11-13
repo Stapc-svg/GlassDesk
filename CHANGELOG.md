@@ -1,6 +1,45 @@
 # Changelog
 
-## 1.8.0
+## 1.8.6
+
+- **Switch animation:** switching tabs in a stack slides the new widget or fence in with a fade.
+- **Same size:** all widgets in a stack are now the same size (the biggest one).
+- Switching tabs is faster.
+
+## 1.8.5
+
+- **Stacked widgets show tabs** too, like stacked fences. Click a tab to switch. The dots and mouse-wheel switching are gone.
+
+## 1.8.4
+
+- **Stacked fences show tabs:** the title shows a tab for every fence in the stack. Click a tab to switch. Every fence in a stack keeps the same size.
+
+## 1.8.3
+
+- **Drag to stack:** drag a widget onto another widget (or a fence onto another fence) and GlassDesk offers to stack them. Click the top of a stack or its dots to flip to the next one; widgets also flip with the mouse wheel.
+- **Fence stacks:** fences can be stacked too.
+- **Acrylic material** now blurs the wallpaper fully.
+
+## 1.8.2
+
+- **Smarter search:** type a sum (12*(3+4)) to get the answer, a theme name to switch to it, a command (settings, organize, dark, light, new fence), or press Ctrl + Enter to search the web.
+- **Today widget:** four rings showing how much of the day, week, month and year has passed.
+- **Match my wallpaper:** the accent color can come from your wallpaper and change when it does (Settings → Appearance).
+
+## 1.8.1
+
+- **Stacks:** 4 or more files of the same type in a fence become one stack. Click it to open or close it.
+- **Widget groups:** right-click a widget → Group with. Grouped widgets share one spot; scroll over it or click the dots to switch.
+- **Organize desktop:** a preview of where every file goes, with a tick for each one. Unticked files go to an "Unsorted" fence. Open it from the tray menu or Settings → Organizer.
+- **Layouts per monitor setup:** GlassDesk remembers a layout for each set of monitors and brings it back when you dock or undock.
+
+- **New search:** Ctrl + Alt + F opens a launcher with a grid of icons on the blurred wallpaper, drawn in your theme.
+- **Music widget:** shows the song playing in any app (Spotify, YouTube, Apple Music...) with its cover, progress and play / pause / next buttons. When nothing plays, it shows the last song you listened to.
+- **Welcome screen:** shown once, the first time GlassDesk starts. It never comes back, even after updates.
+- **Themed menus:** right-click menus and the Settings window take their colors from your theme.
+
+- **Windows themes:** 10 new themes in their own section: Mica material, Acrylic material, Mica Alt, Windows Light, Windows Dark, Bloom, Glow, Sunrise, Flow and Captured Motion.
+- Fixed: theme names in Settings were too big. Panels past the screen edge move back on screen. Fences resize from the right edge, bottom edge or corner.
 - **16 themes** in a new gallery in Settings → Appearance: GlassDesk, Clean, Midnight, Ocean, Sunset, Forest, Rose, Aurora, Frost, Ember, Lavender, Mint, Neon, Graphite, Paper and Classic
 - Every theme has its own glass colors for dark and light mode; Auto mode, accent color, glass style, tint and corners still work on top
 - New effects: a soft accent glow inside the glass, a glowing neon edge (Neon), and solid flat panels (Clean, Paper)

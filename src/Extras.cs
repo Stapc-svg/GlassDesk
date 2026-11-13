@@ -151,7 +151,7 @@ namespace GlassDesk
     {
         public class Look
         {
-            public string Id, Name, Desc, Mode = "Dark", Glass = "frosted";
+            public string Id, Name, Desc, Mode = "Dark", Glass = "frosted", Group = "";
             public Color Accent, DarkTop, DarkBottom, LightTop, LightBottom, Glow2 = Color.Empty;
             public bool Glow, Solid, Flat, Neon;
             public int Tint = 40, Radius = 16;
@@ -188,8 +188,30 @@ namespace GlassDesk
                        LightTop = C(0xF8F9FC), LightBottom = C(0xF8F9FC), Mode = "Auto", Tint = 30, Radius = 16 },
         };
 
+        static Look W(string id, string name, string desc, int accent, int dTop, int dBot, int lTop, int lBot, string mode, string glass, int tint)
+        {
+            return new Look { Id = id, Name = name, Desc = desc, Accent = C(accent), DarkTop = C(dTop), DarkBottom = C(dBot), LightTop = C(lTop), LightBottom = C(lBot),
+                Mode = mode, Glass = glass, Tint = tint, Radius = 8, Group = "windows" };
+        }
+
+        /// <summary>Themes that look like Windows 11's own materials and built-in themes.</summary>
+        public static readonly Look[] Windows =
+        {
+            W("mica", "Mica material", "Calm and mostly solid", 0x60CDFF, 0x202020, 0x1C1C1C, 0xF3F3F3, 0xEEEEEE, "Auto", "frosted", 82),
+            W("acrylic", "Acrylic material", "Fully blurred, see-through", 0x60CDFF, 0x2C2C2C, 0x202020, 0xFCFCFC, 0xF3F3F3, "Auto", "blur", 30),
+            W("mica-alt", "Mica Alt", "Deeper, darker Mica", 0x60CDFF, 0x0A0A0A, 0x141414, 0xE8E8E8, 0xDADADA, "Dark", "frosted", 88),
+            W("win-light", "Windows Light", "Default light", 0x0078D4, 0x2B2B2B, 0x202020, 0xFFFFFF, 0xF3F3F3, "Light", "frosted", 78),
+            W("win-dark", "Windows Dark", "Default dark", 0x4CC2FF, 0x2B2B2B, 0x1F1F1F, 0xF9F9F9, 0xEFEFEF, "Dark", "frosted", 78),
+            W("bloom", "Bloom", "Blue Windows 11 flower", 0x0078D4, 0x0B2A5C, 0x061630, 0xEAF3FF, 0xD6E6FA, "Dark", "blur", 50),
+            W("glow", "Glow", "Purple light, soft acrylic", 0xC48BFF, 0x2A1846, 0x140A26, 0xF6EEFF, 0xE8DAFA, "Dark", "blur", 48),
+            W("sunrise", "Sunrise", "Warm orange morning", 0xFF9A3C, 0x4A2410, 0x200E06, 0xFFF3E8, 0xFFE4CC, "Light", "blur", 48),
+            W("flow", "Flow", "Fresh blue-green waves", 0x00B7C3, 0x08343C, 0x041A1E, 0xE6FBFC, 0xCFF2F4, "Dark", "blur", 48),
+            W("captured-motion", "Captured Motion", "Dark with deep pink motion", 0xE3008C, 0x2A0A20, 0x10040C, 0xFFEAF6, 0xF8D6EA, "Dark", "frosted", 62),
+        };
+
         public static Look Find(string id)
         {
+            foreach (var l in Windows) if (string.Equals(l.Id, id, StringComparison.OrdinalIgnoreCase)) return l;
             foreach (var l in All) if (string.Equals(l.Id, id, StringComparison.OrdinalIgnoreCase)) return l;
             return null;
         }

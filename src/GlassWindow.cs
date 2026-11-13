@@ -201,7 +201,7 @@ namespace GlassDesk
             try
             {
                 Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
-                Bitmap blur = Backdrop.For(scr, Cfg.GlassStyle == "frosted" ? 2 : 1);
+                Bitmap blur = Backdrop.For(scr, T.LookId == "acrylic" ? 3 : Cfg.GlassStyle == "frosted" ? 2 : 1);
                 var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
                 var st = g.Save();
                 g.SetClip(path, CombineMode.Intersect);
@@ -217,6 +217,59 @@ namespace GlassDesk
 
         // ---------------- painting ----------------
         protected abstract void PaintContent(Graphics g);
+        public bool DropHint;   // another panel is being dragged onto this one
+
+        // ---- stacks: a tab for every panel in the stack; click a tab to switch ----
+        protected readonly List<KeyValuePair<RectangleF, string>> tabRects = new List<KeyValuePair<RectangleF, string>>();
+
+        /// <summary>Draws the stack's tabs inside the area; returns false when this panel isn't stacked.</summary>
+        protected bool DrawTabs(Graphics g, RectangleF area)
+        {
+            tabRects.Clear();
+            var members = App.GroupMembers(Id);
+            if (members.Count < 2) return false;
+            float x = area.X, th = Math.Min(area.Height - T.Sf(6), T.Sf(26)), ty = area.Y + (area.Height - th) / 2;
+            var f = Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Bold);
+            float want = 0;
+            foreach (var m in members) want += Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) + T.Sf(6);
+            float squeeze = want > area.Width ? area.Width / want : 1f;
+            var sf = new StringFormat(Gfx.Center) { Trimming = StringTrimming.EllipsisCharacter };
+            foreach (var m in members)
+            {
+                bool cur = m.Key == Id;
+                float tw = Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) * squeeze;
+                var tr = new RectangleF(x, ty, tw, th);
+                if (cur) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, T.Dark ? 110 : 80), tr, th / 2);
+                else Gfx.FillRound(g, T.Hover, tr, th / 2);
+                using (var b = new SolidBrush(cur ? T.Text : T.SubText)) g.DrawString(m.Value, f, b, RectangleF.Inflate(tr, -T.Sf(6), 0), sf);
+                tabRects.Add(new KeyValuePair<RectangleF, string>(tr, m.Key));
+                x += tw + T.Sf(6) * squeeze;
+            }
+            return true;
+        }
+
+        protected virtual void PaintOverlay(Graphics g)
+        {
+            if (DropHint)
+            {
+                var pr = new RectangleF(Panel.X + 1.5f, Panel.Y + 1.5f, Panel.Width - 3, Panel.Height - 3);
+                using (var path = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+                {
+                    using (var b = new SolidBrush(Gfx.WithAlpha(T.Accent, 50))) g.FillPath(b, path);
+                    using (var pen = new Pen(T.Accent, T.Sf(3))) g.DrawPath(pen, path);
+                }
+                var f = Gfx.F(T.FontName, T.Sf(13), FontStyle.Bold);
+                var lr = new RectangleF(Panel.X + Panel.Width / 2f - T.Sf(80), Panel.Y + Panel.Height / 2f - T.Sf(17), T.Sf(160), T.Sf(34));
+                Gfx.FillRound(g, T.Accent, lr, T.Sf(17));
+                using (var b = new SolidBrush(Color.White)) g.DrawString("Drop to stack", f, b, lr, Gfx.Center);
+            }
+        }
+
+        protected virtual bool OnPreClick(Point p)
+        {
+            foreach (var t in tabRects) if (t.Key.Contains(p)) { if (t.Value != Id) App.SwitchTo(this, t.Value); return true; }
+            return false;
+        }
 
         public Bitmap RenderBitmap()
         {
@@ -226,7 +279,29 @@ namespace GlassDesk
                 Gfx.Setup(g);
                 g.Clear(Color.Transparent);
                 DrawChrome(g);
-                PaintContent(g);
+                float t = AnimProgress;
+                if (t >= 1f) PaintContent(g);
+                else
+                {
+                    // switching inside a stack: the new content slides in and fades up
+                    using (var layer = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb))
+                    {
+                        using (var lg = Graphics.FromImage(layer)) { Gfx.Setup(lg); lg.Clear(Color.Transparent); PaintContent(lg); }
+                        float e = 1f - (float)Math.Pow(1 - t, 3);   // ease out
+                        int top = Math.Max(0, Math.Min(bmp.Height, AnimTop));
+                        if (top > 0) g.DrawImage(layer, new Rectangle(0, 0, bmp.Width, top), new Rectangle(0, 0, bmp.Width, top), GraphicsUnit.Pixel);
+                        float dx = animDir * (1 - e) * T.Sf(46);
+                        using (var ia = new ImageAttributes())
+                        {
+                            ia.SetColorMatrix(new ColorMatrix { Matrix33 = 0.15f + 0.85f * e });
+                            var st = g.Save();
+                            g.SetClip(new Rectangle(Panel.X, top, Panel.Width, Panel.Bottom - top));
+                            g.DrawImage(layer, new Rectangle((int)dx, top, bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
+                            g.Restore(st);
+                        }
+                    }
+                }
+                PaintOverlay(g);
                 if (Resizable && (hoverPanel || resizing) && !Cfg.LockPositions) DrawGrip(g);
             }
             return bmp;
@@ -364,6 +439,23 @@ namespace GlassDesk
             return b;
         }
 
+        // ---- the slide when you switch to this panel in a stack ----
+        int animStartTick, animDir; System.Windows.Forms.Timer animTimer;
+        const int AnimMs = 260;
+        float AnimProgress { get { if (animTimer == null || !animTimer.Enabled) return 1f; return Math.Min(1f, (Environment.TickCount - animStartTick) / (float)AnimMs); } }
+        /// <summary>Content above this line (a fence's title) stays put while the rest slides.</summary>
+        protected virtual int AnimTop { get { return Panel.Y; } }
+        public void PlayEnter(int dir)
+        {
+            animDir = dir >= 0 ? 1 : -1; animStartTick = Environment.TickCount;
+            if (animTimer == null)
+            {
+                animTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                animTimer.Tick += delegate { if (Environment.TickCount - animStartTick >= AnimMs) animTimer.Stop(); Redraw(); };
+            }
+            animTimer.Start(); Redraw();
+        }
+
         public void Redraw()
         {
             if (!Native.IsWindows || !IsHandleCreated || !Visible || Width <= 0 || Height <= 0) return;
@@ -405,18 +497,28 @@ namespace GlassDesk
         protected virtual void OnWheel(int delta) { }
         protected virtual void OnResized() { }
 
-        protected bool InGrip(Point p)
+        protected bool InGrip(Point p) { return ResizeZone(p) != 0; }
+
+        /// <summary>Where a resize would start: 1 = right edge, 2 = bottom edge, 3 = bottom-right corner, 0 = not on an edge.</summary>
+        protected int ResizeZone(Point p)
         {
-            int g = T.S(18);
-            return Resizable && p.X >= Panel.Right - g && p.Y >= Panel.Bottom - g && p.X <= Panel.Right && p.Y <= Panel.Bottom;
+            if (!Resizable || p.X < Panel.X || p.Y < Panel.Y || p.X > Panel.Right + 1 || p.Y > Panel.Bottom + 1) return 0;
+            int corner = App.Theme.S(20), edge = App.Theme.S(7);
+            bool right = p.X >= Panel.Right - edge, bottom = p.Y >= Panel.Bottom - edge;
+            if ((p.X >= Panel.Right - corner && p.Y >= Panel.Bottom - corner) || (right && bottom)) return 3;
+            if (right) return 1;
+            if (bottom) return 2;
+            return 0;
         }
+        int zone;
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
             if (e.Button != MouseButtons.Left || Cfg.LockPositions) return;
             downScreen = Cursor.Position; downBounds = PanelBounds; downZoom = Zoom;
-            if (InGrip(e.Location)) { resizing = true; Capture = true; if (IsHandleCreated) SetGlass(true); }
+            zone = ResizeZone(e.Location);
+            if (zone != 0) { resizing = true; Capture = true; if (IsHandleCreated) SetGlass(true); }
             else if (IsDragArea(e.Location)) { armed = true; Capture = true; }
         }
 
@@ -429,7 +531,8 @@ namespace GlassDesk
             {
                 // keep the widget's shape and scale everything inside it
                 float bw = downBounds.Width / downZoom, bh = downBounds.Height / downZoom;
-                float z = Math.Max((downBounds.Width + dx) / bw, (downBounds.Height + dy) / bh);
+                float zx = (downBounds.Width + dx) / bw, zy = (downBounds.Height + dy) / bh;
+                float z = zone == 1 ? zx : zone == 2 ? zy : Math.Max(zx, zy);
                 Zoom = Math.Max(0.6f, Math.Min(2.2f, (float)Math.Round(z * 50) / 50f));
                 int zw = (int)Math.Round(bw * Zoom), zh = (int)Math.Round(bh * Zoom);
                 Size = new Size(zw + 2 * pad, zh + 2 * pad);
@@ -440,8 +543,11 @@ namespace GlassDesk
             }
             if (resizing)
             {
-                int w = Math.Max(T.S(MinPanel.Width), downBounds.Width + dx);
-                int h = Math.Max(T.S(MinPanel.Height), downBounds.Height + dy);
+                int w = zone == 2 ? downBounds.Width : Math.Max(T.S(MinPanel.Width), downBounds.Width + dx);
+                int h = zone == 1 ? downBounds.Height : Math.Max(T.S(MinPanel.Height), downBounds.Height + dy);
+                // never wider or taller than the screen it is on
+                Rectangle wa = Screen.FromRectangle(downBounds).WorkingArea;
+                w = Math.Min(w, wa.Right - downBounds.X); h = Math.Min(h, wa.Bottom - downBounds.Y);
                 Size = new Size(w + 2 * pad, h + 2 * pad);
                 Panel = new Rectangle(pad, pad, w, h);
                 UpdateRegion();
@@ -452,6 +558,7 @@ namespace GlassDesk
             if (armed && !dragging && (Math.Abs(dx) > 4 || Math.Abs(dy) > 4)) { dragging = true; if (IsHandleCreated) SetGlass(true); }
             if (dragging)
             {
+                App.DragOver(this);
                 var r = new Rectangle(downBounds.X + dx, downBounds.Y + dy, downBounds.Width, downBounds.Height);
                 r = Snap(r);
                 Location = new Point(r.X - pad, r.Y - pad);
@@ -459,8 +566,9 @@ namespace GlassDesk
                 if (UsesBackdrop && Environment.TickCount - lastMoveDraw > 30) { lastMoveDraw = Environment.TickCount; Redraw(); }
                 return;
             }
-            bool g = InGrip(e.Location) && !Cfg.LockPositions;
-            Cursor = g ? Cursors.SizeNWSE : Cursors.Default;
+            int zn = Cfg.LockPositions ? 0 : ResizeZone(e.Location);
+            bool g = zn != 0;
+            Cursor = zn == 1 ? Cursors.SizeWE : zn == 2 ? Cursors.SizeNS : zn == 3 ? Cursors.SizeNWSE : Cursors.Default;
             if (Resizable && !hoverPanel) { hoverPanel = true; hoverGrip = g; Redraw(); }
             else if (g != hoverGrip) { hoverGrip = g; Redraw(); }
             OnHover(e.Location);
@@ -490,12 +598,13 @@ namespace GlassDesk
         protected override void OnMouseUp(MouseEventArgs e)
         {
             base.OnMouseUp(e);
-            bool wasMoving = dragging || resizing;
+            bool wasMoving = dragging || resizing, wasDragging = dragging;
             if (resizing && ZoomResize) App.SaveZoom(Id, Zoom);
             if (wasMoving) { App.SavePosition(Id, PanelBounds); if (IsHandleCreated) SetGlass(false); }
             armed = dragging = resizing = false;
             Capture = false;
-            if (!wasMoving) OnClickAt(e.Location, e.Button);
+            if (wasDragging) App.DragEnded(this);
+            if (!wasMoving && !(e.Button == MouseButtons.Left && OnPreClick(e.Location))) OnClickAt(e.Location, e.Button);
         }
 
         protected override void OnMouseDoubleClick(MouseEventArgs e)

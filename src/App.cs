@@ -37,7 +37,7 @@ namespace GlassDesk
 
         ClockWidget clock; SystemWidget system; CalendarWidget calendar; NotesWidget notes;
         WeatherWidget weather; TodoWidget todo; PhotoWidget photos;
-        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus;
+        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music; DayWidget day;
         internal GitHubWidget GitHubW { get { return github; } } internal FocusWidget FocusW { get { return focus; } }
         public WallpaperChanger Wallpaper;
         readonly Dictionary<string, FenceWindow> fences = new Dictionary<string, FenceWindow>();
@@ -59,8 +59,10 @@ namespace GlassDesk
         {
             Settings = Settings.Load();
             try { using (var g = Graphics.FromHwnd(IntPtr.Zero)) DpiScale = g.DpiX / 96f; } catch { DpiScale = 1f; }
+            Safe("wallpaper accent", PickWallpaperAccent);
             Theme = Theme.From(Settings, DpiScale);
             AppIcon = MakeIcon(Theme.Accent);
+            Safe("monitor layout", delegate { SwitchDisplayLayout(); });
 
             invoker = new Control(); invoker.CreateControl();
 
@@ -92,10 +94,14 @@ namespace GlassDesk
             Wallpaper = new WallpaperChanger(this);
             Safe("backup", delegate { Backup.Daily(this); });
 
-            if (!File.Exists(Path.Combine(Settings.Folder, "welcomed")))
+            // the welcome screen shows once ever: the marker file stays when GlassDesk is updated
+            string mark = Path.Combine(Settings.Folder, "welcome-screen-shown");
+            if (!File.Exists(mark))
             {
-                try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(Path.Combine(Settings.Folder, "welcomed"), "1"); } catch { }
-                tray.ShowBalloonTip(4000, "GlassDesk is running", "Your desktop is now organized. Click the tray icon for settings, or press Ctrl + Alt + G to show / hide.", ToolTipIcon.Info);
+                try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(mark, Version); } catch { }
+                var wt = new Timer { Interval = 1200 };
+                wt.Tick += delegate { wt.Stop(); wt.Dispose(); ShowWelcome(); };
+                wt.Start();
             }
         }
 
@@ -116,6 +122,8 @@ namespace GlassDesk
             Windows.Add(countdown); Windows.Add(quote);
             github = new GitHubWidget(this); network = new NetworkWidget(this); focus = new FocusWidget(this);
             Windows.Add(github); Windows.Add(network); Windows.Add(focus);
+            music = new MusicWidget(this); Windows.Add(music);
+            day = new DayWidget(this); Windows.Add(day);
         }
 
         Action balloonClick;
@@ -141,6 +149,7 @@ namespace GlassDesk
         public void RefreshBackdrop()
         {
             Backdrop.Clear();
+            if (Settings.WallAccent) { ApplySettings(); return; }
             foreach (var w in Windows) if (w.Visible) w.Redraw();
         }
 
@@ -168,17 +177,72 @@ namespace GlassDesk
                 }
         }
 
-        SearchForm search;
-        public void ShowSearch()
+        LauncherForm search;
+        public LauncherForm MakeLauncher()
         {
-            if (search != null && !search.IsDisposed) { search.Activate(); return; }
             var items = new List<KeyValuePair<DesktopItem, string>>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var f in fences.Values)
                 foreach (var it in f.Items)
                     if (seen.Add(it.Path)) items.Add(new KeyValuePair<DesktopItem, string>(it, f.Caption));
             items.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
-            search = new SearchForm(this, items);
+            return new LauncherForm(this, items);
+        }
+
+        public const string UnsortedId = "cust.unsorted";
+
+        public void ShowOrganize() { MakeOrganize().Show(); }
+
+        public OrganizeForm MakeOrganize()
+        {
+            var groups = new List<OrganizeForm.Group>();
+            var ticked = new HashSet<DesktopItem>();
+            var byId = new Dictionary<string, OrganizeForm.Group>();
+            foreach (var f in fences.Values)
+            {
+                if (!f.HoldsDesktopItems || f.Id == UnsortedId) continue;
+                var g = new OrganizeForm.Group { Id = f.Id, Title = f.Caption };
+                foreach (var it in f.Items) if (!it.IsRecycleBin) { g.Items.Add(it); ticked.Add(it); }
+                groups.Add(g); byId[f.Id] = g;
+            }
+            FenceWindow un;
+            if (fences.TryGetValue(UnsortedId, out un))
+                foreach (var it in un.Items)
+                {
+                    string id = "cat." + Organizer.CategoryOf(it);
+                    OrganizeForm.Group g;
+                    if (!byId.TryGetValue(id, out g)) { g = new OrganizeForm.Group { Id = id, Title = Organizer.CategoryName(Organizer.CategoryOf(it)) }; groups.Add(g); byId[id] = g; }
+                    g.Items.Add(it);
+                }
+            groups.Sort((a, b) => b.Items.Count.CompareTo(a.Items.Count));
+            return new OrganizeForm(this, groups, ticked, ApplyOrganize);
+        }
+
+        void ApplyOrganize(HashSet<DesktopItem> sorted, List<DesktopItem> unsorted)
+        {
+            foreach (var it in sorted)
+            {
+                string pin;
+                if (Settings.Pins.TryGetValue(it.Path, out pin) && pin == UnsortedId) Settings.Pins.Remove(it.Path);
+            }
+            foreach (var it in unsorted) if (!it.IsRecycleBin) Settings.Pins[it.Path] = UnsortedId;
+            bool anyUnsorted = Settings.Pins.ContainsValue(UnsortedId);
+            if (anyUnsorted && !Settings.CustomFences.Contains(UnsortedId)) { Settings.CustomFences.Add(UnsortedId); Settings.Titles[UnsortedId] = "Unsorted"; }
+            if (!anyUnsorted && Settings.CustomFences.Contains(UnsortedId)) { Settings.CustomFences.Remove(UnsortedId); Settings.Positions.Remove(UnsortedId); }
+            Settings.Save();
+            Rebuild();
+        }
+
+        public void ShowWelcome()
+        {
+            var w = new WelcomeForm(this);
+            w.Show(); w.Activate();
+        }
+
+        public void ShowSearch()
+        {
+            if (search != null && !search.IsDisposed) { search.Activate(); return; }
+            search = MakeLauncher();
             search.FormClosed += delegate { search = null; };
             search.Show(); search.Activate();
         }
@@ -268,10 +332,12 @@ namespace GlassDesk
                     foreach (var it in f.Items) it.Dispose();
                     f.Close(); f.Dispose();
                 }
+            foreach (var f in fences.Values) f.Wanted = true;
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
             weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
-            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus;
+            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic; day.Wanted = Settings.ShowDay;
+            ApplyGroups();
             if (!preview) UpdateWatchers();
             PlaceAll();
         }
@@ -416,6 +482,7 @@ namespace GlassDesk
                 if (Settings.Positions.TryGetValue(w.Id, out saved) && (preview || OnSomeScreen(saved)))
                 {
                     var r = new Rectangle(saved.Location, w.PreferredPanelSize(saved.Size));
+                    if (!preview) r = KeepOnScreen(r);
                     taken.Add(r); placed.Add(new KeyValuePair<GlassWindow, Rectangle>(w, r));
                 }
                 else pending.Add(w);
@@ -441,6 +508,16 @@ namespace GlassDesk
                 });
             }
             if (changed && !preview) Settings.Save();
+        }
+
+        /// <summary>A panel that hangs past the edge of its screen (after a resolution or monitor change) is moved fully back on.</summary>
+        static Rectangle KeepOnScreen(Rectangle r)
+        {
+            Rectangle wa = Screen.FromRectangle(r).WorkingArea;
+            int w = Math.Min(r.Width, wa.Width), h = Math.Min(r.Height, wa.Height);
+            int x = Math.Max(wa.Left, Math.Min(r.X, wa.Right - w));
+            int y = Math.Max(wa.Top, Math.Min(r.Y, wa.Bottom - h));
+            return new Rectangle(x, y, r.Width, r.Height);
         }
 
         Point FindFreeSpot(Size s, bool fromRight, List<Rectangle> taken, Rectangle wa, int m)
@@ -505,8 +582,22 @@ namespace GlassDesk
         public int VisibleCount { get { int n = 0; foreach (var w in Windows) if (w.Visible) n++; return n; } }
 
         // =============================================================== settings
+        /// <summary>"Match my wallpaper": take the accent from the wallpaper of the main screen.</summary>
+        void PickWallpaperAccent()
+        {
+            if (!Settings.WallAccent) return;
+            try
+            {
+                Rectangle scr = preview ? new Rectangle(0, 0, 1920, 1080) : Screen.PrimaryScreen.Bounds;
+                Color c = Backdrop.Accent(scr);
+                if (!c.IsEmpty) Settings.Accent = c;
+            }
+            catch (Exception ex) { Program.Log(ex); }
+        }
+
         public void ApplySettings()
         {
+            PickWallpaperAccent();
             bool wasDark = Theme.Dark; Color oldAccent = Theme.Accent; float oldScale = Theme.Scale;
             Theme = Theme.From(Settings, DpiScale);
             if (oldScale != Theme.Scale) Gfx.ClearFonts();
@@ -628,7 +719,188 @@ namespace GlassDesk
 
         void OnDisplayChanged(object s, EventArgs e)
         {
-            try { invoker.BeginInvoke(new Action(delegate { Theme = Theme.From(Settings, DpiScale); Gfx.ClearFonts(); PlaceAll(); })); } catch { }
+            try { invoker.BeginInvoke(new Action(delegate { Theme = Theme.From(Settings, DpiScale); Gfx.ClearFonts(); SwitchDisplayLayout(); PlaceAll(); })); } catch { }
+        }
+
+        /// <summary>A short name for the monitors plugged in right now (their sizes and places).</summary>
+        static string CurrentDisplayKey()
+        {
+            var parts = new List<string>();
+            foreach (var sc in Screen.AllScreens) parts.Add(sc.Bounds.X + "_" + sc.Bounds.Y + "_" + sc.Bounds.Width + "_" + sc.Bounds.Height);
+            parts.Sort(StringComparer.Ordinal);
+            uint h = 2166136261;
+            foreach (char c in string.Join("|", parts.ToArray())) { h ^= c; h *= 16777619; }
+            return "d" + h.ToString("x8");
+        }
+        public int DisplayCount { get { return Screen.AllScreens.Length; } }
+        public int SavedLayouts { get { return Settings.Layouts.Count; } }
+
+        /// <summary>Docked or undocked: keep the old layout for the old monitors, and bring back the one saved for these monitors.</summary>
+        void SwitchDisplayLayout()
+        {
+            if (preview || !Settings.PerDisplayLayouts) return;
+            string key = CurrentDisplayKey();
+            if (key == Settings.DisplayKey) return;
+            if (!string.IsNullOrEmpty(Settings.DisplayKey)) Settings.Layouts[Settings.DisplayKey] = new Dictionary<string, Rectangle>(Settings.Positions);
+            Dictionary<string, Rectangle> saved;
+            if (Settings.Layouts.TryGetValue(key, out saved) && saved.Count > 0) Settings.Positions = new Dictionary<string, Rectangle>(saved);
+            Settings.DisplayKey = key;
+            Settings.Save();
+        }
+
+        // =============================================================== widget groups
+        static readonly Dictionary<string, string> widgetNames = new Dictionary<string, string>
+        {
+            { "clock", "Clock" }, { "system", "System" }, { "calendar", "Calendar" }, { "notes", "Notes" }, { "weather", "Weather" },
+            { "todo", "To-do" }, { "photos", "Photos" }, { "countdown", "Countdown" }, { "quote", "Quote" }, { "github", "GitHub" },
+            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" }, { "day", "Today" },
+        };
+        public static string WidgetName(string id) { string n; return widgetNames.TryGetValue(id, out n) ? n : id; }
+
+        List<string> GroupOf(string id) { foreach (var g in Settings.Groups) if (g.Contains(id)) return g; return null; }
+        readonly Dictionary<string, List<string>> liveGroups = new Dictionary<string, List<string>>();   // id -> wanted members of its group
+
+        /// <summary>Only the first wanted widget of each group shows; the rest wait in the same spot.</summary>
+        void ApplyGroups()
+        {
+            liveGroups.Clear();
+            var byId = new Dictionary<string, GlassWindow>();
+            foreach (var w in Windows) byId[w.Id] = w;
+            foreach (var g in Settings.Groups)
+            {
+                var wanted = new List<string>();
+                foreach (string id in g) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Wanted) wanted.Add(id); }
+                if (wanted.Count < 2) continue;
+                foreach (string id in wanted) liveGroups[id] = wanted;
+                for (int i = 1; i < wanted.Count; i++) byId[wanted[i]].Wanted = false;
+            }
+        }
+
+        /// <summary>Which member this is (0-based) and how many show in its group; false when not grouped.</summary>
+        public bool GroupInfo(string id, out int index, out int count)
+        {
+            List<string> g; index = 0; count = 0;
+            if (!liveGroups.TryGetValue(id, out g)) return false;
+            index = g.IndexOf(id); count = g.Count; return true;
+        }
+
+        public string PanelName(GlassWindow w) { var f = w as FenceWindow; return f != null ? f.Caption : WidgetName(w.Id); }
+
+        public void AddGroupItems(ContextMenuStrip m, GlassWindow w)
+        {
+            int gi, gc;
+            var grp = new ToolStripMenuItem("Stack with");
+            foreach (var o in Windows)
+                if (o != w && o.Visible && (o is Widget) == (w is Widget)) { var ow = o; grp.DropDownItems.Add(PanelName(ow), null, delegate { JoinGroup(w, ow); }); }
+            if (grp.DropDownItems.Count > 0) m.Items.Add(grp);
+            if (GroupInfo(w.Id, out gi, out gc)) { m.Items.Add("Next in stack", null, delegate { SwitchGroup(w, 1); }); m.Items.Add("Take out of stack", null, delegate { LeaveGroup(w); }); }
+            if (m.Items.Count > 0) m.Items.Add(new ToolStripSeparator());
+        }
+
+        // ---- drag a panel onto another of the same kind: offer to stack them ----
+        GlassWindow dropTarget;
+        GlassWindow TargetUnder(GlassWindow w)
+        {
+            Point c = Cursor.Position;
+            foreach (var o in Windows)
+                if (o != w && o.Visible && (o is Widget) == (w is Widget) && o.PanelBounds.Contains(c)) return o;
+            return null;
+        }
+        public void DragOver(GlassWindow w)
+        {
+            var t = TargetUnder(w);
+            if (t == dropTarget) return;
+            if (dropTarget != null) { dropTarget.DropHint = false; dropTarget.Redraw(); }
+            dropTarget = t;
+            if (t != null) { t.DropHint = true; t.Redraw(); }
+        }
+        public void DragEnded(GlassWindow w)
+        {
+            var t = dropTarget; dropTarget = null;
+            if (t == null) return;
+            t.DropHint = false; t.Redraw();
+            var mine = GroupOf(w.Id);
+            if (mine != null && mine.Contains(t.Id)) return;
+            var m = NewMenu();
+            m.Items.Add(new ToolStripMenuItem("Stack \u201C" + PanelName(w) + "\u201D with \u201C" + PanelName(t) + "\u201D?") { Enabled = false });
+            m.Items.Add(new ToolStripSeparator());
+            m.Items.Add("Stack them", null, delegate
+            {
+                Rectangle spot = t.PanelBounds;
+                JoinGroup(w, t);
+                // the one you dropped shows on top, in the other one's spot
+                var g = GroupOf(w.Id); g.Remove(w.Id); g.Insert(0, w.Id);
+                Settings.Positions[w.Id] = new Rectangle(spot.Location, w.PanelBounds.Size);
+                Settings.Save(); ApplySettings();
+            });
+            m.Items.Add("No, just put it here", null, delegate { });
+            m.Show(Cursor.Position);
+        }
+
+        /// <summary>The ids and names in this panel's stack, in order (empty when it isn't stacked).</summary>
+        public List<KeyValuePair<string, string>> GroupMembers(string id)
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            List<string> live;
+            if (!liveGroups.TryGetValue(id, out live)) return list;
+            foreach (string m in live)
+                foreach (var w in Windows) if (w.Id == m) { list.Add(new KeyValuePair<string, string>(m, PanelName(w))); break; }
+            return list;
+        }
+
+        public Size GroupSize(string id)
+        {
+            List<string> live;
+            if (!liveGroups.TryGetValue(id, out live)) return Size.Empty;
+            int w = 0, h = 0;
+            foreach (var win in Windows) { var wd = win as Widget; if (wd != null && live.Contains(wd.Id)) { var s = wd.NaturalSize(); w = Math.Max(w, s.Width); h = Math.Max(h, s.Height); } }
+            return new Size(w, h);
+        }
+
+        public void SwitchTo(GlassWindow w, string target)
+        {
+            List<string> live;
+            if (!liveGroups.TryGetValue(w.Id, out live) || !live.Contains(target)) return;
+            SwitchGroup(w, live.IndexOf(target) - live.IndexOf(w.Id));
+        }
+
+        public void SwitchGroup(GlassWindow w, int dir)
+        {
+            List<string> live; var g = GroupOf(w.Id);
+            if (g == null || !liveGroups.TryGetValue(w.Id, out live)) return;
+            string next = live[((live.IndexOf(w.Id) + dir) % live.Count + live.Count) % live.Count];
+            if (next == w.Id) return;
+            // the next one takes this one's spot and moves to the front (stacked fences also keep the same size)
+            Rectangle cur = new Rectangle(w.PanelBounds.Location, w.PanelBounds.Size), old;
+            Rectangle stored; if (Settings.Positions.TryGetValue(w.Id, out stored) && w is FenceWindow) cur.Size = stored.Size;
+            if (w is FenceWindow) Settings.Positions[next] = cur;
+            else Settings.Positions[next] = Settings.Positions.TryGetValue(next, out old) ? new Rectangle(cur.Location, old.Size) : new Rectangle(cur.Location, Size.Empty);
+            g.Remove(next); g.Insert(0, next);
+            Settings.Save();
+            // quick: only re-pick who shows in the stack, no full rescan
+            foreach (var win in Windows) if (live.Contains(win.Id)) win.Wanted = true;
+            ApplyGroups();
+            PlaceAll();
+            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir); break; }
+        }
+
+        public void JoinGroup(GlassWindow w, GlassWindow target)
+        {
+            var mine = GroupOf(w.Id); if (mine != null) { mine.Remove(w.Id); if (mine.Count < 2) Settings.Groups.Remove(mine); }
+            var g = GroupOf(target.Id);
+            if (g == null) { g = new List<string> { target.Id }; Settings.Groups.Add(g); }
+            g.Add(w.Id);
+            Settings.Save();
+            ApplySettings();
+        }
+
+        public void LeaveGroup(GlassWindow w)
+        {
+            var g = GroupOf(w.Id); if (g == null) return;
+            g.Remove(w.Id); if (g.Count < 2) Settings.Groups.Remove(g);
+            Settings.Positions.Remove(w.Id);   // find it a free spot of its own
+            Settings.Save();
+            ApplySettings();
         }
 
         void OnUserPrefChanged(object s, UserPreferenceChangedEventArgs e)
@@ -647,6 +919,7 @@ namespace GlassDesk
                 Font = Gfx.SafeFont(Theme.FontName, 13.5f * DpiScale, FontStyle.Regular),
                 Padding = new Padding(2, 4, 2, 4)
             };
+            m.Opened += delegate { Native.SetRoundCorners(m.Handle); };
             m.Closed += delegate { try { invoker.BeginInvoke(new Action(delegate { var f = m.Font; m.Dispose(); f.Dispose(); })); } catch { } };
             return m;
         }
@@ -660,12 +933,14 @@ namespace GlassDesk
                 Font = Gfx.SafeFont(Theme.FontName, 13.5f * DpiScale, FontStyle.Regular),
                 Padding = new Padding(2, 4, 2, 4)
             };
+            m.Opened += delegate { Native.SetRoundCorners(m.Handle); };
             m.Items.Add("Settings", null, delegate { ShowSettings(); });
             m.Items.Add((hiddenByUser ? "Show" : "Hide") + " panels    Ctrl+Alt+G", null, delegate { ToggleVisible(); });
             m.Items.Add("Find on desktop…    Ctrl+Alt+F", null, delegate { ShowSearch(); });
             m.Items.Add("New fence…", null, delegate { NewFence(); });
             m.Items.Add("Add a rule…", null, delegate { AddRule(null); });
             m.Items.Add("Edit note", null, delegate { if (!notes.Visible) { Settings.ShowNotes = true; ApplySettings(); } notes.Edit(); });
+            m.Items.Add("Organize desktop…", null, delegate { ShowOrganize(); });
             m.Items.Add("Rescan desktop", null, delegate { Rebuild(); });
             m.Items.Add("Check for updates", null, delegate { Updates.Check(true); });
             m.Items.Add(new ToolStripSeparator());
@@ -682,6 +957,8 @@ namespace GlassDesk
             if (w == countdown) m.Items.Add("Change event…", null, delegate { countdown.Edit(); });
             if (w == quote) m.Items.Add("Another quote", null, delegate { quote.Next(); });
             if (w == github) { m.Items.Add("Open profile", null, delegate { github.OpenProfile(); }); m.Items.Add("Change username…", null, delegate { github.ChooseUser(); }); m.Items.Add("Refresh now", null, delegate { github.Fetch(); }); }
+            AddGroupItems(m, w);
+            if (w == music) { m.Items.Add("Play / pause", null, delegate { music.PlayPause(); }); m.Items.Add("Next song", null, delegate { music.Next(); }); m.Items.Add("Previous song", null, delegate { music.Previous(); }); m.Items.Add("Volume mixer", null, delegate { music.OpenMixer(); }); }
             if (w == focus) { m.Items.Add("Start / pause", null, delegate { focus.Toggle(); }); m.Items.Add("Reset", null, delegate { focus.Reset(); }); }
             if (w == todo) { m.Items.Add("Edit list", null, delegate { todo.Edit(); }); m.Items.Add("Clear finished tasks", null, delegate { todo.ClearDone(); }); }
             if (w == weather)
@@ -701,7 +978,7 @@ namespace GlassDesk
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;
                 else if (w == calendar) Settings.ShowCalendar = false; else if (w == notes) Settings.ShowNotes = false;
-                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false;
+                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false; else if (w == day) Settings.ShowDay = false;
                 else if (w == weather) Settings.ShowWeather = false; else if (w == todo) Settings.ShowTodo = false; else if (w == photos) Settings.ShowPhotos = false;
                 Settings.Save(); ApplySettings();
             });
@@ -821,8 +1098,10 @@ namespace GlassDesk
             Settings.ShowWeather = false; Settings.ShowPhotos = false;
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
+            string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote
+            if (!string.IsNullOrEmpty(grp)) Settings.Groups.Add(new List<string>(grp.Split(',')));
             CreateWidgets();
-            weather.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample();
+            weather.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
             Rebuild();
             string sample = Environment.GetEnvironmentVariable("GLASSDESK_SAMPLE_PHOTO");
             if (!string.IsNullOrEmpty(sample) && File.Exists(sample)) photos.SetSampleFile(sample);
@@ -838,7 +1117,7 @@ namespace GlassDesk
             add("apps", new[] { "Chrome.lnk", "Spotify.lnk", "Visual Studio Code.lnk", "Steam.lnk", "Roblox Studio.lnk", "Discord.lnk", "Blender.lnk", "OBS Studio.lnk" }, false);
             add("folders", new[] { "Projects", "School", "Screenshots", "Game assets" }, true);
             add("docs", new[] { "Budget 2026.xlsx", "Notes.txt", "Report final.docx", "Invoice-1042.pdf", "Ideas.md" }, false);
-            add("images", new[] { "wallpaper.jpg", "logo.png", "sketch.png", "photo-0912.heic", "banner.webp" }, false);
+            add("images", new[] { "wallpaper.jpg", "logo.png", "sketch.png", "icon.png", "screenshot-1.png", "photo-0912.heic", "banner.webp" }, false);
             add("media", new[] { "podcast.mp3", "clip.mp4" }, false);
             add("archives", new[] { "backup.zip", "assets.7z" }, false);
         }
