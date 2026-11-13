@@ -37,7 +37,7 @@ namespace GlassDesk
 
         ClockWidget clock; SystemWidget system; CalendarWidget calendar; NotesWidget notes;
         WeatherWidget weather; TodoWidget todo; PhotoWidget photos;
-        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus;
+        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music;
         internal GitHubWidget GitHubW { get { return github; } } internal FocusWidget FocusW { get { return focus; } }
         public WallpaperChanger Wallpaper;
         readonly Dictionary<string, FenceWindow> fences = new Dictionary<string, FenceWindow>();
@@ -92,10 +92,14 @@ namespace GlassDesk
             Wallpaper = new WallpaperChanger(this);
             Safe("backup", delegate { Backup.Daily(this); });
 
-            if (!File.Exists(Path.Combine(Settings.Folder, "welcomed")))
+            // the welcome screen shows once ever: the marker file stays when GlassDesk is updated
+            string mark = Path.Combine(Settings.Folder, "welcome-screen-shown");
+            if (!File.Exists(mark))
             {
-                try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(Path.Combine(Settings.Folder, "welcomed"), "1"); } catch { }
-                tray.ShowBalloonTip(4000, "GlassDesk is running", "Your desktop is now organized. Click the tray icon for settings, or press Ctrl + Alt + G to show / hide.", ToolTipIcon.Info);
+                try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(mark, Version); } catch { }
+                var wt = new Timer { Interval = 1200 };
+                wt.Tick += delegate { wt.Stop(); wt.Dispose(); ShowWelcome(); };
+                wt.Start();
             }
         }
 
@@ -116,6 +120,7 @@ namespace GlassDesk
             Windows.Add(countdown); Windows.Add(quote);
             github = new GitHubWidget(this); network = new NetworkWidget(this); focus = new FocusWidget(this);
             Windows.Add(github); Windows.Add(network); Windows.Add(focus);
+            music = new MusicWidget(this); Windows.Add(music);
         }
 
         Action balloonClick;
@@ -168,17 +173,28 @@ namespace GlassDesk
                 }
         }
 
-        SearchForm search;
-        public void ShowSearch()
+        LauncherForm search;
+        public LauncherForm MakeLauncher()
         {
-            if (search != null && !search.IsDisposed) { search.Activate(); return; }
             var items = new List<KeyValuePair<DesktopItem, string>>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var f in fences.Values)
                 foreach (var it in f.Items)
                     if (seen.Add(it.Path)) items.Add(new KeyValuePair<DesktopItem, string>(it, f.Caption));
             items.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
-            search = new SearchForm(this, items);
+            return new LauncherForm(this, items);
+        }
+
+        public void ShowWelcome()
+        {
+            var w = new WelcomeForm(this);
+            w.Show(); w.Activate();
+        }
+
+        public void ShowSearch()
+        {
+            if (search != null && !search.IsDisposed) { search.Activate(); return; }
+            search = MakeLauncher();
             search.FormClosed += delegate { search = null; };
             search.Show(); search.Activate();
         }
@@ -271,7 +287,7 @@ namespace GlassDesk
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
             weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
-            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus;
+            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic;
             if (!preview) UpdateWatchers();
             PlaceAll();
         }
@@ -658,6 +674,7 @@ namespace GlassDesk
                 Font = Gfx.SafeFont(Theme.FontName, 13.5f * DpiScale, FontStyle.Regular),
                 Padding = new Padding(2, 4, 2, 4)
             };
+            m.Opened += delegate { Native.SetRoundCorners(m.Handle); };
             m.Closed += delegate { try { invoker.BeginInvoke(new Action(delegate { var f = m.Font; m.Dispose(); f.Dispose(); })); } catch { } };
             return m;
         }
@@ -671,6 +688,7 @@ namespace GlassDesk
                 Font = Gfx.SafeFont(Theme.FontName, 13.5f * DpiScale, FontStyle.Regular),
                 Padding = new Padding(2, 4, 2, 4)
             };
+            m.Opened += delegate { Native.SetRoundCorners(m.Handle); };
             m.Items.Add("Settings", null, delegate { ShowSettings(); });
             m.Items.Add((hiddenByUser ? "Show" : "Hide") + " panels    Ctrl+Alt+G", null, delegate { ToggleVisible(); });
             m.Items.Add("Find on desktop…    Ctrl+Alt+F", null, delegate { ShowSearch(); });
@@ -693,6 +711,7 @@ namespace GlassDesk
             if (w == countdown) m.Items.Add("Change event…", null, delegate { countdown.Edit(); });
             if (w == quote) m.Items.Add("Another quote", null, delegate { quote.Next(); });
             if (w == github) { m.Items.Add("Open profile", null, delegate { github.OpenProfile(); }); m.Items.Add("Change username…", null, delegate { github.ChooseUser(); }); m.Items.Add("Refresh now", null, delegate { github.Fetch(); }); }
+            if (w == music) { m.Items.Add("Play / pause", null, delegate { music.PlayPause(); }); m.Items.Add("Next song", null, delegate { music.Next(); }); m.Items.Add("Previous song", null, delegate { music.Previous(); }); m.Items.Add("Volume mixer", null, delegate { music.OpenMixer(); }); }
             if (w == focus) { m.Items.Add("Start / pause", null, delegate { focus.Toggle(); }); m.Items.Add("Reset", null, delegate { focus.Reset(); }); }
             if (w == todo) { m.Items.Add("Edit list", null, delegate { todo.Edit(); }); m.Items.Add("Clear finished tasks", null, delegate { todo.ClearDone(); }); }
             if (w == weather)
@@ -712,7 +731,7 @@ namespace GlassDesk
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;
                 else if (w == calendar) Settings.ShowCalendar = false; else if (w == notes) Settings.ShowNotes = false;
-                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false;
+                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false;
                 else if (w == weather) Settings.ShowWeather = false; else if (w == todo) Settings.ShowTodo = false; else if (w == photos) Settings.ShowPhotos = false;
                 Settings.Save(); ApplySettings();
             });
@@ -833,7 +852,7 @@ namespace GlassDesk
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             CreateWidgets();
-            weather.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample();
+            weather.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
             Rebuild();
             string sample = Environment.GetEnvironmentVariable("GLASSDESK_SAMPLE_PHOTO");
             if (!string.IsNullOrEmpty(sample) && File.Exists(sample)) photos.SetSampleFile(sample);

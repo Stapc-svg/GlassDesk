@@ -349,6 +349,7 @@ namespace GlassDesk
             Row("Calendar", "Month view — click the arrows to change month", Toggle(S.ShowCalendar, v => S.ShowCalendar = v));
             Row("Notes", "A sticky note — double-click it to write", Toggle(S.ShowNotes, v => S.ShowNotes = v));
             Row("To-do list", "Tick tasks off right on the desktop — double-click to edit the list", Toggle(S.ShowTodo, v => S.ShowTodo = v));
+            Row("Music", "The song that's playing — or the last one you listened to", Toggle(S.ShowMusic, v => S.ShowMusic = v));
             Row("Quote of the day", "A new quote every morning — double-click for another", Toggle(S.ShowQuote, v => S.ShowQuote = v));
             Row("GitHub stats", "Stars, followers, repos and your last 14 days" + (string.IsNullOrEmpty(S.GitHubUser) ? "" : " — @" + S.GitHubUser), Toggle(S.ShowGitHub, v => S.ShowGitHub = v));
             Row("GitHub username", "Public data only, no sign-in needed", Button("Change…", false, delegate { if (app.GitHubW != null) app.GitHubW.ChooseUser(); }));

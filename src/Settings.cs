@@ -38,7 +38,8 @@ namespace GlassDesk
         public bool ShowTodo = true;
         public string TodoText = "[ ] Try dragging an icon to another fence\n[ ] Make a rule in Settings > Organizer\n[x] Install GlassDesk";
         public bool ShowPhotos = false;
-        public bool ShowCountdown = true, ShowQuote = true;
+        public bool ShowCountdown = true, ShowQuote = true, ShowMusic = true;
+        public string LastSong = "", LastArtist = "";   // the music widget shows these when nothing is playing
         public bool ShowGitHub = true, ShowNetwork = true, ShowFocus = true; public string GitHubUser = ""; public int FocusMinutes = 25, BreakMinutes = 5;
         public string CountdownTitle = "", CountdownDate = "";      // date as yyyy-MM-dd
         public bool WallpaperOn = false;
@@ -180,6 +181,9 @@ namespace GlassDesk
                 case "SkipVersion": SkipVersion = v.Trim(); return;
                 case "ShowCountdown": ShowCountdown = B(v); return;
                 case "ShowQuote": ShowQuote = B(v); return;
+                case "ShowMusic": ShowMusic = B(v); return;
+                case "LastSong": LastSong = Unesc(v); return;
+                case "LastArtist": LastArtist = Unesc(v); return;
                 case "ShowGitHub": ShowGitHub = B(v); return; case "ShowNetwork": ShowNetwork = B(v); return; case "ShowFocus": ShowFocus = B(v); return;
                 case "GitHubUser": GitHubUser = v; return;
                 case "FocusMinutes": { int n; if (int.TryParse(v, out n)) FocusMinutes = Math.Max(1, Math.Min(120, n)); } return;
@@ -245,7 +249,7 @@ namespace GlassDesk
                 for (int i = 0; i < Rules.Count; i++) w("rule." + i, Rules[i][1] + "|" + Esc(Rules[i][0]));
                 foreach (var kv in Sort) w("sort." + kv.Key, kv.Value);
                 w("ShowGitHub", b(ShowGitHub)); w("ShowNetwork", b(ShowNetwork)); w("ShowFocus", b(ShowFocus)); w("GitHubUser", GitHubUser ?? ""); w("FocusMinutes", FocusMinutes.ToString()); w("BreakMinutes", BreakMinutes.ToString());
-                w("ShowCountdown", b(ShowCountdown)); w("ShowQuote", b(ShowQuote)); w("CountdownTitle", Esc(CountdownTitle)); w("CountdownDate", CountdownDate);
+                w("ShowCountdown", b(ShowCountdown)); w("ShowQuote", b(ShowQuote)); w("ShowMusic", b(ShowMusic)); w("LastSong", Esc(LastSong ?? "")); w("LastArtist", Esc(LastArtist ?? "")); w("CountdownTitle", Esc(CountdownTitle)); w("CountdownDate", CountdownDate);
                 w("WallpaperOn", b(WallpaperOn)); w("WallpaperFolder", Esc(WallpaperFolder)); w("WallpaperMinutes", WallpaperMinutes.ToString(CultureInfo.InvariantCulture));
                 w("AutoBackup", b(AutoBackup));
                 foreach (var kv in FenceColor) w("fcolor." + kv.Key, kv.Value);

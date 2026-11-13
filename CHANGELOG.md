@@ -2,6 +2,11 @@
 
 ## 1.8.0
 
+- **New search:** Ctrl + Alt + F opens a launcher with a grid of icons on the blurred wallpaper, drawn in your theme.
+- **Music widget:** shows the song playing in any app (Spotify, YouTube, Apple Music...) with its cover, progress and play / pause / next buttons. When nothing plays, it shows the last song you listened to.
+- **Welcome screen:** shown once, the first time GlassDesk starts. It never comes back, even after updates.
+- **Themed menus:** right-click menus and the Settings window take their colors from your theme.
+
 - **Windows themes:** 10 new themes in their own section: Mica material, Acrylic material, Mica Alt, Windows Light, Windows Dark, Bloom, Glow, Sunrise, Flow and Captured Motion.
 - Fixed: theme names in Settings were too big. Panels past the screen edge move back on screen. Fences resize from the right edge, bottom edge or corner.
 - **16 themes** in a new gallery in Settings → Appearance: GlassDesk, Clean, Midnight, Ocean, Sunset, Forest, Rose, Aurora, Frost, Ember, Lavender, Mint, Neon, Graphite, Paper and Classic

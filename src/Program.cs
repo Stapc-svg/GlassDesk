@@ -20,6 +20,7 @@ namespace GlassDesk
         static int Main(string[] args)
         {
             if (args.Length >= 2 && args[0] == "--preview") return Preview(args[1], args.Length > 2 && args[2] == "light");
+            if (args.Length >= 2 && args[0] == "--preview-forms") return PreviewForms(args[1], args.Length > 2 && args[2] == "light");
             if (args.Length >= 2 && args[0] == "--preview-settings") return PreviewSettings(args[1], args.Length > 2 && args[2] == "light");
 
             bool first;
@@ -122,6 +123,20 @@ namespace GlassDesk
             }
             File.WriteAllText(Path.Combine(dir, "layout.txt"), sb.ToString());
             using (var logo = App.LogoBitmap(256, app.Theme.Accent)) logo.Save(Path.Combine(dir, "logo.png"), ImageFormat.Png);
+            return 0;
+        }
+
+        static int PreviewForms(string dir, bool light)
+        {
+            Directory.CreateDirectory(dir);
+            var app = new App(true);
+            app.StartPreview(!light);
+            var l = app.MakeLauncher(); l.Location = new System.Drawing.Point(610, 230);
+            using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher.png"), ImageFormat.Png);
+            l.SetQuery("o");
+            using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-search.png"), ImageFormat.Png);
+            var w = new WelcomeForm(app); w.Location = new System.Drawing.Point(640, 290);
+            using (var b = w.Render()) b.Save(Path.Combine(dir, "welcome.png"), ImageFormat.Png);
             return 0;
         }
 

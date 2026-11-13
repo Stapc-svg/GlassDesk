@@ -20,19 +20,23 @@ namespace GlassDesk
             var p = new Palette { Dark = t.Dark, Accent = Color.FromArgb(255, t.Accent) };
             // a second, related color for gradients: the accent leaning toward violet
             p.Accent2 = Mix(p.Accent, Color.FromArgb(176, 108, 255), 0.45f);
+            var look = Themes.Find(t.LookId) ?? Themes.Find("glassdesk");
+            Color black = Color.Black, white = Color.White;
             if (t.Dark)
             {
-                p.Bg = Mix(Color.FromArgb(13, 16, 32), p.Accent, 0.03f); p.Side = Mix(Color.FromArgb(10, 13, 27), p.Accent, 0.05f); p.Side2 = Color.FromArgb(8, 10, 20);
-                p.Card = Mix(Color.FromArgb(22, 26, 46), p.Accent, 0.05f); p.Card2 = Mix(Color.FromArgb(18, 21, 38), p.Accent, 0.03f);
-                p.Text = Color.FromArgb(240, 242, 250); p.Sub = Color.FromArgb(152, 160, 186); p.Line = Mix(Color.FromArgb(36, 41, 66), p.Accent, 0.06f);
-                p.Off = Color.FromArgb(58, 63, 90); p.Hover = Mix(Color.FromArgb(28, 33, 58), p.Accent, 0.08f);
+                Color top = look.DarkTop, bot = look.DarkBottom;
+                p.Bg = Mix(bot, top, 0.3f); p.Side = Mix(bot, black, 0.15f); p.Side2 = Mix(bot, black, 0.4f);
+                p.Card = Mix(top, white, 0.035f); p.Card2 = Mix(top, bot, 0.5f);
+                p.Text = Color.FromArgb(240, 242, 250); p.Sub = Mix(Color.FromArgb(160, 166, 186), top, 0.15f); p.Line = Mix(top, white, 0.11f);
+                p.Off = Mix(top, white, 0.22f); p.Hover = Mix(Mix(top, white, 0.07f), p.Accent, 0.12f);
             }
             else
             {
-                p.Bg = Mix(Color.FromArgb(244, 245, 251), p.Accent, 0.03f); p.Side = Mix(Color.FromArgb(236, 238, 248), p.Accent, 0.05f); p.Side2 = Color.FromArgb(246, 247, 252);
-                p.Card = Color.White; p.Card2 = Mix(Color.FromArgb(250, 251, 255), p.Accent, 0.02f);
-                p.Text = Color.FromArgb(20, 22, 34); p.Sub = Color.FromArgb(100, 106, 128); p.Line = Color.FromArgb(226, 229, 240);
-                p.Off = Color.FromArgb(198, 202, 216); p.Hover = Mix(Color.FromArgb(226, 229, 242), p.Accent, 0.06f);
+                Color top = look.LightTop, bot = look.LightBottom;
+                p.Bg = Mix(bot, top, 0.4f); p.Side = Mix(bot, black, 0.03f); p.Side2 = top;
+                p.Card = Mix(top, white, 0.65f); p.Card2 = Mix(top, bot, 0.5f);
+                p.Text = Color.FromArgb(20, 22, 34); p.Sub = Color.FromArgb(100, 106, 128); p.Line = Mix(bot, black, 0.09f);
+                p.Off = Mix(bot, black, 0.2f); p.Hover = Mix(Mix(bot, black, 0.04f), p.Accent, 0.1f);
             }
             return p;
         }
@@ -429,13 +433,16 @@ namespace GlassDesk
         {
             if (!e.Item.Selected || !e.Item.Enabled) return;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Gfx.FillRound(e.Graphics, p.Hover, new RectangleF(4, 1, e.Item.Width - 8, e.Item.Height - 2), 5);
+            var r = new RectangleF(5, 1, e.Item.Width - 10, e.Item.Height - 2);
+            using (var path = Gfx.Round(r, 6))
+            using (var b = new LinearGradientBrush(r, Gfx.WithAlpha(p.Accent, p.Dark ? 120 : 70), Gfx.WithAlpha(p.Accent2, p.Dark ? 80 : 45), 0f))
+                e.Graphics.FillPath(b, path);
         }
         class MenuColors : ProfessionalColorTable
         {
             readonly Palette p;
             public MenuColors(Palette p) { this.p = p; UseSystemColors = false; }
-            Color Bg { get { return p.Dark ? Color.FromArgb(36, 38, 48) : Color.FromArgb(252, 252, 254); } }
+            Color Bg { get { return p.Card; } }
             public override Color ToolStripDropDownBackground { get { return Bg; } }
             public override Color ImageMarginGradientBegin { get { return Bg; } }
             public override Color ImageMarginGradientMiddle { get { return Bg; } }
