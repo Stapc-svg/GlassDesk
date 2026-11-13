@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.6
+
+- **Switch animation:** switching tabs in a stack slides the new widget or fence in with a fade.
+- **Same size:** all widgets in a stack are now the same size (the biggest one).
+- Switching tabs is faster.
+
 ## 1.8.5
 
 - **Stacked widgets show tabs** too, like stacked fences. Click a tab to switch. The dots and mouse-wheel switching are gone.

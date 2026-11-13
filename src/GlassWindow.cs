@@ -279,7 +279,28 @@ namespace GlassDesk
                 Gfx.Setup(g);
                 g.Clear(Color.Transparent);
                 DrawChrome(g);
-                PaintContent(g);
+                float t = AnimProgress;
+                if (t >= 1f) PaintContent(g);
+                else
+                {
+                    // switching inside a stack: the new content slides in and fades up
+                    using (var layer = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb))
+                    {
+                        using (var lg = Graphics.FromImage(layer)) { Gfx.Setup(lg); lg.Clear(Color.Transparent); PaintContent(lg); }
+                        float e = 1f - (float)Math.Pow(1 - t, 3);   // ease out
+                        int top = Math.Max(0, Math.Min(bmp.Height, AnimTop));
+                        if (top > 0) g.DrawImage(layer, new Rectangle(0, 0, bmp.Width, top), new Rectangle(0, 0, bmp.Width, top), GraphicsUnit.Pixel);
+                        float dx = animDir * (1 - e) * T.Sf(46);
+                        using (var ia = new ImageAttributes())
+                        {
+                            ia.SetColorMatrix(new ColorMatrix { Matrix33 = 0.15f + 0.85f * e });
+                            var st = g.Save();
+                            g.SetClip(new Rectangle(Panel.X, top, Panel.Width, Panel.Bottom - top));
+                            g.DrawImage(layer, new Rectangle((int)dx, top, bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
+                            g.Restore(st);
+                        }
+                    }
+                }
                 PaintOverlay(g);
                 if (Resizable && (hoverPanel || resizing) && !Cfg.LockPositions) DrawGrip(g);
             }
@@ -416,6 +437,23 @@ namespace GlassDesk
                 }
             if (dark) grainDark = b; else grainLight = b;
             return b;
+        }
+
+        // ---- the slide when you switch to this panel in a stack ----
+        int animStartTick, animDir; System.Windows.Forms.Timer animTimer;
+        const int AnimMs = 260;
+        float AnimProgress { get { if (animTimer == null || !animTimer.Enabled) return 1f; return Math.Min(1f, (Environment.TickCount - animStartTick) / (float)AnimMs); } }
+        /// <summary>Content above this line (a fence's title) stays put while the rest slides.</summary>
+        protected virtual int AnimTop { get { return Panel.Y; } }
+        public void PlayEnter(int dir)
+        {
+            animDir = dir >= 0 ? 1 : -1; animStartTick = Environment.TickCount;
+            if (animTimer == null)
+            {
+                animTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                animTimer.Tick += delegate { if (Environment.TickCount - animStartTick >= AnimMs) animTimer.Stop(); Redraw(); };
+            }
+            animTimer.Start(); Redraw();
         }
 
         public void Redraw()

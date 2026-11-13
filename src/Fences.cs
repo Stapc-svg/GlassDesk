@@ -808,6 +808,8 @@ namespace GlassDesk
             m.Show(Cursor.Position);
         }
 
+        protected override int AnimTop { get { return Panel.Y + TitleH; } }
+
         void ShowFenceMenu()
         {
             var m = App.NewMenu();

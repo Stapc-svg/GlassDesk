@@ -848,6 +848,15 @@ namespace GlassDesk
             return list;
         }
 
+        public Size GroupSize(string id)
+        {
+            List<string> live;
+            if (!liveGroups.TryGetValue(id, out live)) return Size.Empty;
+            int w = 0, h = 0;
+            foreach (var win in Windows) { var wd = win as Widget; if (wd != null && live.Contains(wd.Id)) { var s = wd.NaturalSize(); w = Math.Max(w, s.Width); h = Math.Max(h, s.Height); } }
+            return new Size(w, h);
+        }
+
         public void SwitchTo(GlassWindow w, string target)
         {
             List<string> live;
@@ -868,7 +877,11 @@ namespace GlassDesk
             else Settings.Positions[next] = Settings.Positions.TryGetValue(next, out old) ? new Rectangle(cur.Location, old.Size) : new Rectangle(cur.Location, Size.Empty);
             g.Remove(next); g.Insert(0, next);
             Settings.Save();
-            ApplySettings();
+            // quick: only re-pick who shows in the stack, no full rescan
+            foreach (var win in Windows) if (live.Contains(win.Id)) win.Wanted = true;
+            ApplyGroups();
+            PlaceAll();
+            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir); break; }
         }
 
         public void JoinGroup(GlassWindow w, GlassWindow target)

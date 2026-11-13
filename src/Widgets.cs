@@ -58,11 +58,16 @@ namespace GlassDesk
         {
             int pct;
             Zoom = Cfg.WidgetZoom.TryGetValue(Id, out pct) ? pct / 100f : 1f;
+            Size gs = App.GroupSize(Id);   // stacked widgets all take the size of the biggest one
+            if (!gs.IsEmpty) return new Size(gs.Width, gs.Height + TabH);
             return new Size(T.S(BaseSize.Width), T.S(BaseSize.Height) + TabH);
         }
         protected Rectangle Inner { get { int m = T.S(18), t = TabH; return new Rectangle(Panel.X + m, Panel.Y + T.S(14) + t, Panel.Width - 2 * m, Panel.Height - T.S(28) - t); } }
         /// <summary>Height of the tab strip a stacked widget shows on top (0 when not stacked).</summary>
         protected int TabH { get { int i, n; return App.GroupInfo(Id, out i, out n) ? T.S(40) : 0; } }
+        protected override int AnimTop { get { return Panel.Y + TabH; } }
+        /// <summary>This widget's own size at its zoom, without a tab strip.</summary>
+        public Size NaturalSize() { int pct; float z = Cfg.WidgetZoom.TryGetValue(Id, out pct) ? pct / 100f : 1f; var t = App.Theme; return new Size((int)(t.S(BaseSize.Width) * z), (int)(t.S(BaseSize.Height) * z)); }
         protected override void PaintOverlay(Graphics g)
         {
             if (TabH > 0)
