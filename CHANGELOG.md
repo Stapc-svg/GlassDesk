@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.5
+
+- **Stacked widgets show tabs** too, like stacked fences. Click a tab to switch. The dots and mouse-wheel switching are gone.
+
 ## 1.8.4
 
 - **Stacked fences show tabs:** the title shows a tab for every fence in the stack. Click a tab to switch. Every fence in a stack keeps the same size.

@@ -58,9 +58,28 @@ namespace GlassDesk
         {
             int pct;
             Zoom = Cfg.WidgetZoom.TryGetValue(Id, out pct) ? pct / 100f : 1f;
-            return new Size(T.S(BaseSize.Width), T.S(BaseSize.Height));
+            return new Size(T.S(BaseSize.Width), T.S(BaseSize.Height) + TabH);
         }
-        protected Rectangle Inner { get { int m = T.S(18); return new Rectangle(Panel.X + m, Panel.Y + T.S(14), Panel.Width - 2 * m, Panel.Height - T.S(28)); } }
+        protected Rectangle Inner { get { int m = T.S(18), t = TabH; return new Rectangle(Panel.X + m, Panel.Y + T.S(14) + t, Panel.Width - 2 * m, Panel.Height - T.S(28) - t); } }
+        /// <summary>Height of the tab strip a stacked widget shows on top (0 when not stacked).</summary>
+        protected int TabH { get { int i, n; return App.GroupInfo(Id, out i, out n) ? T.S(40) : 0; } }
+        protected override void PaintOverlay(Graphics g)
+        {
+            if (TabH > 0)
+            {
+                var strip = new RectangleF(Panel.X, Panel.Y, Panel.Width, TabH);
+                using (var path = Gfx.Round(new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height), T.S(Cfg.Radius)))
+                {
+                    var st = g.Save(); g.SetClip(path, System.Drawing.Drawing2D.CombineMode.Intersect);
+                    using (var b = new SolidBrush(Color.FromArgb(T.Dark ? 40 : 30, T.Dark ? Color.Black : Color.White))) g.FillRectangle(b, strip);
+                    g.Restore(st);
+                }
+                using (var pen = new Pen(T.Border)) g.DrawLine(pen, Panel.X + T.S(12), Panel.Y + TabH, Panel.Right - T.S(12), Panel.Y + TabH);
+                DrawTabs(g, new RectangleF(Panel.X + T.S(12), Panel.Y + T.S(4), Panel.Width - T.S(24), TabH - T.S(4)));
+            }
+            else tabRects.Clear();
+            base.PaintOverlay(g);
+        }
         protected void Txt(Graphics g, string s, Font f, Color c, RectangleF r, StringFormat sf)
         {
             if (Cfg.GlassStyle == "transparent")

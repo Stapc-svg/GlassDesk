@@ -219,24 +219,37 @@ namespace GlassDesk
         protected abstract void PaintContent(Graphics g);
         public bool DropHint;   // another panel is being dragged onto this one
 
-        // ---- groups: dots along the bottom; click the dots or the top of the panel (widgets: or scroll) to switch ----
-        RectangleF Dots(int count)
+        // ---- stacks: a tab for every panel in the stack; click a tab to switch ----
+        protected readonly List<KeyValuePair<RectangleF, string>> tabRects = new List<KeyValuePair<RectangleF, string>>();
+
+        /// <summary>Draws the stack's tabs inside the area; returns false when this panel isn't stacked.</summary>
+        protected bool DrawTabs(Graphics g, RectangleF area)
         {
-            float d = App.Theme.Sf(6), gap = App.Theme.Sf(5), w = count * d + (count - 1) * gap;
-            return new RectangleF(Panel.X + (Panel.Width - w) / 2, Panel.Bottom - App.Theme.Sf(11), w, d);
+            tabRects.Clear();
+            var members = App.GroupMembers(Id);
+            if (members.Count < 2) return false;
+            float x = area.X, th = Math.Min(area.Height - T.Sf(6), T.Sf(26)), ty = area.Y + (area.Height - th) / 2;
+            var f = Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Bold);
+            float want = 0;
+            foreach (var m in members) want += Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) + T.Sf(6);
+            float squeeze = want > area.Width ? area.Width / want : 1f;
+            var sf = new StringFormat(Gfx.Center) { Trimming = StringTrimming.EllipsisCharacter };
+            foreach (var m in members)
+            {
+                bool cur = m.Key == Id;
+                float tw = Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) * squeeze;
+                var tr = new RectangleF(x, ty, tw, th);
+                if (cur) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, T.Dark ? 110 : 80), tr, th / 2);
+                else Gfx.FillRound(g, T.Hover, tr, th / 2);
+                using (var b = new SolidBrush(cur ? T.Text : T.SubText)) g.DrawString(m.Value, f, b, RectangleF.Inflate(tr, -T.Sf(6), 0), sf);
+                tabRects.Add(new KeyValuePair<RectangleF, string>(tr, m.Key));
+                x += tw + T.Sf(6) * squeeze;
+            }
+            return true;
         }
+
         protected virtual void PaintOverlay(Graphics g)
         {
-            int i, n;
-            if (!(this is FenceWindow) && App.GroupInfo(Id, out i, out n))
-            {
-                var r = Dots(n);
-                float d = r.Height, gap = App.Theme.Sf(5);
-                Gfx.FillRound(g, Color.FromArgb(T.Dark ? 70 : 40, 0, 0, 0), RectangleF.Inflate(r, App.Theme.Sf(5), App.Theme.Sf(3)), App.Theme.Sf(6));
-                for (int k = 0; k < n; k++)
-                    using (var b = new SolidBrush(k == i ? T.Accent : Color.FromArgb(150, 255, 255, 255)))
-                        g.FillEllipse(b, r.X + k * (d + gap), r.Y, d, d);
-            }
             if (DropHint)
             {
                 var pr = new RectangleF(Panel.X + 1.5f, Panel.Y + 1.5f, Panel.Width - 3, Panel.Height - 3);
@@ -251,14 +264,11 @@ namespace GlassDesk
                 using (var b = new SolidBrush(Color.White)) g.DrawString("Drop to stack", f, b, lr, Gfx.Center);
             }
         }
-        /// <summary>The strip along the top you can click to flip to the next panel of a group.</summary>
-        protected virtual Rectangle GroupClickArea { get { return new Rectangle(Panel.X, Panel.Y, Panel.Width * 6 / 10, T.S(34)); } }
+
         protected virtual bool OnPreClick(Point p)
         {
-            int i, n;
-            if (!App.GroupInfo(Id, out i, out n)) return false;
-            if (!RectangleF.Inflate(Dots(n), App.Theme.Sf(6), App.Theme.Sf(6)).Contains(p) && !GroupClickArea.Contains(p)) return false;
-            App.SwitchGroup(this, 1); return true;
+            foreach (var t in tabRects) if (t.Key.Contains(p)) { if (t.Value != Id) App.SwitchTo(this, t.Value); return true; }
+            return false;
         }
 
         public Bitmap RenderBitmap()
@@ -575,8 +585,6 @@ namespace GlassDesk
         protected override void OnMouseWheel(MouseEventArgs e)
         {
             base.OnMouseWheel(e);
-            int gi, gn;
-            if (this is Widget && App.GroupInfo(Id, out gi, out gn)) { App.SwitchGroup(this, e.Delta < 0 ? 1 : -1); return; }
             OnWheel(e.Delta);
         }
 
