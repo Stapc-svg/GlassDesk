@@ -1,6 +1,6 @@
 # Changelog
 
-## Linux (beta) fixes
+## 1.7.3 for Linux (beta)
 - Panels that ended up off-screen (after changing the resolution or unplugging a monitor) now come back on screen, and GlassDesk re-arranges itself when the screen changes
 - The Photo frame now shows your photo right away at startup, and when you turn it on after choosing a folder
 - Broken shortcuts (links to deleted files) show up in the Other fence again, so you can delete them
