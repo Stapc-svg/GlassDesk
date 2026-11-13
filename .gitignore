@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+linux/build/
+linux/dist/
