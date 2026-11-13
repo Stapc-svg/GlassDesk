@@ -67,16 +67,47 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - **Resize** widgets and fences from any edge, a **welcome screen** on first start, and menus and Settings drawn in your theme.
 
 <p align="center">
-  <img src="docs/screenshots/desktop-1.8.jpg" width="100%" alt="GlassDesk 1.8 on a purple wallpaper: fences, file stacks, stacked widgets with tabs, music and Today widgets">
+  <img src="docs/screenshots/desktop-1.8.jpg" width="100%" alt="GlassDesk 1.8 on a purple wallpaper: fences, a file stack, a widget stack with tabs, music and photo widgets">
 </p>
-<p align="center">
-  <img src="docs/screenshots/stacks.jpg" width="49%" alt="Stacked fences and widgets with tabs, a file stack and the Today widget">
-  <img src="docs/screenshots/launcher.jpg" width="49%" alt="The search launcher with a grid of desktop icons">
-</p>
-<p align="center">
-  <img src="docs/screenshots/launcher-calc.jpg" width="49%" alt="The search launcher working as a calculator">
-  <img src="docs/screenshots/organize.jpg" width="49%" alt="The Organize desktop preview with a tick for each file">
-</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <b>🗂️ Stacks with tabs</b><br>
+      <sub>Drag a fence onto a fence, or a widget onto a widget. Click a tab to switch.</sub><br><br>
+      <img src="docs/screenshots/stacks.jpg" width="100%" alt="Stacked fences and widgets with tabs, a file stack and the Today widget">
+    </td>
+    <td width="50%" valign="top">
+      <b>🔍 Search launcher</b><br>
+      <sub>Press Ctrl + Alt + F: your whole desktop as a grid of icons.</sub><br><br>
+      <img src="docs/screenshots/launcher.jpg" width="100%" alt="The search launcher with a grid of desktop icons">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>🧮 Built-in calculator</b><br>
+      <sub>Type a sum in the search box, press Enter to copy the answer.</sub><br><br>
+      <img src="docs/screenshots/launcher-calc.jpg" width="100%" alt="The search launcher working as a calculator">
+    </td>
+    <td width="50%" valign="top">
+      <b>🎨 Switch themes from search</b><br>
+      <sub>Type a theme name like "ocean" or "mica".</sub><br><br>
+      <img src="docs/screenshots/launcher-theme.jpg" width="100%" alt="Switching to the Ocean theme from the search launcher">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>🧹 Organize desktop</b><br>
+      <sub>See where every file goes and tick the ones to sort.</sub><br><br>
+      <img src="docs/screenshots/organize.jpg" width="100%" alt="The Organize desktop preview with a tick for each file">
+    </td>
+    <td width="50%" valign="top">
+      <b>👋 Welcome screen</b><br>
+      <sub>Shown once, the first time GlassDesk starts.</sub><br><br>
+      <img src="docs/screenshots/welcome.jpg" width="100%" alt="The GlassDesk welcome screen">
+    </td>
+  </tr>
+</table>
 
 ### Organizer
 - **Auto-sorting fences:** desktop items go into *Apps & Shortcuts, Folders, Documents, Images, Music & Video, Archives* and *Other files*. New files appear in the right fence on their own.
