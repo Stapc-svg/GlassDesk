@@ -134,6 +134,8 @@ namespace GlassDesk
             var f = new SettingsForm(app, 0);
             f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(0, 0);
             f.Show();
+            string tall = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_HEIGHT");
+            if (tall != null) f.Height = int.Parse(tall);
             for (int i = 0; i < 6; i++)
             {
                 f.ShowPage(i);

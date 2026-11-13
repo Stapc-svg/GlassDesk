@@ -240,7 +240,10 @@ namespace GlassDesk
         {
             H1("Appearance", "Glass, colors and size of everything on your desktop.");
             Section("Themes");
-            Block(ThemeGallery());
+            Block(ThemeGallery(Themes.All));
+
+            Section("Windows themes");
+            Block(ThemeGallery(Themes.Windows));
 
             Section("Theme");
             string[] modes = { "Auto", "Dark", "Light" };
@@ -293,7 +296,7 @@ namespace GlassDesk
         }
 
         /// <summary>Every theme as a little live preview card. One click applies it.</summary>
-        Control ThemeGallery()
+        Control ThemeGallery(Themes.Look[] looks)
         {
             int pad = (int)(16 * k), gap = (int)(10 * k);
             int width = CardWidth - 2 * pad;
@@ -301,9 +304,9 @@ namespace GlassDesk
             int cw = (width - gap * (cols - 1)) / cols, ch = (int)(cw * 0.66f) + (int)(42 * k);
             var box = new Panel { Size = new Size(width, 0), BackColor = Color.Transparent };
             bool dark = app.Theme.Dark;
-            for (int i = 0; i < Themes.All.Length; i++)
+            for (int i = 0; i < looks.Length; i++)
             {
-                var look = Themes.All[i];
+                var look = looks[i];
                 var c = new LookCard(P, k, look, dark, string.Equals(S.Look, look.Id, StringComparison.OrdinalIgnoreCase))
                 { Size = new Size(cw, ch), Location = new Point((i % cols) * (cw + gap), (i / cols) * (ch + gap)), Font = fSmall };
                 var tip = new ToolTip(); tip.SetToolTip(c, look.Name + ": " + look.Desc);
@@ -314,7 +317,7 @@ namespace GlassDesk
                 };
                 box.Controls.Add(c);
             }
-            int rows = (Themes.All.Length + cols - 1) / cols;
+            int rows = (looks.Length + cols - 1) / cols;
             box.Height = rows * ch + (rows - 1) * gap;
             return box;
         }

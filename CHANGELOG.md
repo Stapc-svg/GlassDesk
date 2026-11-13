@@ -1,6 +1,9 @@
 # Changelog
 
 ## 1.8.0
+
+- **Windows themes:** 10 new themes in their own section: Mica material, Acrylic material, Mica Alt, Windows Light, Windows Dark, Bloom, Glow, Sunrise, Flow and Captured Motion.
+- Fixed: theme names in Settings were too big. Panels past the screen edge move back on screen. Fences resize from the right edge, bottom edge or corner.
 - **16 themes** in a new gallery in Settings → Appearance: GlassDesk, Clean, Midnight, Ocean, Sunset, Forest, Rose, Aurora, Frost, Ember, Lavender, Mint, Neon, Graphite, Paper and Classic
 - Every theme has its own glass colors for dark and light mode; Auto mode, accent color, glass style, tint and corners still work on top
 - New effects: a soft accent glow inside the glass, a glowing neon edge (Neon), and solid flat panels (Clean, Paper)
