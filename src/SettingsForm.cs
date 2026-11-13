@@ -73,24 +73,24 @@ namespace GlassDesk
             MinimumSize = new Size((int)(700 * k), (int)(460 * k));
 
             content = new DoubleBufferedPanel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = P.Bg };
-            side = new Panel { Dock = DockStyle.Left, Width = (int)(218 * k), BackColor = P.Side };
+            side = new GlowPanel(P) { Dock = DockStyle.Left, Width = (int)(226 * k), BackColor = P.Side };
             Controls.Add(content); Controls.Add(side);
 
-            var logo = new LogoBox(app, k) { Location = new Point((int)(18 * k), (int)(20 * k)), BackColor = P.Side };
+            var logo = new LogoBox(app, k) { Location = new Point((int)(18 * k), (int)(20 * k)), BackColor = Color.Transparent };
             side.Controls.Add(logo);
-            var name = new Label { Text = "GlassDesk", Font = Gfx.SafeFont(semi, 17 * k, FontStyle.Regular), ForeColor = P.Text, AutoSize = true, Location = new Point((int)(60 * k), (int)(22 * k)), BackColor = P.Side };
-            var ver = new Label { Text = "Desktop organizer", Font = fSmall, ForeColor = P.Sub, AutoSize = true, Location = new Point((int)(61 * k), (int)(45 * k)), BackColor = P.Side };
+            var name = new Label { Text = "GlassDesk", Font = Gfx.SafeFont(semi, 17 * k, FontStyle.Regular), ForeColor = P.Text, AutoSize = true, Location = new Point((int)(60 * k), (int)(22 * k)), BackColor = Color.Transparent };
+            var ver = new Label { Text = "Desktop organizer", Font = fSmall, ForeColor = P.Sub, AutoSize = true, Location = new Point((int)(61 * k), (int)(45 * k)), BackColor = Color.Transparent };
             side.Controls.Add(name); side.Controls.Add(ver);
             int y = (int)(92 * k);
             for (int i = 0; i < Pages.Length; i++)
             {
-                var n = new NavItem(P, k, Pages[i][0], Pages[i][1], fGlyph) { Location = new Point((int)(16 * k), y), Font = fBody, BackColor = P.Side };
+                var n = new NavItem(P, k, Pages[i][0], Pages[i][1], fGlyph) { Location = new Point((int)(16 * k), y), Font = fBody, BackColor = Color.Transparent };
                 int idx = i;
                 n.Click += delegate { ShowPage(idx); };
                 navs.Add(n); side.Controls.Add(n);
                 y += (int)(44 * k);
             }
-            var hint = new Label { Text = "Ctrl + Alt + G\nshow / hide panels", Font = fSmall, ForeColor = P.Sub, AutoSize = true, BackColor = P.Side };
+            var hint = new Label { Text = "Ctrl + Alt + G\nshow / hide panels", Font = fSmall, ForeColor = P.Sub, AutoSize = true, BackColor = Color.Transparent };
             hint.Location = new Point((int)(30 * k), ClientSize.Height - (int)(64 * k));
             hint.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
             side.Controls.Add(hint);
@@ -143,17 +143,17 @@ namespace GlassDesk
 
         void H1(string title, string sub)
         {
-            content.Controls.Add(new Label { UseMnemonic = false, Text = title, Font = fH1, ForeColor = P.Text, AutoSize = true, Location = new Point((int)(26 * k), y) });
-            y += (int)(42 * k);
-            content.Controls.Add(new Label { UseMnemonic = false, Text = sub, Font = fBody, ForeColor = P.Sub, AutoSize = true, Location = new Point((int)(28 * k), y) });
-            y += (int)(34 * k);
+            var hero = new HeroBanner(P, k, title, sub, Pages[page][0], fH1, fBody, fGlyph)
+            { Location = new Point((int)(28 * k), y), Size = new Size(CardWidth, (int)(112 * k)), BackColor = P.Bg };
+            content.Controls.Add(hero);
+            y += hero.Height + (int)(14 * k);
         }
 
         void Section(string title)
         {
             EndCard();
             y += (int)(12 * k);
-            content.Controls.Add(new Label { UseMnemonic = false, Text = title, Font = fSection, ForeColor = P.Text, AutoSize = true, Location = new Point((int)(28 * k), y) });
+            content.Controls.Add(new Label { UseMnemonic = false, Text = title.ToUpperInvariant(), Font = fSection, ForeColor = P.Sub, AutoSize = true, Location = new Point((int)(30 * k), y + (int)(2 * k)) });
             y += (int)(28 * k);
             card = new Card(P, k) { Location = new Point((int)(28 * k), y), Width = CardWidth, Height = 10 };
             content.Controls.Add(card);
@@ -169,24 +169,35 @@ namespace GlassDesk
             card = null;
         }
 
+        /// <summary>A full-width block inside the current card (used for the theme gallery).</summary>
+        void Block(Control c)
+        {
+            int pad = (int)(16 * k);
+            c.BackColor = Color.Transparent;
+            c.Location = new Point(pad, rowY + pad);
+            card.Controls.Add(c);
+            rowY += c.Height + 2 * pad;
+            card.Dividers.Add(rowY);
+        }
+
         Label Row(string title, string sub, Control right)
         {
             int h = (int)((string.IsNullOrEmpty(sub) ? 56 : 68) * k);
             int pad = (int)(18 * k);
             int rw = right == null ? 0 : right.Width;
-            var t = new Label { UseMnemonic = false, Text = title, Font = fBody, ForeColor = P.Text, BackColor = P.Card, AutoSize = false, AutoEllipsis = true,
+            var t = new Label { UseMnemonic = false, Text = title, Font = fBody, ForeColor = P.Text, BackColor = Color.Transparent, AutoSize = false, AutoEllipsis = true,
                 Location = new Point(pad, rowY + (string.IsNullOrEmpty(sub) ? (h - (int)(20 * k)) / 2 : (int)(14 * k))), Size = new Size(card.Width - rw - 3 * pad, (int)(20 * k)) };
             card.Controls.Add(t);
             Label s = null;
             if (!string.IsNullOrEmpty(sub))
             {
-                s = new Label { UseMnemonic = false, Text = sub, Font = fSmall, ForeColor = P.Sub, BackColor = P.Card, AutoSize = false, AutoEllipsis = true,
+                s = new Label { UseMnemonic = false, Text = sub, Font = fSmall, ForeColor = P.Sub, BackColor = Color.Transparent, AutoSize = false, AutoEllipsis = true,
                     Location = new Point(pad, rowY + (int)(36 * k)), Size = new Size(card.Width - rw - 3 * pad, (int)(20 * k)) };
                 card.Controls.Add(s);
             }
             if (right != null)
             {
-                right.BackColor = P.Card;
+                right.BackColor = Color.Transparent;
                 right.Location = new Point(card.Width - pad - rw, rowY + (h - right.Height) / 2);
                 card.Controls.Add(right);
             }
@@ -229,8 +240,7 @@ namespace GlassDesk
         {
             H1("Appearance", "Glass, colors and size of everything on your desktop.");
             Section("Themes");
-            Row("Dark themes", "One click sets the color, glass and corners", ThemeButtons(0, 4));
-            Row("Light themes", "You can still fine-tune everything below", ThemeButtons(4, 2));
+            Block(ThemeGallery());
 
             Section("Theme");
             string[] modes = { "Auto", "Dark", "Light" };
@@ -245,13 +255,13 @@ namespace GlassDesk
             bool matched = false;
             foreach (Color c in colors)
             {
-                var s = new Swatch(P, k, c) { Margin = new Padding(0), BackColor = P.Card, Selected = c.ToArgb() == S.Accent.ToArgb() };
+                var s = new Swatch(P, k, c) { Margin = new Padding(0), BackColor = Color.Transparent, Selected = c.ToArgb() == S.Accent.ToArgb() };
                 matched |= s.Selected;
                 all.Add(s); sw.Controls.Add(s);
                 Color cc = c;
                 s.Click += delegate { S.Accent = cc; S.Save(); app.ApplySettings(); };
             }
-            var custom = new Swatch(P, k, S.Accent) { IsCustom = true, Margin = new Padding(0), BackColor = P.Card, Selected = !matched, Font = fBody };
+            var custom = new Swatch(P, k, S.Accent) { IsCustom = true, Margin = new Padding(0), BackColor = Color.Transparent, Selected = !matched, Font = fBody };
             custom.Click += delegate
             {
                 using (var cd = new ColorDialog { Color = S.Accent, FullOpen = true })
@@ -282,22 +292,31 @@ namespace GlassDesk
             Row("Next wallpaper", "Skip to the next picture now", Button("Next", false, delegate { if (app.Wallpaper == null || !app.Wallpaper.Next()) MessageBox.Show("No pictures found in that folder (JPG, PNG or BMP).", "GlassDesk"); }));
         }
 
-        Control ThemeButtons(int start, int count)
+        /// <summary>Every theme as a little live preview card. One click applies it.</summary>
+        Control ThemeGallery()
         {
-            var flow = new FlowLayoutPanel { WrapContents = false, AutoSize = false, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = P.Card };
-            int w = 0;
-            for (int i = start; i < start + count; i++)
+            int pad = (int)(16 * k), gap = (int)(10 * k);
+            int width = CardWidth - 2 * pad;
+            int cols = width > (int)(640 * k) ? 5 : width > (int)(470 * k) ? 4 : 3;
+            int cw = (width - gap * (cols - 1)) / cols, ch = (int)(cw * 0.66f) + (int)(42 * k);
+            var box = new Panel { Size = new Size(width, 0), BackColor = Color.Transparent };
+            bool dark = app.Theme.Dark;
+            for (int i = 0; i < Themes.All.Length; i++)
             {
-                var preset = Themes.All[i];
-                var b = Button(preset.Name, false, delegate { Themes.Apply(S, preset); S.Save(); app.ApplySettings(); });
-                b.Margin = new Padding(0, 0, (int)(6 * k), 0);
-                flow.Controls.Add(b); w += b.Width + (int)(6 * k);
-                var dot = preset.Accent;
-                b.Paint += (s, e) => { e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; using (var br = new SolidBrush(dot)) e.Graphics.FillEllipse(br, 7 * k, b.Height / 2f - 4 * k, 8 * k, 8 * k); };
-                b.Text = "   " + preset.Name; b.Width += (int)(10 * k); w += (int)(10 * k);
+                var look = Themes.All[i];
+                var c = new LookCard(P, k, look, dark, string.Equals(S.Look, look.Id, StringComparison.OrdinalIgnoreCase))
+                { Size = new Size(cw, ch), Location = new Point((i % cols) * (cw + gap), (i / cols) * (ch + gap)), Font = fSmall };
+                var tip = new ToolTip(); tip.SetToolTip(c, look.Name + ": " + look.Desc);
+                c.Click += delegate
+                {
+                    Themes.Apply(S, look); S.Save(); app.ApplySettings();
+                    BeginInvoke(new Action(delegate { Refresh(0); }));
+                };
+                box.Controls.Add(c);
             }
-            flow.Size = new Size(w, (int)(34 * k));
-            return flow;
+            int rows = (Themes.All.Length + cols - 1) / cols;
+            box.Height = rows * ch + (rows - 1) * gap;
+            return box;
         }
 
         void SliderRow(string title, string fmt, int min, int max, int step, int value, Action<int> set)
@@ -313,6 +332,11 @@ namespace GlassDesk
         void PageWidgets()
         {
             H1("Widgets", "Small glass widgets that live on your desktop.");
+            Section("Size");
+            Row("Resize any widget", "Drag its bottom-right corner. Everything inside grows with it.", Button("Reset all sizes", false, delegate
+            {
+                S.WidgetZoom.Clear(); S.Save(); app.ApplySettings();
+            }));
             Section("Clock");
             Row("Clock", "Time, date and a friendly greeting", Toggle(S.ShowClock, v => S.ShowClock = v));
             Row("Show seconds", "Updates every second (otherwise once a minute)", Toggle(S.ShowSeconds, v => S.ShowSeconds = v));
@@ -364,7 +388,7 @@ namespace GlassDesk
                 if (!S.Titles.TryGetValue(fid, out name)) name = "My fence";
                 int count = 0;
                 foreach (var kv in S.Pins) if (kv.Value == fid) count++;
-                var both = new FlowLayoutPanel { WrapContents = false, AutoSize = true, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = P.Card };
+                var both = new FlowLayoutPanel { WrapContents = false, AutoSize = true, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = Color.Transparent };
                 var rn = Button("Rename", false, delegate
                 {
                     string nn = InputBox.Ask("Rename fence", name, app.Theme);
@@ -455,9 +479,9 @@ namespace GlassDesk
 
         Label BigStat(int x, int w, string caption)
         {
-            var v = new Label { Text = "…", Font = fBig, ForeColor = P.Text, BackColor = P.Card, AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
+            var v = new Label { Text = "…", Font = fBig, ForeColor = P.Text, BackColor = Color.Transparent, AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(x, (int)(18 * k)), Size = new Size(w, (int)(46 * k)) };
-            var c = new Label { Text = caption, Font = fSmall, ForeColor = P.Sub, BackColor = P.Card, AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
+            var c = new Label { Text = caption, Font = fSmall, ForeColor = P.Sub, BackColor = Color.Transparent, AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(x, (int)(66 * k)), Size = new Size(w, (int)(22 * k)) };
             card.Controls.Add(v); card.Controls.Add(c);
             return v;
@@ -536,10 +560,11 @@ namespace GlassDesk
         class LogoBox : Control
         {
             readonly App app;
-            public LogoBox(App app, float k) { this.app = app; Size = new Size((int)(32 * k), (int)(32 * k)); DoubleBuffered = true; }
+            public LogoBox(App app, float k) { this.app = app; Size = new Size((int)(32 * k), (int)(32 * k)); DoubleBuffered = true; SetStyle(ControlStyles.SupportsTransparentBackColor, true); }
             protected override void OnPaint(PaintEventArgs e)
             {
-                e.Graphics.Clear(BackColor);
+                if (BackColor.A == 255) e.Graphics.Clear(BackColor);
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 App.DrawLogo(e.Graphics, new RectangleF(0, 0, Width, Height), app.Theme.Accent);
             }
         }

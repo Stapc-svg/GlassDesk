@@ -52,9 +52,14 @@ namespace GlassDesk
 
     internal abstract class Widget : GlassWindow
     {
-        protected Widget(App app, string id) : base(app, id) { }
+        protected Widget(App app, string id) : base(app, id) { Resizable = true; ZoomResize = true; }
         protected abstract Size BaseSize { get; }
-        public override Size PreferredPanelSize(Size saved) { return new Size(T.S(BaseSize.Width), T.S(BaseSize.Height)); }
+        public override Size PreferredPanelSize(Size saved)
+        {
+            int pct;
+            Zoom = Cfg.WidgetZoom.TryGetValue(Id, out pct) ? pct / 100f : 1f;
+            return new Size(T.S(BaseSize.Width), T.S(BaseSize.Height));
+        }
         protected Rectangle Inner { get { int m = T.S(18); return new Rectangle(Panel.X + m, Panel.Y + T.S(14), Panel.Width - 2 * m, Panel.Height - T.S(28)); } }
         protected void Txt(Graphics g, string s, Font f, Color c, RectangleF r, StringFormat sf)
         {

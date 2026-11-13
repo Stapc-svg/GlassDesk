@@ -10,21 +10,29 @@ namespace GlassDesk
     internal class Palette
     {
         public bool Dark;
-        public Color Bg, Side, Card, Text, Sub, Line, Accent, Off, Hover;
+        public Color Bg, Side, Side2, Card, Card2, Text, Sub, Line, Accent, Accent2, Off, Hover;
+        static Color Mix(Color a, Color b, float t)
+        {
+            return Color.FromArgb(255, (int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
+        }
         public static Palette From(Theme t)
         {
-            var p = new Palette { Dark = t.Dark, Accent = t.Accent };
+            var p = new Palette { Dark = t.Dark, Accent = Color.FromArgb(255, t.Accent) };
+            // a second, related color for gradients: the accent leaning toward violet
+            p.Accent2 = Mix(p.Accent, Color.FromArgb(176, 108, 255), 0.45f);
             if (t.Dark)
             {
-                p.Bg = Color.FromArgb(24, 25, 32); p.Side = Color.FromArgb(18, 19, 25); p.Card = Color.FromArgb(34, 36, 45);
-                p.Text = Color.FromArgb(236, 238, 245); p.Sub = Color.FromArgb(150, 156, 172); p.Line = Color.FromArgb(46, 48, 58);
-                p.Off = Color.FromArgb(70, 73, 86); p.Hover = Color.FromArgb(38, 40, 50);
+                p.Bg = Mix(Color.FromArgb(13, 16, 32), p.Accent, 0.03f); p.Side = Mix(Color.FromArgb(10, 13, 27), p.Accent, 0.05f); p.Side2 = Color.FromArgb(8, 10, 20);
+                p.Card = Mix(Color.FromArgb(22, 26, 46), p.Accent, 0.05f); p.Card2 = Mix(Color.FromArgb(18, 21, 38), p.Accent, 0.03f);
+                p.Text = Color.FromArgb(240, 242, 250); p.Sub = Color.FromArgb(152, 160, 186); p.Line = Mix(Color.FromArgb(36, 41, 66), p.Accent, 0.06f);
+                p.Off = Color.FromArgb(58, 63, 90); p.Hover = Mix(Color.FromArgb(28, 33, 58), p.Accent, 0.08f);
             }
             else
             {
-                p.Bg = Color.FromArgb(243, 244, 248); p.Side = Color.FromArgb(234, 236, 242); p.Card = Color.White;
-                p.Text = Color.FromArgb(24, 26, 32); p.Sub = Color.FromArgb(104, 110, 124); p.Line = Color.FromArgb(228, 230, 236);
-                p.Off = Color.FromArgb(196, 200, 210); p.Hover = Color.FromArgb(222, 225, 233);
+                p.Bg = Mix(Color.FromArgb(244, 245, 251), p.Accent, 0.03f); p.Side = Mix(Color.FromArgb(236, 238, 248), p.Accent, 0.05f); p.Side2 = Color.FromArgb(246, 247, 252);
+                p.Card = Color.White; p.Card2 = Mix(Color.FromArgb(250, 251, 255), p.Accent, 0.02f);
+                p.Text = Color.FromArgb(20, 22, 34); p.Sub = Color.FromArgb(100, 106, 128); p.Line = Color.FromArgb(226, 229, 240);
+                p.Off = Color.FromArgb(198, 202, 216); p.Hover = Mix(Color.FromArgb(226, 229, 242), p.Accent, 0.06f);
             }
             return p;
         }
@@ -34,7 +42,7 @@ namespace GlassDesk
     {
         protected SmoothControl()
         {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
         }
         protected Graphics Prep(PaintEventArgs e)
         {
@@ -42,7 +50,7 @@ namespace GlassDesk
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            g.Clear(BackColor);
+            if (BackColor.A == 255) g.Clear(BackColor);   // see-through controls let the panel behind them show
             return g;
         }
     }
@@ -63,9 +71,13 @@ namespace GlassDesk
         {
             var g = Prep(e);
             var r = new RectangleF(1, 1, Width - 2, Height - 2);
-            Gfx.FillRound(g, on ? P.Accent : P.Off, r, r.Height / 2);
+            if (on)
+                using (var path = Gfx.Round(r, r.Height / 2))
+                using (var lg = new LinearGradientBrush(r, P.Accent, P.Accent2, 0f)) g.FillPath(lg, path);
+            else Gfx.FillRound(g, P.Off, r, r.Height / 2);
             float d = r.Height - 6;
             float x = on ? r.Right - d - 3 : r.X + 3;
+            using (var b = new SolidBrush(Color.FromArgb(40, 0, 0, 0))) g.FillEllipse(b, x, r.Y + 4, d, d);
             using (var b = new SolidBrush(Color.White)) g.FillEllipse(b, x, r.Y + 3, d, d);
         }
         protected override void OnClick(EventArgs e) { base.OnClick(e); Checked = !Checked; }
@@ -91,7 +103,10 @@ namespace GlassDesk
             float f = (val - Min) / (float)Math.Max(1, Max - Min);
             float kx = x0 + (x1 - x0) * f;
             Gfx.FillRound(g, P.Off, new RectangleF(x0, cy - 2, x1 - x0, 4), 2);
-            Gfx.FillRound(g, P.Accent, new RectangleF(x0, cy - 2, kx - x0, 4), 2);
+            if (kx - x0 > 2)
+                using (var lg = new LinearGradientBrush(new PointF(x0 - 1, 0), new PointF(kx + 1, 0), P.Accent2, P.Accent))
+                using (var path = Gfx.Round(new RectangleF(x0, cy - 2.5f, kx - x0, 5), 2.5f)) g.FillPath(lg, path);
+            Gfx.Glow(g, new PointF(kx, cy), k * 0.95f, Color.FromArgb(90, P.Accent));
             using (var b = new SolidBrush(Color.White)) g.FillEllipse(b, kx - k / 2, cy - k / 2, k, k);
             using (var pen = new Pen(P.Accent, Math.Max(2f, k * 0.18f))) g.DrawEllipse(pen, kx - k / 2 + 1, cy - k / 2 + 1, k - 2, k - 2);
         }
@@ -121,9 +136,12 @@ namespace GlassDesk
         {
             var g = Prep(e);
             var r = new RectangleF(0.5f, 0.5f, Width - 1, Height - 1);
-            Gfx.FillRound(g, P.Dark ? Color.FromArgb(24, 25, 32) : Color.FromArgb(236, 238, 243), r, Height / 2f);
+            Gfx.FillRound(g, P.Dark ? Color.FromArgb(12, 15, 30) : Color.FromArgb(236, 238, 246), r, Height / 2f);
+            using (var path = Gfx.Round(r, Height / 2f)) using (var pen = new Pen(P.Line)) g.DrawPath(pen, path);
             float w = r.Width / Options.Length;
-            Gfx.FillRound(g, P.Accent, new RectangleF(r.X + sel * w + 3, r.Y + 3, w - 6, r.Height - 6), (Height - 6) / 2f);
+            var pill = new RectangleF(r.X + sel * w + 3, r.Y + 3, w - 6, r.Height - 6);
+            using (var path = Gfx.Round(pill, pill.Height / 2f))
+            using (var lg = new LinearGradientBrush(new PointF(pill.X - 1, pill.Y), new PointF(pill.Right + 1, pill.Bottom), P.Accent, P.Accent2)) g.FillPath(lg, path);
             for (int i = 0; i < Options.Length; i++)
                 using (var b = new SolidBrush(i == sel ? Color.White : P.Text))
                     g.DrawString(Options[i], Font, b, new RectangleF(r.X + i * w, r.Y, w, r.Height), Gfx.Center);
@@ -158,6 +176,155 @@ namespace GlassDesk
         }
     }
 
+    /// <summary>A theme in the gallery: a tiny glass panel drawn in that theme's colors, with its name.</summary>
+    internal class LookCard : SmoothControl
+    {
+        readonly Palette P; readonly float k; readonly Themes.Look L; readonly bool dark; public bool Selected; bool hover;
+        public LookCard(Palette p, float k, Themes.Look look, bool dark, bool selected)
+        {
+            P = p; this.k = k; L = look; this.dark = dark; Selected = selected; Cursor = Cursors.Hand;
+        }
+        protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { hover = false; Invalidate(); base.OnMouseLeave(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = Prep(e);
+            bool d = L.Mode == "Light" ? false : L.Mode == "Dark" ? true : dark;
+            float nameH = 40 * k;
+            var stage = new RectangleF(1.5f, 1.5f, Width - 3, Height - nameH - 3);
+            // wallpaper behind the glass
+            using (var path = Gfx.Round(stage, 12 * k))
+            {
+                using (var lg = new LinearGradientBrush(stage, d ? Color.FromArgb(40, 52, 120) : Color.FromArgb(150, 190, 250),
+                                                        d ? Color.FromArgb(110, 36, 90) : Color.FromArgb(244, 182, 210), 35f))
+                    g.FillPath(lg, path);
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                Gfx.Glow(g, new PointF(stage.Right, stage.Y), stage.Width * 0.8f, Color.FromArgb(120, d ? 90 : 255, d ? 130 : 220, 255));
+                Gfx.Glow(g, new PointF(stage.X, stage.Bottom), stage.Width * 0.7f, Color.FromArgb(110, 255, 120, 170));
+                // the glass panel
+                var pr = new RectangleF(stage.X + stage.Width * 0.12f, stage.Y + stage.Height * 0.16f, stage.Width * 0.76f, stage.Height * 0.68f);
+                float r = Math.Min(L.Radius, 22) * k * 0.6f;
+                int a = L.Solid ? 255 : Math.Min(255, (int)(255 * L.Tint / 100f) + 70);
+                Color top = d ? L.DarkTop : L.LightTop, bot = d ? L.DarkBottom : L.LightBottom;
+                using (var pp = Gfx.Round(pr, r))
+                {
+                    using (var lg = new LinearGradientBrush(new PointF(0, pr.Y - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(a, top), Color.FromArgb(a, bot)))
+                        g.FillPath(lg, pp);
+                    var s2 = g.Save();
+                    g.SetClip(pp, CombineMode.Intersect);
+                    if (L.Glow) Gfx.Glow(g, new PointF(pr.Right, pr.Y), pr.Width * 0.7f, Color.FromArgb(d ? 110 : 70, L.Accent));
+                    if (!L.Glow2.IsEmpty) Gfx.Glow(g, new PointF(pr.X, pr.Bottom), pr.Width * 0.5f, Color.FromArgb(d ? 70 : 50, L.Glow2));
+                    if (!L.Flat)
+                        using (var sheen = new LinearGradientBrush(pr, Color.FromArgb(d ? 34 : 80, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 60f)) g.FillPath(sheen, pp);
+                    g.Restore(s2);
+                    Color ink = L.Id == "paper" && !d ? Color.FromArgb(46, 40, 32) : d ? Color.FromArgb(240, 244, 246, 252) : Color.FromArgb(230, 18, 20, 28);
+                    float px = pr.X + pr.Width * 0.12f, lh = pr.Height * 0.12f;
+                    using (var b = new SolidBrush(L.Accent)) g.FillEllipse(b, px, pr.Y + pr.Height * 0.16f, lh, lh);
+                    Gfx.FillRound(g, Color.FromArgb(150, ink), new RectangleF(px + lh * 1.6f, pr.Y + pr.Height * 0.16f + lh * 0.15f, pr.Width * 0.38f, lh * 0.7f), lh * 0.35f);
+                    Gfx.FillRound(g, Color.FromArgb(230, ink), new RectangleF(px, pr.Y + pr.Height * 0.42f, pr.Width * 0.5f, lh * 1.25f), lh * 0.4f);
+                    Gfx.FillRound(g, Color.FromArgb(d ? 40 : 30, ink), new RectangleF(px, pr.Y + pr.Height * 0.72f, pr.Width * 0.76f, lh * 0.55f), lh * 0.3f);
+                    Gfx.FillRound(g, L.Accent, new RectangleF(px, pr.Y + pr.Height * 0.72f, pr.Width * 0.46f, lh * 0.55f), lh * 0.3f);
+                    if (L.Neon)
+                    {
+                        for (int i = 3; i >= 1; i--) using (var pen = new Pen(Color.FromArgb(28 * (4 - i), L.Accent), 1f + i * 1.3f)) g.DrawPath(pen, pp);
+                        using (var pen = new Pen(L.Accent, 1.2f)) g.DrawPath(pen, pp);
+                    }
+                    else if (L.Flat)
+                        using (var pen = new Pen(d ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(26, 0, 0, 0), 1f)) g.DrawPath(pen, pp);
+                    else
+                        using (var lg = new LinearGradientBrush(pr, Color.FromArgb(200, 255, 255, 255), Color.FromArgb(40, 255, 255, 255), 70f))
+                        using (var pen = new Pen(lg, 1.1f)) g.DrawPath(pen, pp);
+                }
+                g.Restore(st);
+            }
+            // name and description
+            using (var b = new SolidBrush(P.Text)) using (var f = new Font(Font.FontFamily, Font.Size, FontStyle.Bold))
+                g.DrawString(L.Name, f, b, new RectangleF(2, stage.Bottom + 6 * k, Width - 4, 18 * k), Gfx.Left);
+            using (var b = new SolidBrush(P.Sub))
+                g.DrawString(L.Desc, Font, b, new RectangleF(2, stage.Bottom + 22 * k, Width - 4, 16 * k), new StringFormat(Gfx.Left) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
+            // selection ring
+            if (Selected || hover)
+                using (var path = Gfx.Round(new RectangleF(1, 1, Width - 2, stage.Height + 1), 12.5f * k))
+                using (var pen = new Pen(Selected ? P.Accent : Color.FromArgb(90, P.Text), Selected ? 2.5f * k : 1.2f * k)) g.DrawPath(pen, path);
+            if (Selected)
+            {
+                float cs = 20 * k, cx = Width - cs - 8 * k, cy = 8 * k;
+                using (var b = new SolidBrush(P.Accent)) g.FillEllipse(b, cx, cy, cs, cs);
+                using (var pen = new Pen(Color.White, 2f * k) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+                    g.DrawLines(pen, new[] { new PointF(cx + cs * 0.27f, cy + cs * 0.52f), new PointF(cx + cs * 0.44f, cy + cs * 0.68f), new PointF(cx + cs * 0.74f, cy + cs * 0.34f) });
+            }
+        }
+    }
+
+    /// <summary>The sidebar: a deep gradient with a soft glow of your accent color at the top.</summary>
+    internal class GlowPanel : Panel
+    {
+        readonly Palette P;
+        public GlowPanel(Palette p)
+        {
+            P = p;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var lg = new LinearGradientBrush(new Point(0, 0), new Point(0, Math.Max(2, Height)), P.Side, P.Side2)) g.FillRectangle(lg, ClientRectangle);
+            Gfx.Glow(g, new PointF(Width * 0.25f, -Width * 0.15f), Width * 1.1f, Color.FromArgb(P.Dark ? 70 : 50, P.Accent));
+            Gfx.Glow(g, new PointF(Width * 0.9f, Height + Width * 0.1f), Width * 0.9f, Color.FromArgb(P.Dark ? 40 : 30, P.Accent2));
+            using (var pen = new Pen(P.Line)) g.DrawLine(pen, Width - 1, 0, Width - 1, Height);
+        }
+    }
+
+    /// <summary>The colorful banner at the top of each settings page.</summary>
+    internal class HeroBanner : SmoothControl
+    {
+        readonly Palette P; readonly float k; readonly string title, sub, glyph; readonly Font titleFont, subFont, glyphFont;
+        public HeroBanner(Palette p, float k, string title, string sub, string glyph, Font titleFont, Font subFont, Font glyphFont)
+        {
+            P = p; this.k = k; this.title = title; this.sub = sub; this.glyph = glyph; this.titleFont = titleFont; this.subFont = subFont; this.glyphFont = glyphFont;
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = Prep(e);
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            var r = new RectangleF(0.5f, 0.5f, Width - 1, Height - 1);
+            using (var path = Gfx.Round(r, 18 * k))
+            {
+                Color deep = P.Dark ? Color.FromArgb(18, 22, 52) : Color.FromArgb(70, 84, 170);
+                using (var lg = new LinearGradientBrush(r, deep, deep, 20f))
+                {
+                    var cb = new ColorBlend(3);
+                    cb.Colors = new[] { Color.FromArgb(255, P.Accent), P.Accent2, deep };
+                    cb.Positions = new[] { 0f, 0.55f, 1f };
+                    lg.InterpolationColors = cb;
+                    g.FillPath(lg, path);
+                }
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                Gfx.Glow(g, new PointF(r.Right - r.Width * 0.12f, r.Y - r.Height * 0.2f), r.Height * 1.6f, Color.FromArgb(110, 255, 255, 255));
+                Gfx.Glow(g, new PointF(r.X + r.Width * 0.3f, r.Bottom + r.Height * 0.4f), r.Height * 1.4f, Color.FromArgb(70, 255, 140, 200));
+                // glassy sheen on the top half
+                var top = new RectangleF(r.X, r.Y, r.Width, r.Height * 0.6f);
+                using (var sheen = new LinearGradientBrush(new PointF(0, r.Y - 1), new PointF(0, top.Bottom + 1), Color.FromArgb(46, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+                    g.FillRectangle(sheen, top);
+                if (glyphFont != null && !string.IsNullOrEmpty(glyph))
+                    using (var gf = new Font(glyphFont.FontFamily, Height * 0.55f, GraphicsUnit.Pixel))
+                    using (var b = new SolidBrush(Color.FromArgb(70, 255, 255, 255)))
+                        g.DrawString(glyph, gf, b, new RectangleF(r.Right - Height * 1.15f, 0, Height, Height), Gfx.Center);
+                g.Restore(st);
+                using (var lg = new LinearGradientBrush(r, Color.FromArgb(150, 255, 255, 255), Color.FromArgb(30, 255, 255, 255), 70f))
+                using (var pen = new Pen(lg, 1.2f)) g.DrawPath(pen, path);
+            }
+            float x = 26 * k;
+            using (var b = new SolidBrush(Color.White)) g.DrawString(title, titleFont, b, new PointF(x, Height * 0.2f));
+            using (var b = new SolidBrush(Color.FromArgb(215, 255, 255, 255)))
+                g.DrawString(sub, subFont, b, new RectangleF(x + 2 * k, Height * 0.58f, Width - x - Height * 1.2f, Height * 0.38f), new StringFormat(Gfx.Left) { Trimming = StringTrimming.EllipsisWord });
+        }
+    }
+
     /// <summary>A rounded card that holds setting rows separated by thin lines.</summary>
     internal class Card : Panel
     {
@@ -165,7 +332,7 @@ namespace GlassDesk
         public System.Collections.Generic.List<int> Dividers = new System.Collections.Generic.List<int>();
         public Card(Palette p, float k)
         {
-            P = p; Radius = 12 * k;
+            P = p; Radius = 16 * k;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         }
         protected override void OnPaint(PaintEventArgs e)
@@ -174,8 +341,14 @@ namespace GlassDesk
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.Clear(Parent != null ? Parent.BackColor : P.Bg);
             var r = new RectangleF(0.5f, 0.5f, Width - 1, Height - 1);
-            Gfx.FillRound(g, P.Card, r, Radius);
-            using (var path = Gfx.Round(r, Radius)) using (var pen = new Pen(P.Line)) g.DrawPath(pen, path);
+            using (var path = Gfx.Round(r, Radius))
+            {
+                using (var lg = new LinearGradientBrush(new PointF(0, 0), new PointF(0, Math.Max(2, Height)), P.Card, P.Card2)) g.FillPath(lg, path);
+                using (var pen = new Pen(P.Line)) g.DrawPath(pen, path);
+            }
+            // a soft highlight along the top edge
+            using (var lg = new LinearGradientBrush(new PointF(Radius, 0), new PointF(Width - Radius, 0), Color.FromArgb(P.Dark ? 60 : 0, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+            using (var pen = new Pen(lg)) g.DrawLine(pen, Radius, 1.5f, Width - Radius, 1.5f);
             g.SmoothingMode = SmoothingMode.None;
             using (var pen = new Pen(P.Line)) foreach (int y in Dividers) g.DrawLine(pen, (int)(16 * Radius / 12), y, Width - (int)(16 * Radius / 12), y);
         }
@@ -194,8 +367,18 @@ namespace GlassDesk
         {
             var g = Prep(e);
             float k = Height / 40f;
-            if (Selected || hot) Gfx.FillRound(g, Selected ? (P.Dark ? Color.FromArgb(40, 43, 55) : Color.White) : P.Hover, new RectangleF(0, 0, Width, Height), 8 * k);
-            if (Selected) Gfx.FillRound(g, P.Accent, new RectangleF(0, Height * 0.28f, 3 * k, Height * 0.44f), 1.5f * k);
+            var box = new RectangleF(0.5f, 0.5f, Width - 1, Height - 1);
+            if (Selected)
+            {
+                using (var path = Gfx.Round(box, 12 * k))
+                {
+                    using (var lg = new LinearGradientBrush(box, Color.FromArgb(P.Dark ? 80 : 46, P.Accent), Color.FromArgb(P.Dark ? 30 : 16, P.Accent2), 0f)) g.FillPath(lg, path);
+                    using (var pen = new Pen(Color.FromArgb(P.Dark ? 90 : 70, P.Accent))) g.DrawPath(pen, path);
+                }
+                Gfx.Glow(g, new PointF(3 * k, Height / 2f), 18 * k, Color.FromArgb(110, P.Accent));
+                Gfx.FillRound(g, P.Accent, new RectangleF(1, Height * 0.3f, 3 * k, Height * 0.4f), 1.5f * k);
+            }
+            else if (hot) Gfx.FillRound(g, P.Hover, box, 12 * k);
             float x = 14 * k;
             if (GlyphFont != null)
             {
@@ -215,9 +398,17 @@ namespace GlassDesk
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = Prep(e);
-            Color bg = Danger ? Color.FromArgb(220, 70, 80) : Primary ? P.Accent : (P.Dark ? Color.FromArgb(48, 51, 63) : Color.FromArgb(232, 234, 240));
-            if (hot) bg = ControlPaint.Light(bg, 0.12f);
-            Gfx.FillRound(g, bg, new RectangleF(0.5f, 0.5f, Width - 1, Height - 1), Height / 4f);
+            var br = new RectangleF(0.5f, 0.5f, Width - 1, Height - 1);
+            if (Primary && !Danger)
+                using (var path = Gfx.Round(br, Height / 2f))
+                using (var lg = new LinearGradientBrush(br, hot ? ControlPaint.Light(P.Accent, 0.15f) : P.Accent, P.Accent2, 0f)) g.FillPath(lg, path);
+            else
+            {
+                Color bg = Danger ? Color.FromArgb(220, 70, 80) : (P.Dark ? Color.FromArgb(34, 39, 64) : Color.FromArgb(234, 236, 245));
+                if (hot) bg = ControlPaint.Light(bg, 0.12f);
+                Gfx.FillRound(g, bg, br, Height / 2f);
+                if (!Danger) using (var path = Gfx.Round(br, Height / 2f)) using (var pen = new Pen(P.Line)) g.DrawPath(pen, path);
+            }
             using (var b = new SolidBrush(Primary || Danger ? Color.White : P.Text)) g.DrawString(Text, Font, b, new RectangleF(0, 0, Width, Height), Gfx.Center);
         }
         protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); hot = true; Invalidate(); }
