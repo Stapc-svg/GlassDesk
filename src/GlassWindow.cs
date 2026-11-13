@@ -201,7 +201,7 @@ namespace GlassDesk
             try
             {
                 Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
-                Bitmap blur = Backdrop.For(scr, Cfg.GlassStyle == "frosted" ? 2 : 1);
+                Bitmap blur = Backdrop.For(scr, T.LookId == "acrylic" ? 3 : Cfg.GlassStyle == "frosted" ? 2 : 1);
                 var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
                 var st = g.Save();
                 g.SetClip(path, CombineMode.Intersect);
@@ -217,8 +217,49 @@ namespace GlassDesk
 
         // ---------------- painting ----------------
         protected abstract void PaintContent(Graphics g);
-        protected virtual void PaintOverlay(Graphics g) { }
-        protected virtual bool OnPreClick(Point p) { return false; }
+        public bool DropHint;   // another panel is being dragged onto this one
+
+        // ---- groups: dots along the bottom; click the dots or the top of the panel (widgets: or scroll) to switch ----
+        RectangleF Dots(int count)
+        {
+            float d = App.Theme.Sf(6), gap = App.Theme.Sf(5), w = count * d + (count - 1) * gap;
+            return new RectangleF(Panel.X + (Panel.Width - w) / 2, Panel.Bottom - App.Theme.Sf(11), w, d);
+        }
+        protected virtual void PaintOverlay(Graphics g)
+        {
+            int i, n;
+            if (App.GroupInfo(Id, out i, out n))
+            {
+                var r = Dots(n);
+                float d = r.Height, gap = App.Theme.Sf(5);
+                Gfx.FillRound(g, Color.FromArgb(T.Dark ? 70 : 40, 0, 0, 0), RectangleF.Inflate(r, App.Theme.Sf(5), App.Theme.Sf(3)), App.Theme.Sf(6));
+                for (int k = 0; k < n; k++)
+                    using (var b = new SolidBrush(k == i ? T.Accent : Color.FromArgb(150, 255, 255, 255)))
+                        g.FillEllipse(b, r.X + k * (d + gap), r.Y, d, d);
+            }
+            if (DropHint)
+            {
+                var pr = new RectangleF(Panel.X + 1.5f, Panel.Y + 1.5f, Panel.Width - 3, Panel.Height - 3);
+                using (var path = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+                {
+                    using (var b = new SolidBrush(Gfx.WithAlpha(T.Accent, 50))) g.FillPath(b, path);
+                    using (var pen = new Pen(T.Accent, T.Sf(3))) g.DrawPath(pen, path);
+                }
+                var f = Gfx.F(T.FontName, T.Sf(13), FontStyle.Bold);
+                var lr = new RectangleF(Panel.X + Panel.Width / 2f - T.Sf(80), Panel.Y + Panel.Height / 2f - T.Sf(17), T.Sf(160), T.Sf(34));
+                Gfx.FillRound(g, T.Accent, lr, T.Sf(17));
+                using (var b = new SolidBrush(Color.White)) g.DrawString("Drop to stack", f, b, lr, Gfx.Center);
+            }
+        }
+        /// <summary>The strip along the top you can click to flip to the next panel of a group.</summary>
+        protected virtual Rectangle GroupClickArea { get { return new Rectangle(Panel.X, Panel.Y, Panel.Width * 6 / 10, T.S(34)); } }
+        protected virtual bool OnPreClick(Point p)
+        {
+            int i, n;
+            if (!App.GroupInfo(Id, out i, out n)) return false;
+            if (!RectangleF.Inflate(Dots(n), App.Theme.Sf(6), App.Theme.Sf(6)).Contains(p) && !GroupClickArea.Contains(p)) return false;
+            App.SwitchGroup(this, 1); return true;
+        }
 
         public Bitmap RenderBitmap()
         {
@@ -469,6 +510,7 @@ namespace GlassDesk
             if (armed && !dragging && (Math.Abs(dx) > 4 || Math.Abs(dy) > 4)) { dragging = true; if (IsHandleCreated) SetGlass(true); }
             if (dragging)
             {
+                App.DragOver(this);
                 var r = new Rectangle(downBounds.X + dx, downBounds.Y + dy, downBounds.Width, downBounds.Height);
                 r = Snap(r);
                 Location = new Point(r.X - pad, r.Y - pad);
@@ -508,11 +550,12 @@ namespace GlassDesk
         protected override void OnMouseUp(MouseEventArgs e)
         {
             base.OnMouseUp(e);
-            bool wasMoving = dragging || resizing;
+            bool wasMoving = dragging || resizing, wasDragging = dragging;
             if (resizing && ZoomResize) App.SaveZoom(Id, Zoom);
             if (wasMoving) { App.SavePosition(Id, PanelBounds); if (IsHandleCreated) SetGlass(false); }
             armed = dragging = resizing = false;
             Capture = false;
+            if (wasDragging) App.DragEnded(this);
             if (!wasMoving && !(e.Button == MouseButtons.Left && OnPreClick(e.Location))) OnClickAt(e.Location, e.Button);
         }
 
@@ -532,6 +575,8 @@ namespace GlassDesk
         protected override void OnMouseWheel(MouseEventArgs e)
         {
             base.OnMouseWheel(e);
+            int gi, gn;
+            if (this is Widget && App.GroupInfo(Id, out gi, out gn)) { App.SwitchGroup(this, e.Delta < 0 ? 1 : -1); return; }
             OnWheel(e.Delta);
         }
 

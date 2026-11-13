@@ -806,9 +806,12 @@ namespace GlassDesk
             m.Show(Cursor.Position);
         }
 
+        protected override Rectangle GroupClickArea { get { return new Rectangle(Panel.X, Panel.Y, Panel.Width - T.S(70), TitleH); } }
+
         void ShowFenceMenu()
         {
             var m = App.NewMenu();
+            App.AddGroupItems(m, this);
             m.Items.Add(Collapsed ? "Expand" : "Roll up", null, delegate { ToggleCollapsed(); });
             m.Items.Add("Rename…", null, delegate
             {

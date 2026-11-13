@@ -131,7 +131,7 @@ namespace GlassDesk
         static Bitmap Build(Size size, int strength)
         {
             // work on a small copy: blurring 1/10 of the pixels is ~100x cheaper and looks the same once scaled up
-            int div = strength >= 2 ? 10 : 6;
+            int div = strength >= 3 ? 16 : strength >= 2 ? 10 : 6;
             int sw = Math.Max(8, size.Width / div), sh = Math.Max(8, size.Height / div);
             var small = new Bitmap(sw, sh, PixelFormat.Format32bppArgb);
             using (var g = Graphics.FromImage(small))
@@ -156,7 +156,7 @@ namespace GlassDesk
                     catch { }
                 }
             }
-            BoxBlur(small, strength >= 2 ? 4 : 2, 3);
+            BoxBlur(small, strength >= 3 ? 6 : strength >= 2 ? 4 : 2, strength >= 3 ? 4 : 3);
             // scale back up smoothly to the monitor's size
             var big = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppPArgb);
             using (var g = Graphics.FromImage(big))

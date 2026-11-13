@@ -198,7 +198,7 @@ namespace GlassDesk
         public static readonly Look[] Windows =
         {
             W("mica", "Mica material", "Calm and mostly solid", 0x60CDFF, 0x202020, 0x1C1C1C, 0xF3F3F3, 0xEEEEEE, "Auto", "frosted", 82),
-            W("acrylic", "Acrylic material", "Blurred, see-through", 0x60CDFF, 0x2C2C2C, 0x202020, 0xFCFCFC, 0xF3F3F3, "Auto", "blur", 45),
+            W("acrylic", "Acrylic material", "Fully blurred, see-through", 0x60CDFF, 0x2C2C2C, 0x202020, 0xFCFCFC, 0xF3F3F3, "Auto", "blur", 30),
             W("mica-alt", "Mica Alt", "Deeper, darker Mica", 0x60CDFF, 0x0A0A0A, 0x141414, 0xE8E8E8, 0xDADADA, "Dark", "frosted", 88),
             W("win-light", "Windows Light", "Default light", 0x0078D4, 0x2B2B2B, 0x202020, 0xFFFFFF, 0xF3F3F3, "Light", "frosted", 78),
             W("win-dark", "Windows Dark", "Default dark", 0x4CC2FF, 0x2B2B2B, 0x1F1F1F, 0xF9F9F9, 0xEFEFEF, "Dark", "frosted", 78),

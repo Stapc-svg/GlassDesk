@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.3
+
+- **Drag to stack:** drag a widget onto another widget (or a fence onto another fence) and GlassDesk offers to stack them. Click the top of a stack or its dots to flip to the next one; widgets also flip with the mouse wheel.
+- **Fence stacks:** fences can be stacked too.
+- **Acrylic material** now blurs the wallpaper fully.
+
 ## 1.8.2
 
 - **Smarter search:** type a sum (12*(3+4)) to get the answer, a theme name to switch to it, a command (settings, organize, dark, light, new fence), or press Ctrl + Enter to search the web.

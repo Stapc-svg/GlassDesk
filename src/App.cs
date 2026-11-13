@@ -332,6 +332,7 @@ namespace GlassDesk
                     foreach (var it in f.Items) it.Dispose();
                     f.Close(); f.Dispose();
                 }
+            foreach (var f in fences.Values) f.Wanted = true;
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
             weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
@@ -764,7 +765,7 @@ namespace GlassDesk
         {
             liveGroups.Clear();
             var byId = new Dictionary<string, GlassWindow>();
-            foreach (var w in Windows) if (w is Widget) byId[w.Id] = w;
+            foreach (var w in Windows) byId[w.Id] = w;
             foreach (var g in Settings.Groups)
             {
                 var wanted = new List<string>();
@@ -783,7 +784,60 @@ namespace GlassDesk
             index = g.IndexOf(id); count = g.Count; return true;
         }
 
-        public void SwitchGroup(Widget w, int dir)
+        public string PanelName(GlassWindow w) { var f = w as FenceWindow; return f != null ? f.Caption : WidgetName(w.Id); }
+
+        public void AddGroupItems(ContextMenuStrip m, GlassWindow w)
+        {
+            int gi, gc;
+            var grp = new ToolStripMenuItem("Stack with");
+            foreach (var o in Windows)
+                if (o != w && o.Visible && (o is Widget) == (w is Widget)) { var ow = o; grp.DropDownItems.Add(PanelName(ow), null, delegate { JoinGroup(w, ow); }); }
+            if (grp.DropDownItems.Count > 0) m.Items.Add(grp);
+            if (GroupInfo(w.Id, out gi, out gc)) { m.Items.Add("Next in stack", null, delegate { SwitchGroup(w, 1); }); m.Items.Add("Take out of stack", null, delegate { LeaveGroup(w); }); }
+            if (m.Items.Count > 0) m.Items.Add(new ToolStripSeparator());
+        }
+
+        // ---- drag a panel onto another of the same kind: offer to stack them ----
+        GlassWindow dropTarget;
+        GlassWindow TargetUnder(GlassWindow w)
+        {
+            Point c = Cursor.Position;
+            foreach (var o in Windows)
+                if (o != w && o.Visible && (o is Widget) == (w is Widget) && o.PanelBounds.Contains(c)) return o;
+            return null;
+        }
+        public void DragOver(GlassWindow w)
+        {
+            var t = TargetUnder(w);
+            if (t == dropTarget) return;
+            if (dropTarget != null) { dropTarget.DropHint = false; dropTarget.Redraw(); }
+            dropTarget = t;
+            if (t != null) { t.DropHint = true; t.Redraw(); }
+        }
+        public void DragEnded(GlassWindow w)
+        {
+            var t = dropTarget; dropTarget = null;
+            if (t == null) return;
+            t.DropHint = false; t.Redraw();
+            var mine = GroupOf(w.Id);
+            if (mine != null && mine.Contains(t.Id)) return;
+            var m = NewMenu();
+            m.Items.Add(new ToolStripMenuItem("Stack \u201C" + PanelName(w) + "\u201D with \u201C" + PanelName(t) + "\u201D?") { Enabled = false });
+            m.Items.Add(new ToolStripSeparator());
+            m.Items.Add("Stack them", null, delegate
+            {
+                Rectangle spot = t.PanelBounds;
+                JoinGroup(w, t);
+                // the one you dropped shows on top, in the other one's spot
+                var g = GroupOf(w.Id); g.Remove(w.Id); g.Insert(0, w.Id);
+                Settings.Positions[w.Id] = new Rectangle(spot.Location, w.PanelBounds.Size);
+                Settings.Save(); ApplySettings();
+            });
+            m.Items.Add("No, just put it here", null, delegate { });
+            m.Show(Cursor.Position);
+        }
+
+        public void SwitchGroup(GlassWindow w, int dir)
         {
             List<string> live; var g = GroupOf(w.Id);
             if (g == null || !liveGroups.TryGetValue(w.Id, out live)) return;
@@ -797,7 +851,7 @@ namespace GlassDesk
             ApplySettings();
         }
 
-        public void JoinGroup(Widget w, Widget target)
+        public void JoinGroup(GlassWindow w, GlassWindow target)
         {
             var mine = GroupOf(w.Id); if (mine != null) { mine.Remove(w.Id); if (mine.Count < 2) Settings.Groups.Remove(mine); }
             var g = GroupOf(target.Id);
@@ -807,7 +861,7 @@ namespace GlassDesk
             ApplySettings();
         }
 
-        public void LeaveGroup(Widget w)
+        public void LeaveGroup(GlassWindow w)
         {
             var g = GroupOf(w.Id); if (g == null) return;
             g.Remove(w.Id); if (g.Count < 2) Settings.Groups.Remove(g);
@@ -870,14 +924,7 @@ namespace GlassDesk
             if (w == countdown) m.Items.Add("Change event…", null, delegate { countdown.Edit(); });
             if (w == quote) m.Items.Add("Another quote", null, delegate { quote.Next(); });
             if (w == github) { m.Items.Add("Open profile", null, delegate { github.OpenProfile(); }); m.Items.Add("Change username…", null, delegate { github.ChooseUser(); }); m.Items.Add("Refresh now", null, delegate { github.Fetch(); }); }
-            {
-                int gi, gc;
-                var grp = new ToolStripMenuItem("Group with");
-                foreach (var o in Windows)
-                    if (o is Widget && o != w && o.Visible) { var ow = (Widget)o; grp.DropDownItems.Add(WidgetName(ow.Id), null, delegate { JoinGroup(w, ow); }); }
-                if (grp.DropDownItems.Count > 0) m.Items.Add(grp);
-                if (GroupInfo(w.Id, out gi, out gc)) { m.Items.Add("Next in group  (scroll)", null, delegate { SwitchGroup(w, 1); }); m.Items.Add("Take out of group", null, delegate { LeaveGroup(w); }); }
-            }
+            AddGroupItems(m, w);
             if (w == music) { m.Items.Add("Play / pause", null, delegate { music.PlayPause(); }); m.Items.Add("Next song", null, delegate { music.Next(); }); m.Items.Add("Previous song", null, delegate { music.Previous(); }); m.Items.Add("Volume mixer", null, delegate { music.OpenMixer(); }); }
             if (w == focus) { m.Items.Add("Start / pause", null, delegate { focus.Toggle(); }); m.Items.Add("Reset", null, delegate { focus.Reset(); }); }
             if (w == todo) { m.Items.Add("Edit list", null, delegate { todo.Edit(); }); m.Items.Add("Clear finished tasks", null, delegate { todo.ClearDone(); }); }

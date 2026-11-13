@@ -48,7 +48,7 @@ namespace GlassDesk
                 try
                 {
                     Rectangle scr = app.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromControl(this).Bounds;
-                    Bitmap blur = Backdrop.For(scr, 2);
+                    Bitmap blur = Backdrop.For(scr, T.LookId == "acrylic" ? 3 : 2);
                     if (blur != null)
                     {
                         g.InterpolationMode = InterpolationMode.Bilinear;
