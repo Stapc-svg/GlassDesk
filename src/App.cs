@@ -787,6 +787,8 @@ namespace GlassDesk
             Settings.FolderFences.Clear();
             DpiScale = 1f;
             Backdrop.PreviewWallpaper = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WALL");
+            var look = Themes.Find(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LOOK") ?? "");
+            if (look != null) { Settings.Look = look.Id; Settings.Accent = look.Accent; Settings.Radius = look.Radius; Settings.Opacity = look.Tint; }
             Theme = Theme.From(Settings, DpiScale);
             FixedNow = new DateTime(2026, 10, 22, 9, 41, 0);
             PreviewData.FakeStats(Stats);

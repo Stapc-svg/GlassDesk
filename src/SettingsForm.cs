@@ -169,6 +169,17 @@ namespace GlassDesk
             card = null;
         }
 
+        /// <summary>A full-width block inside the current card (used for the theme gallery).</summary>
+        void Block(Control c)
+        {
+            int pad = (int)(16 * k);
+            c.BackColor = P.Card;
+            c.Location = new Point(pad, rowY + pad);
+            card.Controls.Add(c);
+            rowY += c.Height + 2 * pad;
+            card.Dividers.Add(rowY);
+        }
+
         Label Row(string title, string sub, Control right)
         {
             int h = (int)((string.IsNullOrEmpty(sub) ? 56 : 68) * k);
@@ -229,8 +240,7 @@ namespace GlassDesk
         {
             H1("Appearance", "Glass, colors and size of everything on your desktop.");
             Section("Themes");
-            Row("Dark themes", "One click sets the color, glass and corners", ThemeButtons(0, 4));
-            Row("Light themes", "You can still fine-tune everything below", ThemeButtons(4, 2));
+            Block(ThemeGallery());
 
             Section("Theme");
             string[] modes = { "Auto", "Dark", "Light" };
@@ -282,22 +292,31 @@ namespace GlassDesk
             Row("Next wallpaper", "Skip to the next picture now", Button("Next", false, delegate { if (app.Wallpaper == null || !app.Wallpaper.Next()) MessageBox.Show("No pictures found in that folder (JPG, PNG or BMP).", "GlassDesk"); }));
         }
 
-        Control ThemeButtons(int start, int count)
+        /// <summary>Every theme as a little live preview card. One click applies it.</summary>
+        Control ThemeGallery()
         {
-            var flow = new FlowLayoutPanel { WrapContents = false, AutoSize = false, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = P.Card };
-            int w = 0;
-            for (int i = start; i < start + count; i++)
+            int pad = (int)(16 * k), gap = (int)(10 * k);
+            int width = CardWidth - 2 * pad;
+            int cols = width > (int)(640 * k) ? 5 : width > (int)(470 * k) ? 4 : 3;
+            int cw = (width - gap * (cols - 1)) / cols, ch = (int)(cw * 0.66f) + (int)(42 * k);
+            var box = new Panel { Size = new Size(width, 0), BackColor = P.Card };
+            bool dark = app.Theme.Dark;
+            for (int i = 0; i < Themes.All.Length; i++)
             {
-                var preset = Themes.All[i];
-                var b = Button(preset.Name, false, delegate { Themes.Apply(S, preset); S.Save(); app.ApplySettings(); });
-                b.Margin = new Padding(0, 0, (int)(6 * k), 0);
-                flow.Controls.Add(b); w += b.Width + (int)(6 * k);
-                var dot = preset.Accent;
-                b.Paint += (s, e) => { e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; using (var br = new SolidBrush(dot)) e.Graphics.FillEllipse(br, 7 * k, b.Height / 2f - 4 * k, 8 * k, 8 * k); };
-                b.Text = "   " + preset.Name; b.Width += (int)(10 * k); w += (int)(10 * k);
+                var look = Themes.All[i];
+                var c = new LookCard(P, k, look, dark, string.Equals(S.Look, look.Id, StringComparison.OrdinalIgnoreCase))
+                { Size = new Size(cw, ch), Location = new Point((i % cols) * (cw + gap), (i / cols) * (ch + gap)), Font = fSmall };
+                var tip = new ToolTip(); tip.SetToolTip(c, look.Name + ": " + look.Desc);
+                c.Click += delegate
+                {
+                    Themes.Apply(S, look); S.Save(); app.ApplySettings();
+                    BeginInvoke(new Action(delegate { Refresh(0); }));
+                };
+                box.Controls.Add(c);
             }
-            flow.Size = new Size(w, (int)(34 * k));
-            return flow;
+            int rows = (Themes.All.Length + cols - 1) / cols;
+            box.Height = rows * ch + (rows - 1) * gap;
+            return box;
         }
 
         void SliderRow(string title, string fmt, int min, int max, int step, int value, Action<int> set)

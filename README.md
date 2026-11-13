@@ -82,6 +82,12 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - **Focus timer:** Pomodoro (25 min focus, 5 min break) with a progress ring and a notification when time is up.
 
 ### Looks
+- **16 themes:** GlassDesk, Clean, Midnight, Ocean, Sunset, Forest, Rose, Aurora, Frost, Ember, Lavender, Mint, Neon, Graphite, Paper and Classic. Each one has its own glass colors in dark and light, and some add a soft glow, a neon edge, or solid flat panels. Pick one in **Settings → Appearance**, then fine-tune it.
+
+<p align="center">
+  <img src="docs/screenshots/themes.jpg" width="100%" alt="The 16 GlassDesk themes">
+</p>
+
 - **Real frosted glass:** your wallpaper shows softly blurred through every panel (GlassDesk makes the blur itself, so it works on every Windows 10 and 11 PC), with a light-catching rim, sheen and fine grain.
 - Three glass styles (Frosted, Light blur, Clear) plus adjustable tint, corner radius and size.
 - Dark, light, or **Auto**, which follows your Windows setting.

@@ -18,6 +18,7 @@ namespace GlassDesk
         public bool SingleClickOpen = false;
 
         // Appearance
+        public string Look = "glassdesk";        // theme from the gallery (see Themes in Extras.cs)
         public string Theme = "Auto";            // Auto | Dark | Light
         public Color Accent = Color.FromArgb(124, 156, 255);
         public bool Blur = true;                 // kept for older settings files; GlassStyle decides
@@ -80,7 +81,7 @@ namespace GlassDesk
         }
         static string FilePath { get { return Path.Combine(Folder, "settings.ini"); } }
 
-        bool startupV2, iconsV2, glassV2;
+        bool startupV2, iconsV2, glassV2, lookSeen, anyKey;
 
         public bool CategoryOn(string key) { bool v; return !Categories.TryGetValue(key, out v) || v; }
 
@@ -108,6 +109,8 @@ namespace GlassDesk
             }
             if (s.GlassStyle != "frosted" && s.GlassStyle != "blur" && s.GlassStyle != "clear" && s.GlassStyle != "transparent") s.GlassStyle = "frosted";
             s.Blur = s.GlassOn;
+            if (s.anyKey && !s.lookSeen) s.Look = "classic";   // 1.8: people updating keep the look they had
+            if (Themes.Find(s.Look) == null) s.Look = "glassdesk";
             return s;
         }
 
@@ -127,8 +130,10 @@ namespace GlassDesk
 
         void Apply(string k, string v)
         {
+            anyKey = true;
             switch (k)
             {
+                case "Look": Look = v.Trim(); lookSeen = true; return;
                 case "StartWithWindows": StartWithWindows = B(v); return;
                 case "StartupV2": startupV2 = true; return;
                 case "IconsV2": iconsV2 = true; return;
@@ -221,7 +226,7 @@ namespace GlassDesk
                 Func<bool, string> b = x => x ? "1" : "0";
                 w("StartWithWindows", b(StartWithWindows)); w("StartupV2", "1"); w("IconsV2", "1"); w("Hotkey", b(Hotkey)); w("LockPositions", b(LockPositions));
                 w("KeepBehindWindows", b(KeepBehindWindows)); w("SingleClickOpen", b(SingleClickOpen));
-                w("Theme", Theme); w("Accent", (Accent.ToArgb() & 0xFFFFFF).ToString("X6"));
+                w("Look", Look); w("Theme", Theme); w("Accent", (Accent.ToArgb() & 0xFFFFFF).ToString("X6"));
                 w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
                 w("Radius", Radius.ToString(CultureInfo.InvariantCulture)); w("UiScale", UiScale.ToString(CultureInfo.InvariantCulture));
                 w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24));
@@ -267,6 +272,10 @@ namespace GlassDesk
     {
         public bool Dark;
         public Color Accent, Text, SubText, Tint, Border, Hover, Track;
+        /// <summary>Glass gradient (top to bottom), corner glows and special styles from the chosen theme.</summary>
+        public Color TintTop, TintBottom, Glow = Color.Empty, Glow2 = Color.Empty;
+        public bool Solid, Flat, Neon;
+        public string LookId = "classic";
         public float Scale = 1f;
         public string FontName = "Segoe UI";
         public string DisplayFont = "Segoe UI";
@@ -282,6 +291,14 @@ namespace GlassDesk
             t.Accent = s.Accent;
             int a = (int)(255 * s.Opacity / 100f);
             if (s.GlassStyle == "transparent") a = (int)(a * 0.3f);   // see-through: only a whisper of tint
+            var look = Themes.Find(s.Look) ?? Themes.Find("classic");
+            t.LookId = look.Id; t.Solid = look.Solid; t.Flat = look.Flat; t.Neon = look.Neon;
+            if (t.Solid) a = 255;
+            Color top = t.Dark ? look.DarkTop : look.LightTop, bot = t.Dark ? look.DarkBottom : look.LightBottom;
+            // tinted looks carry a little of their color even when the tint slider is low
+            int a2 = look.Id == "classic" || t.Solid ? a : Math.Min(255, a + 40);
+            t.TintTop = Color.FromArgb(a2, top); t.TintBottom = Color.FromArgb(a2, bot);
+            if (look.Glow) { t.Glow = Color.FromArgb(t.Dark ? 92 : 54, s.Accent); t.Glow2 = look.Glow2.IsEmpty ? Color.Empty : Color.FromArgb(t.Dark ? 52 : 36, look.Glow2); }
             if (t.Dark)
             {
                 t.Tint = Color.FromArgb(a, 18, 20, 28);
@@ -300,6 +317,13 @@ namespace GlassDesk
                 t.Hover = Color.FromArgb(28, 0, 0, 0);
                 t.Track = Color.FromArgb(30, 0, 0, 0);
             }
+            if (t.Solid)
+            {
+                t.Border = t.Dark ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(22, 0, 0, 0);
+                t.SubText = t.Dark ? Color.FromArgb(255, 152, 152, 158) : Color.FromArgb(255, 110, 110, 116);
+            }
+            if (look.Id == "paper") { t.Text = t.Dark ? Color.FromArgb(245, 238, 232, 220) : Color.FromArgb(245, 46, 40, 32); }
+            t.Tint = t.TintTop;
             t.FontName = Pick("Segoe UI", "DejaVu Sans");
             t.DisplayFont = Pick("Segoe UI", "DejaVu Sans");
             return t;

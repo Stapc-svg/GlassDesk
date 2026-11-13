@@ -158,6 +158,88 @@ namespace GlassDesk
         }
     }
 
+    /// <summary>A theme in the gallery: a tiny glass panel drawn in that theme's colors, with its name.</summary>
+    internal class LookCard : SmoothControl
+    {
+        readonly Palette P; readonly float k; readonly Themes.Look L; readonly bool dark; public bool Selected; bool hover;
+        public LookCard(Palette p, float k, Themes.Look look, bool dark, bool selected)
+        {
+            P = p; this.k = k; L = look; this.dark = dark; Selected = selected; Cursor = Cursors.Hand;
+        }
+        protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { hover = false; Invalidate(); base.OnMouseLeave(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = Prep(e);
+            bool d = L.Mode == "Light" ? false : L.Mode == "Dark" ? true : dark;
+            float nameH = 40 * k;
+            var stage = new RectangleF(1.5f, 1.5f, Width - 3, Height - nameH - 3);
+            // wallpaper behind the glass
+            using (var path = Gfx.Round(stage, 12 * k))
+            {
+                using (var lg = new LinearGradientBrush(stage, d ? Color.FromArgb(40, 52, 120) : Color.FromArgb(150, 190, 250),
+                                                        d ? Color.FromArgb(110, 36, 90) : Color.FromArgb(244, 182, 210), 35f))
+                    g.FillPath(lg, path);
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                Gfx.Glow(g, new PointF(stage.Right, stage.Y), stage.Width * 0.8f, Color.FromArgb(120, d ? 90 : 255, d ? 130 : 220, 255));
+                Gfx.Glow(g, new PointF(stage.X, stage.Bottom), stage.Width * 0.7f, Color.FromArgb(110, 255, 120, 170));
+                // the glass panel
+                var pr = new RectangleF(stage.X + stage.Width * 0.12f, stage.Y + stage.Height * 0.16f, stage.Width * 0.76f, stage.Height * 0.68f);
+                float r = Math.Min(L.Radius, 22) * k * 0.6f;
+                int a = L.Solid ? 255 : Math.Min(255, (int)(255 * L.Tint / 100f) + 70);
+                Color top = d ? L.DarkTop : L.LightTop, bot = d ? L.DarkBottom : L.LightBottom;
+                using (var pp = Gfx.Round(pr, r))
+                {
+                    using (var lg = new LinearGradientBrush(new PointF(0, pr.Y - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(a, top), Color.FromArgb(a, bot)))
+                        g.FillPath(lg, pp);
+                    var s2 = g.Save();
+                    g.SetClip(pp, CombineMode.Intersect);
+                    if (L.Glow) Gfx.Glow(g, new PointF(pr.Right, pr.Y), pr.Width * 0.7f, Color.FromArgb(d ? 110 : 70, L.Accent));
+                    if (!L.Glow2.IsEmpty) Gfx.Glow(g, new PointF(pr.X, pr.Bottom), pr.Width * 0.5f, Color.FromArgb(d ? 70 : 50, L.Glow2));
+                    if (!L.Flat)
+                        using (var sheen = new LinearGradientBrush(pr, Color.FromArgb(d ? 34 : 80, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 60f)) g.FillPath(sheen, pp);
+                    g.Restore(s2);
+                    Color ink = L.Id == "paper" && !d ? Color.FromArgb(46, 40, 32) : d ? Color.FromArgb(240, 244, 246, 252) : Color.FromArgb(230, 18, 20, 28);
+                    float px = pr.X + pr.Width * 0.12f, lh = pr.Height * 0.12f;
+                    using (var b = new SolidBrush(L.Accent)) g.FillEllipse(b, px, pr.Y + pr.Height * 0.16f, lh, lh);
+                    Gfx.FillRound(g, Color.FromArgb(150, ink), new RectangleF(px + lh * 1.6f, pr.Y + pr.Height * 0.16f + lh * 0.15f, pr.Width * 0.38f, lh * 0.7f), lh * 0.35f);
+                    Gfx.FillRound(g, Color.FromArgb(230, ink), new RectangleF(px, pr.Y + pr.Height * 0.42f, pr.Width * 0.5f, lh * 1.25f), lh * 0.4f);
+                    Gfx.FillRound(g, Color.FromArgb(d ? 40 : 30, ink), new RectangleF(px, pr.Y + pr.Height * 0.72f, pr.Width * 0.76f, lh * 0.55f), lh * 0.3f);
+                    Gfx.FillRound(g, L.Accent, new RectangleF(px, pr.Y + pr.Height * 0.72f, pr.Width * 0.46f, lh * 0.55f), lh * 0.3f);
+                    if (L.Neon)
+                    {
+                        for (int i = 3; i >= 1; i--) using (var pen = new Pen(Color.FromArgb(28 * (4 - i), L.Accent), 1f + i * 1.3f)) g.DrawPath(pen, pp);
+                        using (var pen = new Pen(L.Accent, 1.2f)) g.DrawPath(pen, pp);
+                    }
+                    else if (L.Flat)
+                        using (var pen = new Pen(d ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(26, 0, 0, 0), 1f)) g.DrawPath(pen, pp);
+                    else
+                        using (var lg = new LinearGradientBrush(pr, Color.FromArgb(200, 255, 255, 255), Color.FromArgb(40, 255, 255, 255), 70f))
+                        using (var pen = new Pen(lg, 1.1f)) g.DrawPath(pen, pp);
+                }
+                g.Restore(st);
+            }
+            // name and description
+            using (var b = new SolidBrush(P.Text)) using (var f = new Font(Font.FontFamily, Font.Size, FontStyle.Bold))
+                g.DrawString(L.Name, f, b, new RectangleF(2, stage.Bottom + 6 * k, Width - 4, 18 * k), Gfx.Left);
+            using (var b = new SolidBrush(P.Sub))
+                g.DrawString(L.Desc, Font, b, new RectangleF(2, stage.Bottom + 22 * k, Width - 4, 16 * k), new StringFormat(Gfx.Left) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
+            // selection ring
+            if (Selected || hover)
+                using (var path = Gfx.Round(new RectangleF(1, 1, Width - 2, stage.Height + 1), 12.5f * k))
+                using (var pen = new Pen(Selected ? P.Accent : Color.FromArgb(90, P.Text), Selected ? 2.5f * k : 1.2f * k)) g.DrawPath(pen, path);
+            if (Selected)
+            {
+                float cs = 20 * k, cx = Width - cs - 8 * k, cy = 8 * k;
+                using (var b = new SolidBrush(P.Accent)) g.FillEllipse(b, cx, cy, cs, cs);
+                using (var pen = new Pen(Color.White, 2f * k) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+                    g.DrawLines(pen, new[] { new PointF(cx + cs * 0.27f, cy + cs * 0.52f), new PointF(cx + cs * 0.44f, cy + cs * 0.68f), new PointF(cx + cs * 0.74f, cy + cs * 0.34f) });
+            }
+        }
+    }
+
     /// <summary>A rounded card that holds setting rows separated by thin lines.</summary>
     internal class Card : Panel
     {

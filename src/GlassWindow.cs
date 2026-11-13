@@ -26,6 +26,22 @@ namespace GlassDesk
             p.CloseFigure();
             return p;
         }
+        /// <summary>A soft round glow: color at the center fading to nothing at the edge.</summary>
+        public static void Glow(Graphics g, PointF c, float radius, Color color)
+        {
+            if (radius < 2 || color.A == 0) return;
+            using (var path = new GraphicsPath())
+            {
+                path.AddEllipse(c.X - radius, c.Y - radius, radius * 2, radius * 2);
+                using (var b = new PathGradientBrush(path) { CenterPoint = c, CenterColor = color, SurroundColors = new[] { Color.FromArgb(0, color) } })
+                {
+                    var blend = new Blend(3) { Factors = new[] { 0f, 0.55f, 1f }, Positions = new[] { 0f, 0.5f, 1f } };
+                    b.Blend = blend;
+                    g.FillPath(b, path);
+                }
+            }
+        }
+
         public static void FillRound(Graphics g, Color c, RectangleF r, float radius)
         {
             using (var p = Round(r, radius)) using (var b = new SolidBrush(c)) g.FillPath(b, p);
@@ -163,7 +179,7 @@ namespace GlassDesk
         }
 
         int lastMoveDraw;
-        bool UsesBackdrop { get { return Cfg.GlassStyle == "frosted" || Cfg.GlassStyle == "blur"; } }
+        bool UsesBackdrop { get { return !T.Solid && (Cfg.GlassStyle == "frosted" || Cfg.GlassStyle == "blur"); } }
 
         /// <summary>Paints the matching piece of the blurred wallpaper inside the panel: the actual glass blur.</summary>
         void DrawBackdrop(Graphics g, GraphicsPath path)
@@ -222,7 +238,19 @@ namespace GlassDesk
             {
                 // 1. tint: how much the glass colors what's behind it
                 DrawBackdrop(g, path);
-                using (var b = new SolidBrush(T.Tint)) g.FillPath(b, path);
+                if (T.TintTop.ToArgb() == T.TintBottom.ToArgb())
+                    using (var b = new SolidBrush(T.TintTop)) g.FillPath(b, path);
+                else
+                    using (var b = new LinearGradientBrush(new PointF(0, pr.Y - 1), new PointF(0, pr.Bottom + 1), T.TintTop, T.TintBottom)) g.FillPath(b, path);
+                if (!T.Glow.IsEmpty || !T.Glow2.IsEmpty)
+                {
+                    var gs = g.Save();
+                    g.SetClip(path, CombineMode.Intersect);
+                    float big = Math.Max(pr.Width, pr.Height);
+                    if (!T.Glow.IsEmpty) Gfx.Glow(g, new PointF(pr.Right - pr.Width * 0.08f, pr.Y - pr.Height * 0.05f), big * 0.75f, T.Glow);
+                    if (!T.Glow2.IsEmpty) Gfx.Glow(g, new PointF(pr.X - pr.Width * 0.05f, pr.Bottom + pr.Height * 0.05f), big * 0.5f, T.Glow2);
+                    g.Restore(gs);
+                }
                 if (!PanelColor.IsEmpty) using (var b = new SolidBrush(Color.FromArgb(T.Dark ? 52 : 44, PanelColor))) g.FillPath(b, path);
 
                 var st = g.Save();
@@ -230,7 +258,8 @@ namespace GlassDesk
                 // 2. frosted grain, the fine texture real frosted glass has
                 // (grain removed in 1.7.1: it showed up as a grid of little squares)
 
-                // 3. light falling across the pane from the top-left
+                // 3. light falling across the pane from the top-left (flat themes skip the glass effects)
+                if (T.Flat) { g.Restore(st); goto rim; }
                 var a = new PointF(pr.X, pr.Y);
                 var z = new PointF(pr.Right + 2, pr.Bottom + 2);
                 using (var lg = new LinearGradientBrush(new PointF(a.X - 2, a.Y - 2), z, Color.White, Color.White))
@@ -247,8 +276,25 @@ namespace GlassDesk
                 using (var pen = new Pen(Color.FromArgb(T.Dark ? 12 : 22, 255, 255, 255), T.Sf(3))) g.DrawPath(pen, path);
                 g.Restore(st);
             }
+            rim:
             // 5. the rim: bright where light hits (top-left and bottom-right corners), faint along the sides
             var br = new RectangleF(pr.X + 0.6f, pr.Y + 0.6f, pr.Width - 1.2f, pr.Height - 1.2f);
+            if (T.Flat)
+            {
+                using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f))) using (var pen = new Pen(T.Border, 1f)) g.DrawPath(pen, p);
+                return;
+            }
+            if (T.Neon)
+            {
+                using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
+                {
+                    for (int i = 4; i >= 1; i--)
+                        using (var pen = new Pen(Color.FromArgb(18 * (5 - i), T.Accent), T.Sf(1.2f + i * 1.6f))) g.DrawPath(pen, p);
+                    using (var lg = new LinearGradientBrush(new PointF(br.X, br.Y), new PointF(br.Right, br.Bottom), T.Accent, T.Glow2.IsEmpty ? T.Accent : Color.FromArgb(255, T.Glow2)))
+                    using (var pen = new Pen(lg, T.Sf(1.4f))) g.DrawPath(pen, p);
+                }
+                return;
+            }
             using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
             using (var lg = new LinearGradientBrush(new PointF(br.X - 1, br.Y - 1), new PointF(br.Right + 1, br.Bottom + 1), Color.White, Color.White))
             {
