@@ -95,7 +95,20 @@ namespace GlassDesk
     {
         protected readonly App App;
         public readonly string Id;
-        protected Theme T { get { return App.Theme; } }
+        /// <summary>Widgets can be zoomed by dragging their corner; everything inside is drawn at that size.</summary>
+        public float Zoom = 1f;
+        protected bool ZoomResize;
+        Theme zoomed, zoomedFrom; float zoomedAt;
+        protected Theme T
+        {
+            get
+            {
+                Theme b = App.Theme;
+                if (Math.Abs(Zoom - 1f) < 0.001f) return b;
+                if (zoomed == null || !ReferenceEquals(zoomedFrom, b) || zoomedAt != Zoom) { zoomed = b.Zoomed(Zoom); zoomedFrom = b; zoomedAt = Zoom; }
+                return zoomed;
+            }
+        }
         protected Settings Cfg { get { return App.Settings; } }
 
         int pad;                       // room for the soft shadow around the panel
@@ -104,8 +117,8 @@ namespace GlassDesk
         public bool Wanted = true;     // should this window be shown with current settings
         protected Size MinPanel = new Size(150, 50);
 
-        bool armed, dragging, resizing;
-        Point downScreen; Rectangle downBounds;
+        bool armed, dragging, resizing, hoverGrip, hoverPanel;
+        Point downScreen; Rectangle downBounds; float downZoom = 1f;
 
         protected GlassWindow(App app, string id)
         {
@@ -134,7 +147,7 @@ namespace GlassDesk
 
         public void SetPanelBounds(Rectangle r)
         {
-            pad = T.S(14);   // GlassDesk paints its own blur now, so every style keeps its soft shadow
+            pad = App.Theme.S(14);   // GlassDesk paints its own blur now, so every style keeps its soft shadow
             Bounds = new Rectangle(r.X - pad, r.Y - pad, r.Width + 2 * pad, r.Height + 2 * pad);
             Panel = new Rectangle(pad, pad, r.Width, r.Height);
             ApplyStyle();
@@ -214,8 +227,27 @@ namespace GlassDesk
                 g.Clear(Color.Transparent);
                 DrawChrome(g);
                 PaintContent(g);
+                if (Resizable && (hoverPanel || resizing) && !Cfg.LockPositions) DrawGrip(g);
             }
             return bmp;
+        }
+
+        /// <summary>Two little curved lines in the corner, shown on hover, so you can see where to resize.</summary>
+        void DrawGrip(Graphics g)
+        {
+            float r = T.S(Cfg.Radius);
+            float x = Panel.Right, y = Panel.Bottom;
+            int a = hoverGrip || resizing ? 230 : 120;
+            using (var pen = new Pen(Color.FromArgb(a, hoverGrip || resizing ? T.Accent : T.Text), App.Theme.Sf(2.2f)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    float o = App.Theme.Sf(5 + i * 5);
+                    float rr = Math.Max(App.Theme.Sf(6), r - o);
+                    var box = new RectangleF(x - o - rr * 2, y - o - rr * 2, rr * 2, rr * 2);
+                    g.DrawArc(pen, box, 10, 70);
+                }
+            }
         }
 
         void DrawChrome(Graphics g)
@@ -383,7 +415,7 @@ namespace GlassDesk
         {
             base.OnMouseDown(e);
             if (e.Button != MouseButtons.Left || Cfg.LockPositions) return;
-            downScreen = Cursor.Position; downBounds = PanelBounds;
+            downScreen = Cursor.Position; downBounds = PanelBounds; downZoom = Zoom;
             if (InGrip(e.Location)) { resizing = true; Capture = true; if (IsHandleCreated) SetGlass(true); }
             else if (IsDragArea(e.Location)) { armed = true; Capture = true; }
         }
@@ -393,6 +425,19 @@ namespace GlassDesk
             base.OnMouseMove(e);
             Point s = Cursor.Position;
             int dx = s.X - downScreen.X, dy = s.Y - downScreen.Y;
+            if (resizing && ZoomResize)
+            {
+                // keep the widget's shape and scale everything inside it
+                float bw = downBounds.Width / downZoom, bh = downBounds.Height / downZoom;
+                float z = Math.Max((downBounds.Width + dx) / bw, (downBounds.Height + dy) / bh);
+                Zoom = Math.Max(0.6f, Math.Min(2.2f, (float)Math.Round(z * 50) / 50f));
+                int zw = (int)Math.Round(bw * Zoom), zh = (int)Math.Round(bh * Zoom);
+                Size = new Size(zw + 2 * pad, zh + 2 * pad);
+                Panel = new Rectangle(pad, pad, zw, zh);
+                OnResized();
+                Redraw();
+                return;
+            }
             if (resizing)
             {
                 int w = Math.Max(T.S(MinPanel.Width), downBounds.Width + dx);
@@ -414,7 +459,10 @@ namespace GlassDesk
                 if (UsesBackdrop && Environment.TickCount - lastMoveDraw > 30) { lastMoveDraw = Environment.TickCount; Redraw(); }
                 return;
             }
-            Cursor = InGrip(e.Location) && !Cfg.LockPositions ? Cursors.SizeNWSE : Cursors.Default;
+            bool g = InGrip(e.Location) && !Cfg.LockPositions;
+            Cursor = g ? Cursors.SizeNWSE : Cursors.Default;
+            if (Resizable && !hoverPanel) { hoverPanel = true; hoverGrip = g; Redraw(); }
+            else if (g != hoverGrip) { hoverGrip = g; Redraw(); }
             OnHover(e.Location);
         }
 
@@ -443,6 +491,7 @@ namespace GlassDesk
         {
             base.OnMouseUp(e);
             bool wasMoving = dragging || resizing;
+            if (resizing && ZoomResize) App.SaveZoom(Id, Zoom);
             if (wasMoving) { App.SavePosition(Id, PanelBounds); if (IsHandleCreated) SetGlass(false); }
             armed = dragging = resizing = false;
             Capture = false;
@@ -458,6 +507,7 @@ namespace GlassDesk
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
+            if (hoverPanel && !resizing) { hoverPanel = hoverGrip = false; Redraw(); }
             OnHover(new Point(-1, -1));
         }
 

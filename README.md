@@ -90,6 +90,7 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 
 - **Real frosted glass:** your wallpaper shows softly blurred through every panel (GlassDesk makes the blur itself, so it works on every Windows 10 and 11 PC), with a light-catching rim, sheen and fine grain.
 - Three glass styles (Frosted, Light blur, Clear) plus adjustable tint, corner radius and size.
+- **Resize any widget** by dragging its bottom-right corner; text, numbers and charts grow with it.
 - Dark, light, or **Auto**, which follows your Windows setting.
 - Choose an accent color.
 

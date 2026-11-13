@@ -472,6 +472,19 @@ namespace GlassDesk
             w.SetPanelBounds(new Rectangle(saved.Location, w.PreferredPanelSize(saved.Size)));
         }
 
+        public void SaveZoom(string id, float zoom)
+        {
+            int pct = (int)Math.Round(zoom * 100);
+            if (pct == 100) Settings.WidgetZoom.Remove(id); else Settings.WidgetZoom[id] = pct;
+        }
+
+        public void ResetZoom(Widget w)
+        {
+            Settings.WidgetZoom.Remove(w.Id);
+            Settings.Save();
+            PlaceWindow(w);
+        }
+
         public void SavePosition(string id, Rectangle r)
         {
             Rectangle old;
@@ -683,6 +696,7 @@ namespace GlassDesk
                 m.Items.Add((Settings.ShowSeconds ? "Hide" : "Show") + " seconds", null, delegate { Settings.ShowSeconds = !Settings.ShowSeconds; Settings.Save(); ApplySettings(); });
                 m.Items.Add(Settings.Clock24 ? "Use 12-hour time" : "Use 24-hour time", null, delegate { Settings.Clock24 = !Settings.Clock24; Settings.Save(); ApplySettings(); });
             }
+            if (Settings.WidgetZoom.ContainsKey(w.Id)) m.Items.Add("Reset size", null, delegate { ResetZoom(w); });
             m.Items.Add("Hide this widget", null, delegate
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;
@@ -788,6 +802,8 @@ namespace GlassDesk
             DpiScale = 1f;
             Backdrop.PreviewWallpaper = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WALL");
             var look = Themes.Find(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LOOK") ?? "");
+            string zs = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_ZOOM");   // e.g. clock:150,todo:70
+            if (!string.IsNullOrEmpty(zs)) foreach (string part in zs.Split(',')) { var kv = part.Split(':'); if (kv.Length == 2) Settings.WidgetZoom[kv[0]] = int.Parse(kv[1]); }
             if (look != null) { Settings.Look = look.Id; Settings.Accent = look.Accent; Settings.Radius = look.Radius; Settings.Opacity = look.Tint; }
             Theme = Theme.From(Settings, DpiScale);
             FixedNow = new DateTime(2026, 10, 22, 9, 41, 0);

@@ -72,6 +72,7 @@ namespace GlassDesk
 
         // Layout: id -> x,y,w,h  and collapsed fences
         public Dictionary<string, Rectangle> Positions = new Dictionary<string, Rectangle>();
+        public Dictionary<string, int> WidgetZoom = new Dictionary<string, int>();   // widget id -> size in % (60..220)
         public HashSet<string> Collapsed = new HashSet<string>();
         public Dictionary<string, string> Titles = new Dictionary<string, string>();
 
@@ -209,6 +210,7 @@ namespace GlassDesk
             else if (k.StartsWith("fauto.")) { if (B(v)) AutoHide.Add(k.Substring(6)); }
             else if (k.StartsWith("col.")) { if (B(v)) Collapsed.Add(k.Substring(4)); }
             else if (k.StartsWith("title.")) Titles[k.Substring(6)] = Unesc(v);
+            else if (k.StartsWith("zoom.")) WidgetZoom[k.Substring(5)] = Math.Max(60, Math.Min(220, I(v)));
             else if (k.StartsWith("pos."))
             {
                 string[] p = v.Split(',');
@@ -256,6 +258,7 @@ namespace GlassDesk
                 foreach (var kv in Pins) w("pin." + (pn++), kv.Value + "|" + Esc(kv.Key));
                 foreach (string c in Collapsed) w("col." + c, "1");
                 foreach (var kv in Titles) w("title." + kv.Key, Esc(kv.Value));
+                foreach (var kv in WidgetZoom) if (kv.Value != 100) w("zoom." + kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
                 foreach (var kv in Positions)
                     w("pos." + kv.Key, string.Format(CultureInfo.InvariantCulture, "{0},{1},{2},{3}", kv.Value.X, kv.Value.Y, kv.Value.Width, kv.Value.Height));
                 string tmp = FilePath + ".tmp";
@@ -281,6 +284,8 @@ namespace GlassDesk
         public string DisplayFont = "Segoe UI";
 
         public int S(float v) { return (int)Math.Round(v * Scale); }
+        /// <summary>The same theme drawn bigger or smaller (for a widget you resized).</summary>
+        public Theme Zoomed(float z) { var t = (Theme)MemberwiseClone(); t.Scale = Scale * z; return t; }
         public float Sf(float v) { return v * Scale; }
 
         public static Theme From(Settings s, float dpiScale)
