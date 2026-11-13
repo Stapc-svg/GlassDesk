@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- GlassDesk installer: per-user (no admin prompt), starts with Windows, Start menu shortcut -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Name="GlassDesk" Language="1033" Version="1.8.1" Manufacturer="GlassDesk"
+  <Product Id="*" Name="GlassDesk" Language="1033" Version="1.8.2" Manufacturer="GlassDesk"
            UpgradeCode="792e2b05-a71e-4aa8-821c-740870d15968">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser"
              Description="GlassDesk - glass desktop organizer and widgets" Comments="Runs on startup" />
@@ -13,8 +13,8 @@
     <Icon Id="GlassDeskIcon" SourceFile="../assets/GlassDesk.ico" />
 
     <Upgrade Id="792e2b05-a71e-4aa8-821c-740870d15968">
-      <UpgradeVersion Minimum="0.0.1" Maximum="1.8.1" IncludeMinimum="yes" IncludeMaximum="no" Property="OLDERVERSIONFOUND" />
-      <UpgradeVersion Minimum="1.8.1" IncludeMinimum="no" OnlyDetect="yes" Property="NEWERVERSIONFOUND" />
+      <UpgradeVersion Minimum="0.0.1" Maximum="1.8.2" IncludeMinimum="yes" IncludeMaximum="no" Property="OLDERVERSIONFOUND" />
+      <UpgradeVersion Minimum="1.8.2" IncludeMinimum="no" OnlyDetect="yes" Property="NEWERVERSIONFOUND" />
     </Upgrade>
 
     <Directory Id="TARGETDIR" Name="SourceDir">

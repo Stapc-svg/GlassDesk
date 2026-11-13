@@ -136,7 +136,62 @@ namespace GlassDesk
         int Pad { get { return (int)(16 * k); } }
         Rectangle SearchRect { get { return new Rectangle(Pad, Pad, Width - 2 * Pad - (int)(48 * k), (int)(46 * k)); } }
         Rectangle CloseRect { get { var s = SearchRect; return new Rectangle(s.Right + (int)(10 * k), s.Y + (s.Height - (int)(36 * k)) / 2, (int)(36 * k), (int)(36 * k)); } }
-        Rectangle GridRect { get { int top = SearchRect.Bottom + (int)(14 * k); return new Rectangle(Pad, top, Width - 2 * Pad, FooterTop - top - (int)(4 * k)); } }
+        // ---------- quick actions: a calculator, themes, commands and web search ----------
+        class Act { public string Glyph, Title, Hint; public Action Run; }
+        readonly List<Act> acts = new List<Act>();
+        int ActH { get { return (int)(46 * k); } }
+        Rectangle ActRect(int i) { return new Rectangle(Pad, SearchRect.Bottom + (int)(12 * k) + i * (ActH + (int)(6 * k)), Width - 2 * Pad, ActH); }
+        int hotAct = -1;
+
+        void BuildActs()
+        {
+            acts.Clear();
+            string q = query.Trim();
+            if (q.Length == 0) return;
+            double v;
+            if (Calc.TryEval(q, out v))
+            {
+                string res = Math.Abs(v) >= 1e15 || (Math.Abs(v) < 1e-6 && v != 0) ? v.ToString("G6", System.Globalization.CultureInfo.InvariantCulture) : Math.Round(v, 8).ToString("#,0.########", System.Globalization.CultureInfo.InvariantCulture);
+                acts.Add(new Act { Glyph = "=", Title = "= " + res, Hint = "Enter to copy", Run = delegate { try { Clipboard.SetText(res.Replace(",", "")); } catch { } Finish(); } });
+            }
+            string ql = q.ToLowerInvariant();
+            foreach (var list in new[] { Themes.All, Themes.Windows })
+                foreach (var l in list)
+                    if (acts.Count < 3 && ql.Length >= 3 && (l.Name.ToLowerInvariant().StartsWith(ql) || ("theme " + l.Name.ToLowerInvariant()).StartsWith(ql)))
+                    {
+                        var look = l;
+                        acts.Add(new Act { Glyph = "◐", Title = "Switch to the " + l.Name + " theme", Hint = l.Desc, Run = delegate { Finish(); Themes.Apply(app.Settings, look); app.Settings.Save(); app.ApplySettings(); } });
+                    }
+            string[][] cmds =
+            {
+                new[] { "settings", "Open Settings" }, new[] { "organize", "Organize desktop" }, new[] { "hide", "Hide or show all panels" },
+                new[] { "new fence", "Make a new fence" }, new[] { "dark", "Dark mode" }, new[] { "light", "Light mode" },
+            };
+            foreach (var c in cmds)
+                if (acts.Count < 3 && ql.Length >= 3 && c[0].StartsWith(ql))
+                {
+                    string id = c[0];
+                    acts.Add(new Act { Glyph = "›", Title = c[1], Hint = "GlassDesk command", Run = delegate
+                    {
+                        Finish();
+                        if (id == "settings") app.ShowSettings();
+                        else if (id == "organize") app.ShowOrganize();
+                        else if (id == "hide") app.ToggleVisible();
+                        else if (id == "new fence") app.NewFence();
+                        else { app.Settings.Theme = id == "dark" ? "Dark" : "Light"; app.Settings.Save(); app.ApplySettings(); }
+                    } });
+                }
+            if (acts.Count < 3)
+                acts.Add(new Act { Glyph = "⌕", Title = "Search the web for \"" + q + "\"", Hint = shown.Count == 0 ? "Enter" : "Ctrl + Enter", Run = delegate
+                {
+                    Finish();
+                    try { Process.Start(new ProcessStartInfo("https://www.google.com/search?q=" + Uri.EscapeDataString(q)) { UseShellExecute = true }); } catch { }
+                } });
+        }
+
+        void RunFirstAct() { if (acts.Count > 0) acts[0].Run(); }
+
+        Rectangle GridRect { get { int top = SearchRect.Bottom + (int)(14 * k) + acts.Count * (ActH + (int)(6 * k)); return new Rectangle(Pad, top, Width - 2 * Pad, FooterTop - top - (int)(4 * k)); } }
         int FooterTop { get { return Height - (int)(54 * k); } }
         Rectangle SettingsRect { get { int bw = (int)(140 * k), bh = (int)(34 * k); return new Rectangle(Width - Pad - bw, FooterTop + ((Height - FooterTop) - bh) / 2, bw, bh); } }
         int CellW { get { return (GridRect.Width - (int)(10 * k)) / Cols; } }
@@ -162,6 +217,7 @@ namespace GlassDesk
                 else if (Loose(q, n)) loose.Add(kv.Key);
             }
             shown.Clear(); shown.AddRange(starts); shown.AddRange(has); shown.AddRange(loose);
+            BuildActs();
             sel = 0; hot = -1; scroll = 0;
             Invalidate();
         }
@@ -212,11 +268,32 @@ namespace GlassDesk
             }
             Close(g, CloseRect, hotClose);
 
+            // quick actions
+            for (int i = 0; i < acts.Count; i++)
+            {
+                var ar = ActRect(i);
+                bool firstAct = i == 0 && (shown.Count == 0 || acts[0].Glyph == "=");
+                if (firstAct)
+                    using (var p = Gfx.Round(ar, 12 * k))
+                    {
+                        using (var b = new LinearGradientBrush(ar, Gfx.WithAlpha(P.Accent, T.Dark ? 70 : 55), Gfx.WithAlpha(P.Accent2, T.Dark ? 40 : 30), 0f)) g.FillPath(b, p);
+                        using (var pen = new Pen(Gfx.WithAlpha(P.Accent, 150), 1.2f * k)) g.DrawPath(pen, p);
+                    }
+                else Chip(g, ar, 12 * k, i == hotAct);
+                var gr0 = new RectangleF(ar.X + 10 * k, ar.Y + (ar.Height - 28 * k) / 2, 28 * k, 28 * k);
+                using (var p = Gfx.Round(gr0, 8 * k)) using (var b = new LinearGradientBrush(gr0, P.Accent, P.Accent2, 45f)) g.FillPath(b, p);
+                using (var b = new SolidBrush(Color.White)) g.DrawString(acts[i].Glyph, Gfx.F(T.FontName, 19 * k, FontStyle.Bold), b, gr0, Gfx.Center);
+                var fT = Gfx.F(T.FontName, acts[i].Glyph == "=" ? 17 * k : 14 * k, FontStyle.Bold);
+                float hx = ar.Right - 230 * k;
+                using (var b = new SolidBrush(P.Text)) g.DrawString(acts[i].Title, fT, b, new RectangleF(gr0.Right + 12 * k, ar.Y, hx - gr0.Right - 16 * k, ar.Height), Gfx.Left);
+                using (var b = new SolidBrush(P.Sub)) g.DrawString(acts[i].Hint, fSmall, b, new RectangleF(hx, ar.Y, 218 * k, ar.Height), Gfx.Right);
+            }
+
             // grid of icons
             var gr = GridRect;
             var st = g.Save();
             g.SetClip(gr);
-            if (shown.Count == 0)
+            if (shown.Count == 0 && acts.Count == 0)
                 using (var b = new SolidBrush(P.Sub)) g.DrawString(query.Length == 0 ? "Your desktop is empty" : "Nothing on your desktop matches \"" + query + "\"", fBig, b, gr, Gfx.Center);
             int first = Math.Max(0, scroll / CellH * Cols), last = Math.Min(shown.Count, ((scroll + gr.Height) / CellH + 1) * Cols);
             for (int i = first; i < last; i++)
@@ -302,7 +379,10 @@ namespace GlassDesk
                 case Keys.Left: Move(-1); break;
                 case Keys.Down: Move(Cols); break;
                 case Keys.Up: Move(-Cols); break;
-                case Keys.Enter: Open(sel, e.Shift); break;
+                case Keys.Enter:
+                    if (e.Control || (acts.Count > 0 && (shown.Count == 0 || acts[0].Glyph == "="))) RunFirstAct();
+                    else Open(sel, e.Shift);
+                    break;
                 default: return;
             }
             e.Handled = true; e.SuppressKeyPress = e.KeyCode != Keys.V || e.Control;
@@ -332,10 +412,12 @@ namespace GlassDesk
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            int ha = -1; for (int a = 0; a < acts.Count; a++) if (ActRect(a).Contains(e.Location)) ha = a;
+            if (ha != hotAct) { hotAct = ha; Invalidate(); }
             int h = HitItem(e.Location);
             bool hc = CloseRect.Contains(e.Location), hs = SettingsRect.Contains(e.Location);
             if (h != hot || hc != hotClose || hs != hotSettings) { hot = h; hotClose = hc; hotSettings = hs; Invalidate(); }
-            Cursor = h >= 0 || hc || hs ? Cursors.Hand : Cursors.Default;
+            Cursor = h >= 0 || hc || hs || ha >= 0 ? Cursors.Hand : Cursors.Default;
         }
         protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); hot = -1; hotClose = hotSettings = false; Invalidate(); }
         protected override void OnMouseWheel(MouseEventArgs e)
@@ -348,6 +430,7 @@ namespace GlassDesk
             base.OnMouseClick(e);
             if (e.Button != MouseButtons.Left) return;
             if (CloseRect.Contains(e.Location)) { Finish(); return; }
+            for (int a = 0; a < acts.Count; a++) if (ActRect(a).Contains(e.Location)) { acts[a].Run(); return; }
             if (SettingsRect.Contains(e.Location)) { Finish(); app.ShowSettings(); return; }
             int i = HitItem(e.Location);
             if (i >= 0) Open(i, ModifierKeys == Keys.Shift);
@@ -501,5 +584,64 @@ namespace GlassDesk
         protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); if (hotBtn != -1) { hotBtn = -1; Invalidate(); } }
         protected override void OnKeyDown(KeyEventArgs e) { if (e.KeyCode == Keys.Escape || e.KeyCode == Keys.Enter) Close(); base.OnKeyDown(e); }
         protected override void OnLocationChanged(EventArgs e) { base.OnLocationChanged(e); Invalidate(); }   // the blurred wallpaper behind it moves
+    }
+
+    /// <summary>A tiny calculator for the search box: + - * / ^ %, brackets and decimals.</summary>
+    internal static class Calc
+    {
+        public static bool TryEval(string text, out double v)
+        {
+            v = 0;
+            string q = text.Replace(" ", "").Replace("×", "*").Replace("÷", "/").Replace(",", ".");
+            if (q.Length < 3) return false;
+            bool op = false, digit = false;
+            foreach (char c in q)
+            {
+                if (char.IsDigit(c)) digit = true;
+                else if ("+-*/^%".IndexOf(c) >= 0) op = true;
+                else if (c != '.' && c != '(' && c != ')') return false;
+            }
+            if (!op || !digit) return false;
+            try
+            {
+                int i = 0;
+                v = Sum(q, ref i);
+                return i == q.Length && !double.IsNaN(v) && !double.IsInfinity(v);
+            }
+            catch { return false; }
+        }
+        static double Sum(string s, ref int i)
+        {
+            double v = Prod(s, ref i);
+            while (i < s.Length && (s[i] == '+' || s[i] == '-')) { char o = s[i++]; double r = Prod(s, ref i); v = o == '+' ? v + r : v - r; }
+            return v;
+        }
+        static double Prod(string s, ref int i)
+        {
+            double v = Pow(s, ref i);
+            while (i < s.Length && (s[i] == '*' || s[i] == '/' || s[i] == '%'))
+            {
+                char o = s[i++];
+                if (o == '%' && (i >= s.Length || "+-*/)".IndexOf(s[i]) >= 0)) { v /= 100; continue; }   // "20%" = 0.2
+                double r = Pow(s, ref i); v = o == '*' ? v * r : o == '/' ? v / r : v % r;
+            }
+            return v;
+        }
+        static double Pow(string s, ref int i)
+        {
+            double v = Unary(s, ref i);
+            if (i < s.Length && s[i] == '^') { i++; v = Math.Pow(v, Pow(s, ref i)); }
+            return v;
+        }
+        static double Unary(string s, ref int i)
+        {
+            if (i < s.Length && s[i] == '-') { i++; return -Unary(s, ref i); }
+            if (i < s.Length && s[i] == '+') { i++; return Unary(s, ref i); }
+            if (i < s.Length && s[i] == '(') { i++; double v = Sum(s, ref i); if (i >= s.Length || s[i] != ')') throw new FormatException(); i++; return v; }
+            int st = i;
+            while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.')) i++;
+            if (st == i) throw new FormatException();
+            return double.Parse(s.Substring(st, i - st), System.Globalization.CultureInfo.InvariantCulture);
+        }
     }
 }

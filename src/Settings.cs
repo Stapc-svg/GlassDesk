@@ -16,7 +16,9 @@ namespace GlassDesk
         public bool LockPositions = false;
         public bool KeepBehindWindows = true;
         public bool SingleClickOpen = false;
-        public bool Stacks = true;                 // 4+ files of the same type in a fence become one stack
+        public bool Stacks = true;
+        public bool WallAccent = false;            // take the accent color from the wallpaper
+        public bool ShowDay = true;                // the "Today" progress rings widget                 // 4+ files of the same type in a fence become one stack
         public bool PerDisplayLayouts = true;      // remember a layout for each monitor setup
         public string DisplayKey = "";             // the monitor setup the current layout belongs to
         public Dictionary<string, Dictionary<string, Rectangle>> Layouts = new Dictionary<string, Dictionary<string, Rectangle>>();
@@ -149,6 +151,8 @@ namespace GlassDesk
                 case "KeepBehindWindows": KeepBehindWindows = B(v); return;
                 case "SingleClickOpen": SingleClickOpen = B(v); return;
                 case "Stacks": Stacks = B(v); return;
+                case "WallAccent": WallAccent = B(v); return;
+                case "ShowDay": ShowDay = B(v); return;
                 case "PerDisplayLayouts": PerDisplayLayouts = B(v); return;
                 case "DisplayKey": DisplayKey = v.Trim(); return;
                 case "Theme": Theme = v.Trim(); return;
@@ -285,7 +289,7 @@ namespace GlassDesk
                 foreach (string c in Collapsed) w("col." + c, "1");
                 foreach (var kv in Titles) w("title." + kv.Key, Esc(kv.Value));
                 foreach (var kv in WidgetZoom) if (kv.Value != 100) w("zoom." + kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
-                w("Stacks", b(Stacks)); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
+                w("Stacks", b(Stacks)); w("WallAccent", b(WallAccent)); w("ShowDay", b(ShowDay)); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
                 for (int i = 0; i < Groups.Count; i++) w("group." + i, string.Join(",", Groups[i].ToArray()));
                 if (PerDisplayLayouts && !string.IsNullOrEmpty(DisplayKey)) Layouts[DisplayKey] = new Dictionary<string, Rectangle>(Positions);
                 foreach (var lay in Layouts)

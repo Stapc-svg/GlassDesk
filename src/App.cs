@@ -37,7 +37,7 @@ namespace GlassDesk
 
         ClockWidget clock; SystemWidget system; CalendarWidget calendar; NotesWidget notes;
         WeatherWidget weather; TodoWidget todo; PhotoWidget photos;
-        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music;
+        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music; DayWidget day;
         internal GitHubWidget GitHubW { get { return github; } } internal FocusWidget FocusW { get { return focus; } }
         public WallpaperChanger Wallpaper;
         readonly Dictionary<string, FenceWindow> fences = new Dictionary<string, FenceWindow>();
@@ -59,6 +59,7 @@ namespace GlassDesk
         {
             Settings = Settings.Load();
             try { using (var g = Graphics.FromHwnd(IntPtr.Zero)) DpiScale = g.DpiX / 96f; } catch { DpiScale = 1f; }
+            Safe("wallpaper accent", PickWallpaperAccent);
             Theme = Theme.From(Settings, DpiScale);
             AppIcon = MakeIcon(Theme.Accent);
             Safe("monitor layout", delegate { SwitchDisplayLayout(); });
@@ -122,6 +123,7 @@ namespace GlassDesk
             github = new GitHubWidget(this); network = new NetworkWidget(this); focus = new FocusWidget(this);
             Windows.Add(github); Windows.Add(network); Windows.Add(focus);
             music = new MusicWidget(this); Windows.Add(music);
+            day = new DayWidget(this); Windows.Add(day);
         }
 
         Action balloonClick;
@@ -147,6 +149,7 @@ namespace GlassDesk
         public void RefreshBackdrop()
         {
             Backdrop.Clear();
+            if (Settings.WallAccent) { ApplySettings(); return; }
             foreach (var w in Windows) if (w.Visible) w.Redraw();
         }
 
@@ -332,7 +335,7 @@ namespace GlassDesk
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
             weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
-            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic;
+            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic; day.Wanted = Settings.ShowDay;
             ApplyGroups();
             if (!preview) UpdateWatchers();
             PlaceAll();
@@ -578,8 +581,22 @@ namespace GlassDesk
         public int VisibleCount { get { int n = 0; foreach (var w in Windows) if (w.Visible) n++; return n; } }
 
         // =============================================================== settings
+        /// <summary>"Match my wallpaper": take the accent from the wallpaper of the main screen.</summary>
+        void PickWallpaperAccent()
+        {
+            if (!Settings.WallAccent) return;
+            try
+            {
+                Rectangle scr = preview ? new Rectangle(0, 0, 1920, 1080) : Screen.PrimaryScreen.Bounds;
+                Color c = Backdrop.Accent(scr);
+                if (!c.IsEmpty) Settings.Accent = c;
+            }
+            catch (Exception ex) { Program.Log(ex); }
+        }
+
         public void ApplySettings()
         {
+            PickWallpaperAccent();
             bool wasDark = Theme.Dark; Color oldAccent = Theme.Accent; float oldScale = Theme.Scale;
             Theme = Theme.From(Settings, DpiScale);
             if (oldScale != Theme.Scale) Gfx.ClearFonts();
@@ -735,7 +752,7 @@ namespace GlassDesk
         {
             { "clock", "Clock" }, { "system", "System" }, { "calendar", "Calendar" }, { "notes", "Notes" }, { "weather", "Weather" },
             { "todo", "To-do" }, { "photos", "Photos" }, { "countdown", "Countdown" }, { "quote", "Quote" }, { "github", "GitHub" },
-            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" },
+            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" }, { "day", "Today" },
         };
         public static string WidgetName(string id) { string n; return widgetNames.TryGetValue(id, out n) ? n : id; }
 
@@ -881,7 +898,7 @@ namespace GlassDesk
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;
                 else if (w == calendar) Settings.ShowCalendar = false; else if (w == notes) Settings.ShowNotes = false;
-                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false;
+                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false; else if (w == day) Settings.ShowDay = false;
                 else if (w == weather) Settings.ShowWeather = false; else if (w == todo) Settings.ShowTodo = false; else if (w == photos) Settings.ShowPhotos = false;
                 Settings.Save(); ApplySettings();
             });

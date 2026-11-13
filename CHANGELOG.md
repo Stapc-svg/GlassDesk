@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.2
+
+- **Smarter search:** type a sum (12*(3+4)) to get the answer, a theme name to switch to it, a command (settings, organize, dark, light, new fence), or press Ctrl + Enter to search the web.
+- **Today widget:** four rings showing how much of the day, week, month and year has passed.
+- **Match my wallpaper:** the accent color can come from your wallpaper and change when it does (Settings → Appearance).
+
 ## 1.8.1
 
 - **Stacks:** 4 or more files of the same type in a fence become one stack. Click it to open or close it.
