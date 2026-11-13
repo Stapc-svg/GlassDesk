@@ -228,7 +228,7 @@ namespace GlassDesk
         protected virtual void PaintOverlay(Graphics g)
         {
             int i, n;
-            if (App.GroupInfo(Id, out i, out n))
+            if (!(this is FenceWindow) && App.GroupInfo(Id, out i, out n))
             {
                 var r = Dots(n);
                 float d = r.Height, gap = App.Theme.Sf(5);

@@ -370,7 +370,31 @@ namespace GlassDesk
             if (Cfg.GlassStyle == "transparent")
                 using (var sh = new SolidBrush(Color.FromArgb(150, 0, 0, 0)))
                     g.DrawString(Caption, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), sh, new Rectangle(capR.X, capR.Y + 1, capR.Width, capR.Height), Gfx.Left);
-            using (var b = new SolidBrush(T.Text)) g.DrawString(Caption, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), b, capR, Gfx.Left);
+            var members = App.GroupMembers(Id);
+            tabRects.Clear();
+            if (members.Count < 2)
+                using (var b = new SolidBrush(T.Text)) g.DrawString(Caption, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), b, capR, Gfx.Left);
+            else
+            {
+                // stacked: one tab per fence, the one showing is highlighted; click a tab to switch
+                float x = capR.X - T.Sf(4), th = T.Sf(26), ty = capR.Y + (TitleH - th) / 2;
+                var f = Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Bold);
+                float avail = capR.Right + T.Sf(20) - x, want = 0;
+                foreach (var m in members) want += Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) + T.Sf(6);
+                float squeeze = want > avail ? avail / want : 1f;
+                var sf = new StringFormat(Gfx.Center) { Trimming = StringTrimming.EllipsisCharacter };
+                foreach (var m in members)
+                {
+                    bool cur = m.Key == Id;
+                    float tw = Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) * squeeze;
+                    var tr = new RectangleF(x, ty, tw, th);
+                    if (cur) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, T.Dark ? 110 : 80), tr, th / 2);
+                    else Gfx.FillRound(g, T.Hover, tr, th / 2);
+                    using (var b = new SolidBrush(cur ? T.Text : T.SubText)) g.DrawString(m.Value, f, b, RectangleF.Inflate(tr, -T.Sf(6), 0), sf);
+                    tabRects.Add(new KeyValuePair<RectangleF, string>(tr, m.Key));
+                    x += tw + T.Sf(6) * squeeze;
+                }
+            }
             using (var b = new SolidBrush(T.SubText))
                 g.DrawString(Items.Count.ToString(), Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), b, new Rectangle(titleR.Right - T.S(56), titleR.Y, T.S(34), TitleH), Gfx.Right);
             DrawChevron(g, new PointF(titleR.Right - T.Sf(8), titleR.Y + TitleH / 2f), Collapsed, hoverTitle ? T.Text : T.SubText);
@@ -806,7 +830,12 @@ namespace GlassDesk
             m.Show(Cursor.Position);
         }
 
-        protected override Rectangle GroupClickArea { get { return new Rectangle(Panel.X, Panel.Y, Panel.Width - T.S(70), TitleH); } }
+        readonly List<KeyValuePair<RectangleF, string>> tabRects = new List<KeyValuePair<RectangleF, string>>();
+        protected override bool OnPreClick(Point p)
+        {
+            foreach (var t in tabRects) if (t.Key.Contains(p)) { if (t.Value != Id) App.SwitchTo(this, t.Value); return true; }
+            return false;
+        }
 
         void ShowFenceMenu()
         {

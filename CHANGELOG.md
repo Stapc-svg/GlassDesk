@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.4
+
+- **Stacked fences show tabs:** the title shows a tab for every fence in the stack. Click a tab to switch. Every fence in a stack keeps the same size.
+
 ## 1.8.3
 
 - **Drag to stack:** drag a widget onto another widget (or a fence onto another fence) and GlassDesk offers to stack them. Click the top of a stack or its dots to flip to the next one; widgets also flip with the mouse wheel.

@@ -837,15 +837,35 @@ namespace GlassDesk
             m.Show(Cursor.Position);
         }
 
+        /// <summary>The ids and names in this panel's stack, in order (empty when it isn't stacked).</summary>
+        public List<KeyValuePair<string, string>> GroupMembers(string id)
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            List<string> live;
+            if (!liveGroups.TryGetValue(id, out live)) return list;
+            foreach (string m in live)
+                foreach (var w in Windows) if (w.Id == m) { list.Add(new KeyValuePair<string, string>(m, PanelName(w))); break; }
+            return list;
+        }
+
+        public void SwitchTo(GlassWindow w, string target)
+        {
+            List<string> live;
+            if (!liveGroups.TryGetValue(w.Id, out live) || !live.Contains(target)) return;
+            SwitchGroup(w, live.IndexOf(target) - live.IndexOf(w.Id));
+        }
+
         public void SwitchGroup(GlassWindow w, int dir)
         {
             List<string> live; var g = GroupOf(w.Id);
             if (g == null || !liveGroups.TryGetValue(w.Id, out live)) return;
             string next = live[((live.IndexOf(w.Id) + dir) % live.Count + live.Count) % live.Count];
             if (next == w.Id) return;
-            // the next one takes this one's spot and moves to the front
+            // the next one takes this one's spot and moves to the front (stacked fences also keep the same size)
             Rectangle cur = new Rectangle(w.PanelBounds.Location, w.PanelBounds.Size), old;
-            Settings.Positions[next] = Settings.Positions.TryGetValue(next, out old) ? new Rectangle(cur.Location, old.Size) : new Rectangle(cur.Location, Size.Empty);
+            Rectangle stored; if (Settings.Positions.TryGetValue(w.Id, out stored) && w is FenceWindow) cur.Size = stored.Size;
+            if (w is FenceWindow) Settings.Positions[next] = cur;
+            else Settings.Positions[next] = Settings.Positions.TryGetValue(next, out old) ? new Rectangle(cur.Location, old.Size) : new Rectangle(cur.Location, Size.Empty);
             g.Remove(next); g.Insert(0, next);
             Settings.Save();
             ApplySettings();
