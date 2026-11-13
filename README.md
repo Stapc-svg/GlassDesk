@@ -4,13 +4,13 @@
 </picture>
 
 <p align="center">
-  <a href="../../releases/tag/v1.7.2"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
+  <a href="../../releases/tag/v1.8.6"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
   <a href="../../releases/tag/v1.7.2_Linux"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
   <a href="../../releases"><img src="https://img.shields.io/badge/Download-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android"></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.2-7C9CFF" alt="Version 1.7.2">
+  <img src="https://img.shields.io/badge/version-1.8.6-7C9CFF" alt="Version 1.8.6">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/Linux-beta-FCC624" alt="Linux beta">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84" alt="Android 8+">
@@ -54,6 +54,30 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
   <img src="docs/screenshots/windows-demo.gif" width="100%" alt="GlassDesk fences and widgets appearing on the desktop (animated)">
 </p>
 
+### ✨ New in 1.8
+- **26 themes**, including a new **Windows themes** set: *Mica material, Acrylic material, Mica Alt, Windows Light, Windows Dark, Bloom, Glow, Sunrise, Flow* and *Captured Motion*.
+- **Stack anything:** drag a widget onto a widget, or a fence onto a fence, and GlassDesk offers to stack them. Each stack gets **tabs**, switches with a smooth slide, and keeps one size.
+- **File stacks:** 4 or more files of the same type in a fence fold into one stack. Click to open it.
+- **New search launcher** (<kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd>): your desktop as a grid of icons on blurred glass, with a **calculator**, **theme switching**, quick **commands** and **web search**.
+- **Music widget:** the song playing in any app, with its cover and play / pause / next buttons, or the last song you heard.
+- **Today widget:** rings for how much of the day, week, month and year has passed.
+- **Organize desktop:** preview where every file goes and tick the ones to sort.
+- **Layouts per monitor setup:** dock or undock a laptop and everything goes back to its spot for those monitors.
+- **Match my wallpaper:** the accent color can come from your wallpaper.
+- **Resize** widgets and fences from any edge, a **welcome screen** on first start, and menus and Settings drawn in your theme.
+
+<p align="center">
+  <img src="docs/screenshots/desktop-1.8.jpg" width="100%" alt="GlassDesk 1.8 on a purple wallpaper: fences, file stacks, stacked widgets with tabs, music and Today widgets">
+</p>
+<p align="center">
+  <img src="docs/screenshots/stacks.jpg" width="49%" alt="Stacked fences and widgets with tabs, a file stack and the Today widget">
+  <img src="docs/screenshots/launcher.jpg" width="49%" alt="The search launcher with a grid of desktop icons">
+</p>
+<p align="center">
+  <img src="docs/screenshots/launcher-calc.jpg" width="49%" alt="The search launcher working as a calculator">
+  <img src="docs/screenshots/organize.jpg" width="49%" alt="The Organize desktop preview with a tick for each file">
+</p>
+
 ### Organizer
 - **Auto-sorting fences:** desktop items go into *Apps & Shortcuts, Folders, Documents, Images, Music & Video, Archives* and *Other files*. New files appear in the right fence on their own.
 - **Your own fences:** make fences like "School" or "Games" and drag icons into them.
@@ -63,7 +87,10 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - **Fence colors, icon sizes and auto roll-up** from each fence's right-click menu.
 - **Backup & sync:** export your layout to a `.glassdesk` file and import it anywhere.
 - **Themes and a wallpaper changer** in Settings → Appearance.
-- **Quick search:** press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd>, type a few letters, press Enter to open.
+- **Quick search:** press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd>, type a few letters, press Enter to open. Type a sum like `12*(3+4)` for the answer, a theme name to switch to it, or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to search the web.
+- **File stacks:** 4+ files of one type become a stack inside their fence.
+- **Fence stacks:** drag a fence onto another to stack them, with a tab for each.
+- **Organize desktop:** from the tray menu, see where every file goes and untick the ones to keep in an "Unsorted" fence.
 - **Drag & drop:** drag icons between fences, onto a folder to move them inside, in from File Explorer, out to other apps, or onto the Recycle Bin.
 - **Clean desktop:** the normal Windows desktop icons are hidden, so nothing overlaps. The Recycle Bin lives in a fence.
 - Roll fences up and down, resize them, and scroll them. Panels snap to the screen edges and to each other.
@@ -80,9 +107,12 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - **GitHub stats:** your stars, followers, repos, most-starred project and a 14-day activity chart. Double-click and type your username (public data, no sign-in).
 - **Network meter:** live download and upload speed with small graphs.
 - **Focus timer:** Pomodoro (25 min focus, 5 min break) with a progress ring and a notification when time is up.
+- **Music:** what's playing in Spotify, YouTube or any player, with its cover, progress and controls. Shows your last song when nothing plays.
+- **Today:** four rings for the day, week, month and year.
+- **Widget stacks:** drag a widget onto another to stack them. Click a tab to switch.
 
 ### Looks
-- **16 themes:** GlassDesk, Clean, Midnight, Ocean, Sunset, Forest, Rose, Aurora, Frost, Ember, Lavender, Mint, Neon, Graphite, Paper and Classic. Each one has its own glass colors in dark and light, and some add a soft glow, a neon edge, or solid flat panels. Pick one in **Settings → Appearance**, then fine-tune it.
+- **26 themes:** GlassDesk, Clean, Midnight, Ocean, Sunset, Forest, Rose, Aurora, Frost, Ember, Lavender, Mint, Neon, Graphite, Paper and Classic, plus 10 **Windows themes** (Mica material, Acrylic material, Mica Alt, Windows Light, Windows Dark, Bloom, Glow, Sunrise, Flow, Captured Motion). Each one has its own glass colors in dark and light, and some add a soft glow, a neon edge, or solid flat panels. Pick one in **Settings → Appearance**, then fine-tune it.
 
 <p align="center">
   <img src="docs/screenshots/themes.jpg" width="100%" alt="The 16 GlassDesk themes">
@@ -90,7 +120,9 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 
 - **Real frosted glass:** your wallpaper shows softly blurred through every panel (GlassDesk makes the blur itself, so it works on every Windows 10 and 11 PC), with a light-catching rim, sheen and fine grain.
 - Three glass styles (Frosted, Light blur, Clear) plus adjustable tint, corner radius and size.
-- **Resize any widget** by dragging its bottom-right corner; text, numbers and charts grow with it.
+- **Resize any widget or fence** by dragging its right edge, bottom edge or corner; widget text, numbers and charts grow with it.
+- **Match my wallpaper:** take the accent color from your wallpaper.
+- **Per-monitor layouts:** a saved layout for each monitor setup.
 - Dark, light, or **Auto**, which follows your Windows setting.
 - Choose an accent color.
 
@@ -107,7 +139,7 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 </p>
 
 ### Download & install
-1. Download **`GlassDesk-Setup.msi`** from the [Releases](../../releases) page.
+1. Download **`GlassDesk-Setup-1.8.6.msi`** from the [Releases](../../releases) page.
 2. Double-click it. It installs just for your user account, with no admin password needed, into `%LocalAppData%\Programs\GlassDesk`.
 3. GlassDesk starts right away and then **every time you sign in**. It is also in the Start menu.
 
@@ -181,7 +213,10 @@ More details: [android/README.md](android/README.md).
 | Double-click a fence title | Roll the fence up or down |
 | Double-click an icon | Open it (single-click is an option) |
 | Right-click an icon | Open, show in File Explorer, copy path, **Move to fence**, delete, properties |
-| Right-click a fence title | Rename, sort by, add a rule, new fence, hide, delete |
+| Right-click a fence title | Rename, sort by, add a rule, stack with, new fence, hide, delete |
+| Drag a widget onto a widget (or a fence onto a fence) | Offers to stack them. Click a tab to switch |
+| Click a file stack | Open or close it |
+| Tray icon → Organize desktop… | Preview and choose how your desktop gets sorted |
 
 #### Drag & drop
 
