@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.8.0
+## 1.8.1
 
 - **Stacks:** 4 or more files of the same type in a fence become one stack. Click it to open or close it.
 - **Widget groups:** right-click a widget → Group with. Grouped widgets share one spot; scroll over it or click the dots to switch.
