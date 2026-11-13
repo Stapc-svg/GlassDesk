@@ -14,7 +14,10 @@ class Item:
 
     def __init__(self, path):
         self.path = path
-        st = os.stat(path)
+        try:
+            st = os.stat(path)
+        except FileNotFoundError:
+            st = os.lstat(path)  # a broken shortcut: still show it so it can be deleted
         self.is_dir = os.path.isdir(path)
         self.mtime, self.size = st.st_mtime, (0 if self.is_dir else st.st_size)
         self.ext = "" if self.is_dir else os.path.splitext(path)[1].lower()
@@ -131,7 +134,7 @@ class Organizer:
                 p = os.path.join(folder, n)
                 try:
                     old = self.items.get(p)
-                    st = os.stat(p)
+                    st = os.stat(p) if os.path.exists(p) else os.lstat(p)
                     if old is not None and old.mtime == st.st_mtime:
                         out.append(old)
                     else:
