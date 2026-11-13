@@ -33,8 +33,8 @@ Homepage: https://github.com/Stapc-svg/GlassDesk
 Description: Glass desktop organizer with fences and widgets
  GlassDesk sorts the files on your desktop into frosted-glass fences
  (Apps, Folders, Documents, Images...) and adds widgets: clock, system
- monitor, calendar, notes, to-do, weather, GitHub stats, network meter
- and a focus timer. Free and open source.
+ monitor, calendar, notes, to-do, weather, music, GitHub stats, network
+ meter and a focus timer, with 26 themes. Free and open source.
 CTL
 cat > $D/DEBIAN/postinst <<'PI'
 #!/bin/sh

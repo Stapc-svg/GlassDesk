@@ -37,6 +37,92 @@ CSS = b"""
 """
 
 
+def themed_css(T):
+    """The Settings window in the colors of the theme you picked."""
+    hx = core.rgb_hex
+    css = CSS.decode()
+    light = not T.dark
+    for old, new in (("#12141c", hx(T.ui_bg)), ("#0d0f15", hx(T.ui_side)), ("#7C9CFF", hx(T.accent)),
+                     ("#232735", hx(T.ui_card if light else core.mix(T.ui_card, (1, 1, 1), 0.05))),
+                     ("#2c3142", hx(core.mix(T.ui_card, T.accent, 0.15))), ("#eef1f8", hx(T.ui_text)), ("#0b1020", "#FFFFFF")):
+        css = css.replace(old, new)
+    if light:
+        css = css.replace("rgba(238,241,248", "rgba(20,22,34").replace("rgba(255,255,255,0.0", "rgba(0,0,0,0.0") \
+                 .replace("rgba(255,255,255,0.1", "rgba(0,0,0,0.1").replace("rgba(255,255,255,0.12)", "rgba(0,0,0,0.12)") \
+                 .replace("rgba(255,255,255,0.15)", "rgba(0,0,0,0.15)").replace("color: #fff;", "color: %s;" % hx(T.ui_text))
+    return css.encode()
+
+
+class LookCard(Gtk.DrawingArea):
+    """A small preview of one theme for the gallery."""
+
+    def __init__(self, win, look):
+        super().__init__()
+        self.win, self.look = win, look
+        self.set_size_request(132, 112)
+        self.add_events(Gdk.EventMask.BUTTON_RELEASE_MASK | Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+        self.hot = False
+        self.connect("draw", self.draw)
+        self.connect("button-release-event", lambda *a: win.pick_look(look))
+        self.connect("enter-notify-event", lambda *a: (setattr(self, "hot", True), self.queue_draw()))
+        self.connect("leave-notify-event", lambda *a: (setattr(self, "hot", False), self.queue_draw()))
+        self.set_tooltip_text("%s: %s" % (look["name"], look["desc"]))
+
+    def draw(self, _w, cr):
+        import cairo, math
+        from .glass import rounded, text
+        L = self.look
+        T = self.win.app.theme
+        w = self.get_allocated_width()
+        sh = 76
+        dark = T.dark if L["mode"] == "auto" else L["mode"] == "dark"
+        top, bot = L["dark"] if dark else L["light"]
+        acc = core.hex_rgb(L["accent"])
+        # stage: a little wallpaper
+        rounded(cr, 1, 1, w - 2, sh, 12)
+        g = cairo.LinearGradient(0, 0, w, sh)
+        g.add_color_stop_rgb(0, 0.32, 0.22, 0.62)
+        g.add_color_stop_rgb(1, 0.78, 0.3, 0.55)
+        cr.set_source(g)
+        cr.fill()
+        # mini panel in the theme's colors
+        px, py, pw, ph = 16, 14, w - 32, sh - 26
+        rr = max(4, L["radius"] * 0.5)
+        rounded(cr, px, py, pw, ph, rr)
+        g = cairo.LinearGradient(0, py, 0, py + ph)
+        a = 1 if L["solid"] else 0.55 + L["tint"] / 250
+        g.add_color_stop_rgba(0, *(top + (a,)))
+        g.add_color_stop_rgba(1, *(bot + (a,)))
+        cr.set_source(g)
+        cr.fill_preserve()
+        cr.set_source_rgba(*(acc + (0.9,)) if L["neon"] else (1, 1, 1, 0.35))
+        cr.set_line_width(1.6 if L["neon"] else 1)
+        cr.stroke()
+        tc = (1, 1, 1) if dark else (0.1, 0.1, 0.14)
+        cr.set_source_rgb(*acc)
+        cr.arc(px + 12, py + 12, 3.5, 0, 2 * math.pi)
+        cr.fill()
+        for i, (ww, al) in enumerate(((0.45, 0.5), (0.7, 0.9))):
+            rounded(cr, px + 22 if i == 0 else px + 10, py + 9 + i * 12, pw * ww, 6, 3)
+            cr.set_source_rgba(*(tc + (al,)))
+            cr.fill()
+        rounded(cr, px + 10, py + ph - 11, pw - 20, 4, 2)
+        cr.set_source_rgba(*(tc + (0.2,)))
+        cr.fill()
+        rounded(cr, px + 10, py + ph - 11, (pw - 20) * 0.6, 4, 2)
+        cr.set_source_rgb(*acc)
+        cr.fill()
+        sel = self.win.S.get("look") == L["id"]
+        if sel or self.hot:
+            rounded(cr, 1, 1, w - 2, sh, 12)
+            cr.set_source_rgba(*(T.accent + (1,)) if sel else (1, 1, 1, 0.5))
+            cr.set_line_width(2.5 if sel else 1.2)
+            cr.stroke()
+        text(cr, L["name"], 2, sh + 6, w - 4, size=9.6, bold=True, color=T.ui_text + (1,))
+        text(cr, L["desc"], 2, sh + 22, w - 4, size=8, color=T.ui_sub + (1,))
+        return True
+
+
 class SettingsWindow(Gtk.Window):
     def __init__(self, app):
         super().__init__(title="GlassDesk Settings")
@@ -45,12 +131,12 @@ class SettingsWindow(Gtk.Window):
         self.set_default_size(860, 620)
         self.set_icon_name("glassdesk")
         self.set_position(Gtk.WindowPosition.CENTER)
-        prov = Gtk.CssProvider()
-        prov.load_from_data(CSS)
-        Gtk.StyleContext.add_provider_for_screen(self.get_screen(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.prov = Gtk.CssProvider()
+        self.prov.load_from_data(themed_css(app.theme))
+        Gtk.StyleContext.add_provider_for_screen(self.get_screen(), self.prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         st = Gtk.Settings.get_default()
         if st:
-            st.set_property("gtk-application-prefer-dark-theme", True)
+            st.set_property("gtk-application-prefer-dark-theme", app.theme.dark)
         hb = Gtk.HeaderBar(title="GlassDesk", subtitle="Version " + core.VERSION)
         hb.set_show_close_button(True)
         self.set_titlebar(hb)
@@ -202,15 +288,21 @@ class SettingsWindow(Gtk.Window):
             self.app.settings_changed()
         cb.connect("color-set", acc)
         self.row("Accent color", "Used for highlights, charts and today's date.", cb)
-        tb = Gtk.Box(spacing=6)
-        for name in core.THEMES:
-            def apply(n=name):
-                S.update(core.THEMES[n])
-                self.app.settings_changed()
-            tb.pack_start(self.button(name, apply), False, False, 0)
-        self.row("Themes", "One click looks.", None)
-        self._card.add(tb)
-        tb.set_margin_start(14); tb.set_margin_bottom(10)
+        self.row("Match my wallpaper", "Picks the accent color from your wallpaper, and changes with it.", self.toggle("wall_accent"))
+        for title, group in (("Themes", ""), ("Windows themes", "windows")):
+            self.section(title)
+            fb = Gtk.FlowBox()
+            fb.set_selection_mode(Gtk.SelectionMode.NONE)
+            fb.set_max_children_per_line(5)
+            fb.set_min_children_per_line(3)
+            fb.set_column_spacing(10)
+            fb.set_row_spacing(10)
+            fb.set_homogeneous(True)
+            for look in core.LOOKS:
+                if look["group"] == group:
+                    fb.add(LookCard(self, look))
+            fb.set_margin_start(14); fb.set_margin_end(14); fb.set_margin_top(12); fb.set_margin_bottom(12)
+            self._card.add(fb)
         self.section("Glass")
         self.row("Glass style", "Frosted is the softest blur; See-through shows the wallpaper clearly.",
                  self.combo("glass_style", [("frosted", "Frosted"), ("blur", "Light blur"), ("clear", "Clear"), ("transparent", "See-through")]))
@@ -242,8 +334,15 @@ class SettingsWindow(Gtk.Window):
                                ("show_quote", "Quote of the day", "Double-click for another"),
                                ("show_github", "GitHub stats", "Stars, followers, repos and your last 14 days"),
                                ("show_network", "Network meter", "Live download and upload speed"),
-                               ("show_focus", "Focus timer", "Pomodoro: focus, then a short break")):
+                               ("show_focus", "Focus timer", "Pomodoro: focus, then a short break"),
+                               ("show_music", "Music", "The song that's playing, or the last one you listened to"),
+                               ("show_day", "Today", "Rings for the day, week, month and year")):
             self.row(name, sub, self.toggle(key))
+        self.section("Stacks and sizes")
+        self.row("Stack widgets", "Drag a widget onto another one, then click the tabs to switch. Fences stack the same way.", None)
+        self.row("Resize widgets", "Drag a widget's bottom-right corner; everything inside grows with it.",
+                 self.button("Reset all sizes", lambda: (S["zoom"].clear(), [setattr(w, "zoom", 1.0) for w in self.app.widgets.values()], self.app.settings_changed())))
+        self.row("Layout for each monitor setup", "Remembers where everything goes when you plug in or unplug a monitor.", self.toggle("per_display"))
         self.section("Widget options")
         self.row("GitHub username", "Public data only, no sign-in needed.",
                  self.button("Change…", lambda: self.app.widgets["show_github"].choose_user()))
@@ -258,6 +357,8 @@ class SettingsWindow(Gtk.Window):
         self.page("organizer", "Organizer")
         self.section("Desktop folder")
         self.row(core.desktop_dir(), "GlassDesk sorts what is in this folder.", self.button("Open", lambda: core.open_path(core.desktop_dir())))
+        self.row("Stack similar files", "4 or more files of the same type become one stack. Click it to open.", self.toggle("stacks"))
+        self.row("Organize desktop", "See where every file goes and pick which ones to sort.", self.button("Preview…", self.app.show_organize, True))
         self.section("Category fences")
         for key, name, _e in core.CATEGORIES:
             sw = Gtk.Switch(active=S["categories"].get(key, True))
@@ -315,6 +416,15 @@ class SettingsWindow(Gtk.Window):
         self.row("GitHub", "github.com/" + core.REPO, self.button("Open", lambda: core.open_path("https://github.com/" + core.REPO)))
         self.row("Settings file", core.SETTINGS_FILE, self.button("Open folder", lambda: core.open_path(core.CONFIG_DIR)))
         self.row("Quit GlassDesk", "Panels close; your files are not touched.", self.button("Quit", self.app.quit_app))
+
+    def pick_look(self, look):
+        core.apply_look(self.S, look)
+        self.app.settings_changed()
+        self.prov.load_from_data(themed_css(self.app.theme))
+        st = Gtk.Settings.get_default()
+        if st:
+            st.set_property("gtk-application-prefer-dark-theme", self.app.theme.dark)
+        self.queue_draw()
 
     def rebuild(self):
         name = self.stack.get_visible_child_name()

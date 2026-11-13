@@ -14,9 +14,49 @@ class Widget(GlassWindow):
     NAME = ""
     SETTING = ""
 
+    zoomable = True
+
     def __init__(self, app, name, w, h):
         super().__init__(app, "w:" + name, w, h)
         self.timers = []
+        self.zoom = app.settings["zoom"].get(self.key, 100) / 100.0
+        self.apply_size()
+
+    # ---- size: its own size at its zoom, or the stack's size, plus the tab strip when stacked
+    def tab_h(self):
+        return int(self.T.s(36)) if self.app.group_members(self.key) else 0
+
+    def natural_size(self):
+        return int(self.T.s(self.base_w)), int(self.T.s(self.base_h))
+
+    def panel_size(self):
+        gs = self.app.group_size(self.key)
+        w, h = gs if gs else self.natural_size()
+        return w, h + self.tab_h()
+
+    def inner(self):
+        x, y, w, h = super().inner()
+        t = self.tab_h()
+        return x, y + t, w, h - t
+
+    def anim_top(self):
+        return self.panel_rect()[1] + self.tab_h()
+
+    def paint_overlay(self, cr):
+        t = self.tab_h()
+        if t:
+            T = self.T
+            x, y, w, h = self.panel_rect()
+            cr.rectangle(x, y, w, t)
+            cr.set_source_rgba(*((0, 0, 0, 0.16) if T.dark else (1, 1, 1, 0.18)))
+            cr.fill()
+            cr.rectangle(x + T.s(12), y + t - 1, w - T.s(24), 1)
+            cr.set_source_rgba(T.text[0], T.text[1], T.text[2], 0.12)
+            cr.fill()
+            self.draw_tabs(cr, x + T.s(10), y + T.s(3), w - T.s(20), t - T.s(3))
+        else:
+            self.tab_rects = []
+        super().paint_overlay(cr)
 
     def every(self, seconds, fn):
         def tick():
@@ -26,8 +66,17 @@ class Widget(GlassWindow):
         self.timers.append(GLib.timeout_add_seconds(seconds, tick) if seconds >= 1 else GLib.timeout_add(int(seconds * 1000), tick))
 
     def menu_items(self):
-        return self.extra_menu() + [None, ("Hide this widget", lambda: self.app.hide_widget(self.SETTING)),
-                                    ("GlassDesk settings", self.app.show_settings)]
+        items = self.extra_menu() + [None] + self.app.stack_menu(self)
+        if self.zoom != 1.0:
+            items.append(("Reset size", self.reset_zoom))
+        return items + [("Hide this widget", lambda: self.app.hide_widget(self.SETTING)),
+                        ("GlassDesk settings", self.app.show_settings)]
+
+    def reset_zoom(self):
+        self.zoom = 1.0
+        self.S["zoom"].pop(self.key, None)
+        self.S.save()
+        self.apply_size()
 
     def extra_menu(self):
         return []
@@ -257,7 +306,7 @@ class TodoWidget(Widget):
 
     def content_height(self, ph):
         n = max(1, len(self.S["todo"]))
-        return int(self.T.s(14 * 2 + 24 + self.ROW * min(n, 12) + 4))
+        return int(self.T.s(14 * 2 + 24 + self.ROW * min(n, 12) + 4)) + self.tab_h()
 
     def rows(self):
         x, y, w, h = self.inner()
@@ -888,5 +937,12 @@ class FocusWidget(Widget):
             self.queue_draw()
 
 
+from .music import MusicWidget, DayWidget
+
+NAMES = {"show_clock": "Clock", "show_system": "System", "show_calendar": "Calendar", "show_notes": "Notes",
+         "show_todo": "To-do", "show_weather": "Weather", "show_photos": "Photos", "show_countdown": "Countdown",
+         "show_quote": "Quote", "show_github": "GitHub", "show_network": "Network", "show_focus": "Focus",
+         "show_music": "Music", "show_day": "Today"}
+
 ALL = [ClockWidget, SystemWidget, CalendarWidget, NotesWidget, TodoWidget, WeatherWidget, PhotoWidget,
-       CountdownWidget, QuoteWidget, GitHubWidget, NetworkWidget, FocusWidget]
+       CountdownWidget, QuoteWidget, GitHubWidget, NetworkWidget, FocusWidget, MusicWidget, DayWidget]
