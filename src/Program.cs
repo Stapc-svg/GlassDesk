@@ -11,7 +11,6 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Glass desktop organizer with widgets")]
 [assembly: System.Reflection.AssemblyVersion("1.8.1.0")]
 [assembly: System.Reflection.AssemblyFileVersion("1.8.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.7.2.0")]
 
 namespace GlassDesk
 {
