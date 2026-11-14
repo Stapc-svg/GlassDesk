@@ -333,8 +333,8 @@ def rule_target(name, rules):
 def _uri_to_path(u):
     u = (u or "").strip().strip("'\"")
     if u.startswith("file://"):
-        return urllib.parse.unquote(u[7:])
-    return u
+        u = urllib.parse.unquote(u[7:])
+    return host_path(u)        # inside Flatpak, /usr/share/backgrounds is at /run/host/usr/share/backgrounds
 
 
 def wallpaper_path():
@@ -469,7 +469,48 @@ def set_desktop_icons_hidden(hide):
 AUTOSTART = os.path.join(GLib.get_user_config_dir(), "autostart", "glassdesk.desktop")
 
 
+# ------------------------------------------------------------------ Flatpak (Flathub)
+# Inside the Flatpak sandbox the computer's own files show up under /run/host, and apps on the
+# computer have to be started "on the host" with flatpak-spawn.
+FLATPAK = bool(os.environ.get("FLATPAK_ID"))
+
+
+def host_path(p):
+    """A path that can be read from here (inside Flatpak, /usr/... is at /run/host/usr/...)."""
+    if FLATPAK and p and not os.path.exists(p) and os.path.exists("/run/host" + p):
+        return "/run/host" + p
+    return p
+
+
+def to_host(p):
+    return p[len("/run/host"):] if p and p.startswith("/run/host/") else p
+
+
+def host_run(argv):
+    subprocess.Popen(["flatpak-spawn", "--host"] + list(argv), start_new_session=True)
+
+
+def host_app_dirs():
+    """Where apps installed on the computer keep their .desktop files, as seen from here."""
+    home = os.path.expanduser("~")
+    dirs = ["/run/host/usr/share/applications", "/run/host/usr/local/share/applications",
+            os.path.join(home, ".local/share/applications"),
+            os.path.join(home, ".local/share/flatpak/exports/share/applications"),
+            "/var/lib/flatpak/exports/share/applications", "/var/lib/snapd/desktop/applications"]
+    return [d for d in dirs if os.path.isdir(d)]
+
+
+def host_icon_dirs():
+    home = os.path.expanduser("~")
+    dirs = ["/run/host/usr/share/icons", "/run/host/usr/share/pixmaps", "/run/host/usr/local/share/icons",
+            os.path.join(home, ".local/share/icons"), os.path.join(home, ".local/share/flatpak/exports/share/icons"),
+            "/var/lib/flatpak/exports/share/icons", "/var/lib/snapd/desktop/icons"]
+    return [d for d in dirs if os.path.isdir(d)]
+
+
 def launcher_command():
+    if FLATPAK:
+        return "flatpak run " + os.environ["FLATPAK_ID"]
     for c in (os.environ.get("APPIMAGE"), shutil.which("glassdesk")):
         if c:
             return c
@@ -477,6 +518,19 @@ def launcher_command():
 
 
 def set_autostart(on):
+    if FLATPAK:
+        # a sandboxed app asks the desktop (the Background portal) to start it at login
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            opts = {"reason": GLib.Variant("s", "Show your fences and widgets when you sign in"),
+                    "autostart": GLib.Variant("b", bool(on)),
+                    "commandline": GLib.Variant("as", ["glassdesk", "--startup"]),
+                    "dbus-activatable": GLib.Variant("b", False)}
+            bus.call_sync("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Background",
+                          "RequestBackground", GLib.Variant("(sa{sv})", ("", opts)), None, Gio.DBusCallFlags.NONE, 10000, None)
+        except Exception as e:
+            log("autostart portal: %s" % e)
+        return
     try:
         if on:
             os.makedirs(os.path.dirname(AUTOSTART), exist_ok=True)
@@ -513,6 +567,13 @@ def in_background(work, done):
 
 def open_path(path):
     try:
+        if FLATPAK and (path.endswith(".desktop") or (os.access(path, os.X_OK) and os.path.isfile(path))):
+            # apps live outside the sandbox: start them on the computer itself
+            if path.endswith(".desktop"):
+                host_run(["gio", "launch", to_host(path)])
+            else:
+                host_run([to_host(path)])
+            return
         if path.endswith(".desktop"):
             info = Gio.DesktopAppInfo.new_from_filename(path)
             if info:

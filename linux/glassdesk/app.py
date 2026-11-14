@@ -100,6 +100,11 @@ class GlassDeskApp(Gtk.Application):
             if grp:
                 self.settings["groups"] = [grp.split(",")]
             self.settings["show_photos"] = bool(os.environ.get("GLASSDESK_SAMPLE_PHOTO"))
+        if core.FLATPAK:
+            # app icons of the computer's own apps, for search and fences
+            theme = Gtk.IconTheme.get_default()
+            for d in core.host_icon_dirs():
+                theme.append_search_path(d)
         self.switch_display_layout()
         self.pick_wallpaper_accent()
         self.theme = Theme(self.settings)

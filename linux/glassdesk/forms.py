@@ -301,6 +301,27 @@ class Launcher(GlassForm):
         """Every app in your app menu (its .desktop file), the same list your desktop's menu shows."""
         from .fences import Item
         out = []
+        if core.FLATPAK:
+            # inside the Flatpak sandbox, read the computer's own app list straight from its folders
+            seen = set()
+            for d in core.host_app_dirs():
+                for fn in sorted(os.listdir(d)):
+                    if not fn.endswith(".desktop") or fn in seen:
+                        continue
+                    path = os.path.join(d, fn)
+                    try:
+                        kf = GLib.KeyFile()
+                        kf.load_from_file(path, GLib.KeyFileFlags.NONE)
+                        g = "Desktop Entry"
+                        if kf.get_string(g, "Type") != "Application":
+                            continue
+                        if any(kf.has_key(g, k) and kf.get_boolean(g, k) for k in ("NoDisplay", "Hidden")):
+                            continue
+                        seen.add(fn)
+                        out.append(Item(path))
+                    except Exception:
+                        continue
+            return out
         try:
             infos = Gio.AppInfo.get_all()
         except Exception:
