@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.7
+
+- Fixed: stacked fences and widgets sometimes showed no tabs after GlassDesk started, until you rescanned the desktop.
+
 ## 1.8.6
 
 - **Switch animation:** switching tabs in a stack slides the new widget or fence in with a fade.

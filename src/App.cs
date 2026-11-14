@@ -763,6 +763,8 @@ namespace GlassDesk
         /// <summary>Only the first wanted widget of each group shows; the rest wait in the same spot.</summary>
         void ApplyGroups()
         {
+            // panels whose tabs may change must be drawn again, or they keep showing the old title
+            var touched = new HashSet<string>(liveGroups.Keys);
             liveGroups.Clear();
             var byId = new Dictionary<string, GlassWindow>();
             foreach (var w in Windows) byId[w.Id] = w;
@@ -774,6 +776,10 @@ namespace GlassDesk
                 foreach (string id in wanted) liveGroups[id] = wanted;
                 for (int i = 1; i < wanted.Count; i++) byId[wanted[i]].Wanted = false;
             }
+            foreach (string id in liveGroups.Keys) touched.Add(id);
+            Action redraw = delegate { foreach (string id in touched) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Visible) w.Redraw(); } };
+            // after this, the caller places and shows the panels; draw once that is done
+            try { if (invoker != null && invoker.IsHandleCreated) invoker.BeginInvoke(redraw); else redraw(); } catch { redraw(); }
         }
 
         /// <summary>Which member this is (0-based) and how many show in its group; false when not grouped.</summary>
