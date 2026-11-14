@@ -506,7 +506,12 @@ namespace GlassDesk
                 {
                     // move and draw it first, then show it: no flash of an old picture in an old spot
                     win.SetPanelBounds(rect);
-                    if (!preview && !win.Visible) win.Show();
+                    if (!preview && !win.Visible)
+                    {
+                        win.RedrawBeforeShow();   // a hidden window isn't drawn by SetPanelBounds; without this it would show empty
+                        win.Show();
+                        win.Redraw();
+                    }
                 });
             }
             // hide after the others are showing, so switching inside a stack never leaves a gap

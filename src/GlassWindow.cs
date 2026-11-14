@@ -488,6 +488,14 @@ namespace GlassDesk
             animTimer.Start();
         }
 
+        /// <summary>Draws the panel even while it is hidden, so it has the right picture the moment it shows.</summary>
+        public void RedrawBeforeShow()
+        {
+            if (!Native.IsWindows || Width <= 0 || Height <= 0) return;
+            if (!IsHandleCreated) CreateHandle();
+            using (var bmp = RenderBitmap()) Push(bmp);
+        }
+
         public void Redraw()
         {
             if (!Native.IsWindows || !IsHandleCreated || !Visible || Width <= 0 || Height <= 0) return;

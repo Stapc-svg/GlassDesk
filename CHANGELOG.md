@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.9
+
+- Fixed: switching inside a stack could make the whole stack disappear, or show an empty or old picture for a moment. A panel is now fully drawn before it appears.
+
 ## 1.8.8
 
 - **Smoother stack switching:** the tab highlight glides from the old tab to the new one, the content slides in smoothly, and there is no more flash or jump when you switch.
