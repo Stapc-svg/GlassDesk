@@ -42,6 +42,9 @@ class GlassDeskApp(Gtk.Application):
         self._hold = False
         self._fixed_now = None
         self._screen_id = 0
+        self.live_groups = {}
+        self._drop_target = None
+        self._css = None
 
     # ------------------------------------------------------------ command line
     def do_command_line(self, cmd):
@@ -85,7 +88,22 @@ class GlassDeskApp(Gtk.Application):
         self.settings = Settings()
         if os.environ.get("GLASSDESK_LIGHT"):
             self.settings["theme"] = "light"
+        if core.PREVIEW:
+            look = core.LOOK.get(os.environ.get("GLASSDESK_PREVIEW_LOOK", ""))
+            if look:
+                core.apply_look(self.settings, look)
+                if os.environ.get("GLASSDESK_LIGHT"):
+                    self.settings["theme"] = "light"
+            else:
+                self.settings["look"] = "glassdesk"
+            grp = os.environ.get("GLASSDESK_PREVIEW_GROUP")
+            if grp:
+                self.settings["groups"] = [grp.split(",")]
+            self.settings["show_photos"] = bool(os.environ.get("GLASSDESK_SAMPLE_PHOTO"))
+        self.switch_display_layout()
+        self.pick_wallpaper_accent()
         self.theme = Theme(self.settings)
+        self.apply_css()
         self.organizer = Organizer(self)
         self.install_icon()
         self.make_widgets()
@@ -105,8 +123,11 @@ class GlassDeskApp(Gtk.Application):
             self.settings["_first_run_done"] = True
             core.set_autostart(self.settings["start_at_login"])
             self.settings.save()
-            GLib.timeout_add(1200, lambda: (core.notify("GlassDesk is running",
-                "Right-click a panel or use the tray icon for settings. Drag panels to move them."), False)[1])
+        # the welcome screen shows once ever, and stays gone after updates
+        if not self.settings.get("_welcome_shown"):
+            self.settings["_welcome_shown"] = core.VERSION
+            self.settings.save()
+            GLib.timeout_add(1200, lambda: (self.show_welcome(), False)[1])
         if self.settings["hide_desktop_icons"]:
             core.set_desktop_icons_hidden(True)
         GLib.timeout_add_seconds(15, self._check_wallpaper)
@@ -141,6 +162,7 @@ class GlassDeskApp(Gtk.Application):
             GLib.source_remove(self._screen_id)
         def go():
             self._screen_id = 0
+            self.switch_display_layout()
             self.place_all()
             for w in self.all_windows():
                 w.queue_draw()
@@ -148,13 +170,17 @@ class GlassDeskApp(Gtk.Application):
         self._screen_id = GLib.timeout_add(600, go)
 
     def _on_screen(self, x, y, pw, ph):
-        """Moves a saved position back onto a monitor if it is no longer on any screen."""
+        """Moves a saved position back onto a monitor if it is no longer on any screen,
+        and pulls a panel that hangs past the edge of its monitor fully back on."""
         disp = Gdk.Display.get_default()
         for i in range(disp.get_n_monitors()):
             g = disp.get_monitor(i).get_workarea()
             # keep it if at least a good part of the panel's top is on this monitor
             if x + min(pw, 80) > g.x and x + 40 < g.x + g.width and y + 20 > g.y - 10 and y + 30 < g.y + g.height:
-                return x, y
+                if core.PREVIEW:
+                    return x, y
+                w, h = min(pw, g.width), min(ph, g.height)
+                return max(g.x, min(x, g.x + g.width - w)), max(g.y, min(y, g.y + g.height - h))
         wa = self.workarea()
         gap = int(self.theme.s(14))
         x = max(wa.x + gap, min(x, wa.x + wa.width - pw - gap))
@@ -179,13 +205,24 @@ class GlassDeskApp(Gtk.Application):
         self.refresh_fences()
         for key, wd in self.widgets.items():
             wd.wanted = bool(S.get(key))
+        for f in self.fences.values():
+            f.wanted = True
+        self._group_hidden = set()      # everything got its own wanted state just above
+        self.apply_groups()
         self.place_all()
+        self.show_hide()
+
+    def show_hide(self):
+        # show first, hide after: switching inside a stack never leaves a gap
+        hide = []
         for win in self.all_windows():
             win.apply_size()
             if win.wanted and self.visible_all:
                 win.show_all()
             else:
-                win.hide()
+                hide.append(win)
+        for win in hide:
+            win.hide()
 
     def all_windows(self):
         return list(self.fences.values()) + list(self.widgets.values())
@@ -213,7 +250,7 @@ class GlassDeskApp(Gtk.Application):
             y += ph + gap
             colw = max(colw, pw)
         # widgets: columns from the right
-        order = ["show_clock", "show_system", "show_calendar", "show_weather", "show_github", "show_focus",
+        order = ["show_clock", "show_system", "show_calendar", "show_weather", "show_music", "show_day", "show_github", "show_focus",
                  "show_network", "show_todo", "show_notes", "show_quote", "show_countdown", "show_photos"]
         x, y, colw = wa.x + wa.width - gap, wa.y + gap, 0
         for key in order:
@@ -241,7 +278,9 @@ class GlassDeskApp(Gtk.Application):
         self.place_all()
 
     def settings_changed(self):
+        self.pick_wallpaper_accent()
         self.theme = Theme(self.settings)
+        self.apply_css()
         self.rebuild()
         for w in self.all_windows():
             w.queue_draw()
@@ -265,6 +304,8 @@ class GlassDeskApp(Gtk.Application):
     # ------------------------------------------------------------ periodic jobs
     def _check_wallpaper(self):
         if Backdrop.check_changed():
+            if self.settings.get("wall_accent"):
+                self.settings_changed()
             for w in self.all_windows():
                 w.queue_draw()
         return True
@@ -354,6 +395,7 @@ class GlassDeskApp(Gtk.Application):
     def make_tray(self):
         menu = Gtk.Menu()
         for label, cb in (("Settings", self.show_settings), ("Find on desktop", self.show_search),
+                          ("Organize desktop…", self.show_organize),
                           ("Show / hide panels", self.toggle_all), (None, None), ("Quit GlassDesk", self.quit_app)):
             mi = Gtk.SeparatorMenuItem() if label is None else Gtk.MenuItem(label=label)
             if cb:
@@ -429,6 +471,13 @@ class GlassDeskApp(Gtk.Application):
                         shutil.copytree(p, dst_path)
                     else:
                         src.copy(dst, Gio.FileCopyFlags.NONE, None, None, None)
+                    if dst_path.endswith(".desktop"):
+                        # an app dragged in from search: make the launcher runnable from the desktop
+                        os.chmod(dst_path, 0o755)
+                        try:
+                            Gio.File.new_for_path(dst_path).set_attribute_string("metadata::trusted", "true", Gio.FileQueryInfoFlags.NONE, None)
+                        except Exception:
+                            pass
                 else:
                     src.move(dst, Gio.FileCopyFlags.NONE, None, None, None)
             except Exception as e:
@@ -618,16 +667,267 @@ class GlassDeskApp(Gtk.Application):
         self.settings_win.show_all()
         self.settings_win.present()
 
+    def show_welcome(self):
+        from .forms import WelcomeWindow
+        WelcomeWindow(self).show_all()
+
+    def show_organize(self):
+        from .forms import OrganizeWindow
+        OrganizeWindow(self).show_all()
+
+    # ------------------------------------------------------------ themed look for menus and windows
+    def apply_css(self):
+        T = self.theme
+        hx = core.rgb_hex
+        acc = T.accent
+        css = """
+menu, .menu, .context-menu {{ background-color: {card}; color: {text}; border: 1px solid {line}; border-radius: 10px; padding: 4px; }}
+menu menuitem {{ padding: 6px 12px; border-radius: 6px; color: {text}; }}
+menu menuitem:hover {{ background-image: linear-gradient(to right, rgba({ar},{ag},{ab},0.55), rgba({br},{bg},{bb},0.35)); color: {text}; }}
+menu menuitem:disabled {{ color: {sub}; }}
+menu separator {{ background-color: {line}; margin: 4px 6px; }}
+""".format(card=hx(T.ui_card), text=hx(T.ui_text), line=hx(T.ui_line), sub=hx(T.ui_sub),
+           ar=int(acc[0] * 255), ag=int(acc[1] * 255), ab=int(acc[2] * 255),
+           br=int(T.accent2[0] * 255), bg=int(T.accent2[1] * 255), bb=int(T.accent2[2] * 255))
+        scr = Gdk.Screen.get_default()
+        if scr is None:
+            return
+        if self._css is None:
+            self._css = Gtk.CssProvider()
+            Gtk.StyleContext.add_provider_for_screen(scr, self._css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+        try:
+            self._css.load_from_data(css.encode())
+        except Exception as e:
+            core.log("css: %s" % e)
+
+    # ------------------------------------------------------------ "Match my wallpaper"
+    def pick_wallpaper_accent(self):
+        if not self.settings.get("wall_accent"):
+            return
+        try:
+            import colorsys
+            p = core.wallpaper_path()
+            if not p or not os.path.exists(p):
+                return
+            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(p, 80, 80, False)
+            px, n, rs = pb.get_pixels(), pb.get_n_channels(), pb.get_rowstride()
+            score, sums = [0.0] * 24, [[0.0, 0.0, 0.0] for _ in range(24)]
+            for yy in range(pb.get_height()):
+                for xx in range(pb.get_width()):
+                    o = yy * rs + xx * n
+                    r, g, b = px[o] / 255, px[o + 1] / 255, px[o + 2] / 255
+                    h, l, sat = colorsys.rgb_to_hls(r, g, b)
+                    if sat < 0.25 or l < 0.15 or l > 0.9:
+                        continue
+                    k = int(h * 24) % 24
+                    w = sat * (1 - abs(l - 0.55))
+                    score[k] += w
+                    sums[k][0] += r * w; sums[k][1] += g * w; sums[k][2] += b * w
+            best = max(range(24), key=lambda i: score[i])
+            if score[best] <= 0:
+                return
+            avg = [v / score[best] for v in sums[best]]
+            h, l, sat = colorsys.rgb_to_hls(*avg)
+            c = colorsys.hls_to_rgb(h, max(0.55, min(0.68, l)), max(0.6, sat))
+            self.settings["accent"] = core.rgb_hex(c)
+        except Exception as e:
+            core.log("wallpaper accent: %s" % e)
+
+    # ------------------------------------------------------------ a layout for each monitor setup
+    def display_key(self):
+        disp = Gdk.Display.get_default()
+        parts = []
+        for i in range(disp.get_n_monitors()):
+            g = disp.get_monitor(i).get_geometry()
+            parts.append("%d_%d_%d_%d" % (g.x, g.y, g.width, g.height))
+        import hashlib
+        return "d" + hashlib.md5("|".join(sorted(parts)).encode()).hexdigest()[:8]
+
+    def switch_display_layout(self):
+        S = self.settings
+        if core.PREVIEW or not S.get("per_display"):
+            return
+        key = self.display_key()
+        if key == S.get("display_key"):
+            return
+        if S.get("display_key"):
+            S["layouts"][S["display_key"]] = json.loads(json.dumps(S["positions"]))
+        saved = S["layouts"].get(key)
+        if saved:
+            S["positions"] = json.loads(json.dumps(saved))
+        S["display_key"] = key
+        S.save()
+
+    # ------------------------------------------------------------ stacks of fences or widgets
+    def panel_name(self, win):
+        if isinstance(win, Fence):
+            return self.organizer.fence_name(win.fid)
+        return getattr(win, "NAME", "") or W.NAMES.get(win.SETTING, win.key)
+
+    def window_by_key(self, key):
+        for w in self.all_windows():
+            if w.key == key:
+                return w
+        return None
+
+    def group_of(self, key):
+        for g in self.settings["groups"]:
+            if key in g:
+                return g
+        return None
+
+    def apply_groups(self):
+        """Only the first wanted panel of each stack shows; the others wait in the same spot."""
+        self.live_groups = {}
+        # panels hidden last time only because of a stack are wanted again before the stacks are worked out anew;
+        # otherwise switching one stack would break every other stack
+        for k in getattr(self, "_group_hidden", set()):
+            w = self.window_by_key(k)
+            if w is not None:
+                w.wanted = True
+        self._group_hidden = set()
+        for g in self.settings["groups"]:
+            live = [k for k in g if self.window_by_key(k) is not None and self.window_by_key(k).wanted]
+            if len(live) < 2:
+                continue
+            for k in live:
+                self.live_groups[k] = live
+            for k in live[1:]:
+                self.window_by_key(k).wanted = False
+                self._group_hidden.add(k)
+
+    def group_members(self, key):
+        live = self.live_groups.get(key)
+        if not live:
+            return []
+        return [(k, self.panel_name(self.window_by_key(k))) for k in live]
+
+    def group_size(self, key):
+        live = self.live_groups.get(key)
+        if not live or not key.startswith("w:"):
+            return None
+        w = h = 0
+        for k in live:
+            win = self.window_by_key(k)
+            nw, nh = win.natural_size()
+            w, h = max(w, nw), max(h, nh)
+        return w, h
+
+    def switch_to(self, win, key):
+        live = self.live_groups.get(win.key)
+        g = self.group_of(win.key)
+        if not live or not g or key not in live:
+            return
+        d = live.index(key) - live.index(win.key)
+        pos = self.settings["positions"].get(win.key)
+        if pos:
+            old = self.settings["positions"].get(key)
+            if isinstance(win, Fence):
+                self.settings["positions"][key] = list(pos)                      # same spot and size
+            else:
+                self.settings["positions"][key] = list(pos[:2]) + (list(old[2:]) if old else [])
+        g.remove(key)
+        g.insert(0, key)
+        self.settings.save()
+        for k in live:
+            self.window_by_key(k).wanted = True
+        nxt = self.window_by_key(key)
+        if nxt:
+            nxt.play_enter(d, win.key)       # start before it shows, so the first frame is the first picture
+        self.apply_groups()
+        self.place_all()
+        self.show_hide()
+
+    def join_group(self, win, target):
+        mine = self.group_of(win.key)
+        if mine:
+            mine.remove(win.key)
+            if len(mine) < 2:
+                self.settings["groups"].remove(mine)
+        g = self.group_of(target.key)
+        if g is None:
+            g = [target.key]
+            self.settings["groups"].append(g)
+        g.insert(0, win.key)                  # the one you dropped shows, in the other one's spot
+        tp = self.settings["positions"].get(target.key) or list(target.panel_origin())
+        if isinstance(win, Fence):
+            self.settings["positions"][win.key] = list(tp)
+        else:
+            self.settings["positions"][win.key] = list(tp[:2])
+        self.settings.save()
+        self.rebuild()
+
+    def leave_group(self, win):
+        g = self.group_of(win.key)
+        if not g:
+            return
+        g.remove(win.key)
+        if len(g) < 2:
+            self.settings["groups"].remove(g)
+        self.settings["positions"].pop(win.key, None)
+        self.settings.save()
+        self.rebuild()
+
+    def stack_menu(self, win):
+        same = [w for w in self.all_windows() if w is not win and w.get_visible() and isinstance(w, Fence) == isinstance(win, Fence)]
+        items = []
+        if same:
+            items.append(("Stack with", [(self.panel_name(o), (lambda o=o: self.join_group(win, o))) for o in same]))
+        if self.live_groups.get(win.key):
+            items.append(("Take out of stack", lambda: self.leave_group(win)))
+        return items
+
+    def _target_at(self, win, x, y):
+        for o in self.all_windows():
+            if o is win or not o.get_visible() or isinstance(o, Fence) != isinstance(win, Fence):
+                continue
+            ox, oy = o.panel_origin()
+            pw, ph = o.panel_rect()[2:]
+            if ox <= x < ox + pw and oy <= y < oy + ph:
+                return o
+        return None
+
+    def drag_over(self, win, x, y):
+        t = self._target_at(win, x, y)
+        if t is self._drop_target:
+            return
+        if self._drop_target is not None:
+            self._drop_target.drop_hint = False
+            self._drop_target.queue_draw()
+        self._drop_target = t
+        if t is not None:
+            t.drop_hint = True
+            t.queue_draw()
+
+    def drag_ended(self, win, x, y):
+        t = self._drop_target
+        self._drop_target = None
+        if t is None:
+            return
+        t.drop_hint = False
+        t.queue_draw()
+        g = self.group_of(win.key)
+        if g and t.key in g:
+            return
+        popup(t, [("Stack “%s” with “%s”?" % (self.panel_name(win), self.panel_name(t)), None), None,
+                  ("Stack them", lambda: self.join_group(win, t)),
+                  ("No, just put it here", lambda: None)])
+
     def show_search(self):
-        from .search import SearchWindow
-        if self.search_win is None:
-            self.search_win = SearchWindow(self)
-            self.search_win.connect("destroy", lambda *a: setattr(self, "search_win", None))
+        from .forms import Launcher
+        if self.search_win is not None:
+            self.search_win.present()
+            return
+        self.search_win = Launcher(self)
+        self.search_win.connect("destroy", lambda *a: setattr(self, "search_win", None))
         self.search_win.open()
 
     # ------------------------------------------------------------ preview (screenshots for docs)
     def write_preview(self, out):
         os.makedirs(out, exist_ok=True)
+        extra = os.environ.get("GLASSDESK_PREVIEW_FORMS")
+        if extra:
+            self._shot_forms(out)
         lines = []
         for w in self.all_windows():
             if not w.wanted or not w.get_visible():
@@ -644,10 +944,27 @@ class GlassDeskApp(Gtk.Application):
             f.write("\n".join(lines) + "\n")
         if self.settings_win is None and os.environ.get("GLASSDESK_PREVIEW_SETTINGS"):
             self.show_settings()
-            GLib.timeout_add(700, lambda: self._shot_settings(out))
+            page = os.environ.get("GLASSDESK_PREVIEW_PAGE")
+            if page:
+                self.settings_win.stack.set_visible_child_name(page)
+                self.settings_win.resize(980, 1000)
+            GLib.timeout_add(900, lambda: self._shot_settings(out))
             return False
         self.quit_app()
         return False
+
+    def _shot_forms(self, out):
+        from .forms import Launcher, WelcomeWindow, OrganizeWindow
+        l = Launcher(self)
+        l.load_items()
+        l.set_query("")
+        l.render_png(os.path.join(out, "launcher.png"), (610, 230))
+        l.set_query("12*(3+4)")
+        l.render_png(os.path.join(out, "launcher-calc.png"), (610, 230))
+        l.set_query("ocea")
+        l.render_png(os.path.join(out, "launcher-theme.png"), (610, 230))
+        WelcomeWindow(self).render_png(os.path.join(out, "welcome.png"), (640, 290))
+        OrganizeWindow(self).render_png(os.path.join(out, "organize.png"), (510, 220))
 
     def _shot_settings(self, out):
         w = self.settings_win

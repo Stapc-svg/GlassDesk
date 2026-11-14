@@ -5,7 +5,7 @@
 
 <p align="center">
   <a href="../../releases/tag/v1.8.6"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
-  <a href="../../releases/tag/v1.7.2_Linux"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
+  <a href="../../releases/tag/v1.9.2_Linux"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
   <a href="../../releases"><img src="https://img.shields.io/badge/Download-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android"></a>
 </p>
 
@@ -188,7 +188,9 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 
 GlassDesk also runs on **Ubuntu, Linux Mint, Debian, Fedora, Arch, openSUSE** and more, on GNOME, KDE Plasma, Cinnamon, XFCE and MATE. It has the same fences, widgets, glass blur and settings, rebuilt with Python and GTK.
 
-![GlassDesk on Linux](docs/screenshots/linux-desktop-dark.png)
+**New in 1.8.6 for Linux:** 26 themes (with Mica and Acrylic), file stacks, stacks of fences and widgets with tabs, the music and Today widgets, the new search launcher with a calculator, Organize desktop, resizable widgets, per-monitor layouts and Match my wallpaper, the same as on Windows.
+
+![GlassDesk 1.8 on Linux](docs/screenshots/linux-desktop-1.8.jpg)
 
 | Your Linux | Download from [Releases](../../releases) | How |
 |---|---|---|

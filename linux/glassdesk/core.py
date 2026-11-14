@@ -8,7 +8,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import GLib, Gio, Gtk, Gdk, GdkPixbuf
 
-VERSION = "1.7.2"
+VERSION = "1.9.2"
 REPO = "Stapc-svg/GlassDesk"
 APP_ID = "app.glassdesk.GlassDesk"
 
@@ -70,6 +70,16 @@ DEFAULTS = {
     "hidden_fences": [],
     "wallpaper_folder": "", "wallpaper_minutes": 0,
     "last_update_check": 0,
+    # 1.8
+    "look": "glassdesk",            # theme id (see LOOKS)
+    "show_music": True, "show_day": True,
+    "last_song": "", "last_artist": "",
+    "stacks": True,                 # 4+ files of one type fold into a stack
+    "per_display": True,            # a layout for each monitor setup
+    "display_key": "", "layouts": {},
+    "groups": [],                   # stacked panels: [[key, key, ...]], the first one shows
+    "wall_accent": False,           # accent color from the wallpaper
+    "zoom": {},                     # widget key -> size in %
 }
 
 
@@ -89,6 +99,8 @@ class Settings(dict):
                     self[k].update(v)
                 else:
                     self[k] = v
+            if "look" not in data:
+                self["look"] = "classic"      # people updating keep the look they had
         except FileNotFoundError:
             pass
         except Exception as e:
@@ -155,16 +167,88 @@ def system_prefers_dark():
     return True     # GlassDesk looks best dark; default to it
 
 
+def _c(h):
+    return hex_rgb("%06X" % h)
+
+
+def _look(id, name, desc, accent, dtop, dbot, ltop, lbot, glow2, mode, tint, radius, glass="frosted", group="", **flags):
+    d = dict(id=id, name=name, desc=desc, accent="#%06X" % accent, dark=(_c(dtop), _c(dbot)), light=(_c(ltop), _c(lbot)),
+             glow=glow2 >= 0, glow2=_c(glow2) if glow2 > 0 else None, mode=mode, tint=tint, radius=radius, glass=glass,
+             group=group, solid=False, flat=False, neon=False)
+    d.update(flags)
+    return d
+
+
+# the same 26 looks as GlassDesk for Windows
+LOOKS = [
+    _look("glassdesk", "GlassDesk", "Frosted navy glass with a soft glow", 0x7C9CFF, 0x1A2140, 0x0C1022, 0xFFFFFF, 0xECF0FA, 0xB06CFF, "dark", 45, 18),
+    _look("clean", "Clean", "Bright, flat and rounded", 0x007AFF, 0x1C1C1E, 0x1C1C1E, 0xFFFFFF, 0xFFFFFF, -1, "auto", 95, 22, solid=True, flat=True),
+    _look("midnight", "Midnight", "Deep violet glass", 0xA78BFA, 0x241446, 0x0E0820, 0xF4EEFF, 0xE4DAFA, 0xFF6FA8, "dark", 50, 16),
+    _look("ocean", "Ocean", "Teal water and cyan light", 0x4FC3F7, 0x0A3450, 0x061628, 0xE8F8FF, 0xD2ECF8, 0x2DD4BF, "dark", 40, 18),
+    _look("sunset", "Sunset", "Warm coral evening glow", 0xFF8A65, 0x5C2632, 0x28101E, 0xFFF0E8, 0xFFE0D6, 0xFFC46B, "dark", 38, 20),
+    _look("forest", "Forest", "Green glass, fresh and calm", 0x5BD68A, 0x123C2C, 0x081A14, 0xECFAF0, 0xD6F0DE, 0xC6F68D, "dark", 42, 14),
+    _look("rose", "Rose", "Soft pink and lilac", 0xF48FB1, 0x501E3A, 0x220C1C, 0xFFECF4, 0xFADAE8, 0xC77DFF, "dark", 38, 22),
+    _look("aurora", "Aurora", "Northern lights, teal to purple", 0x2DD4BF, 0x102C48, 0x2C1242, 0xE6FAFF, 0xF0E4FF, 0xC77DFF, "dark", 40, 18),
+    _look("frost", "Frost", "Icy white glass", 0x3B82F6, 0x1E2838, 0x121824, 0xF6FAFF, 0xE2ECFA, 0x7DD3FC, "light", 45, 22),
+    _look("ember", "Ember", "Glowing coals, red and amber", 0xFF6B4A, 0x3A1410, 0x160806, 0xFFF1EC, 0xFFE2D8, 0xFFB347, "dark", 48, 16),
+    _look("lavender", "Lavender", "Light lilac glass", 0x8B5CF6, 0x2A2140, 0x16122A, 0xF7F2FF, 0xEDE4FF, 0xF0ABFC, "light", 42, 20),
+    _look("mint", "Mint", "Cool, fresh and light", 0x10B981, 0x123A34, 0x081C18, 0xF0FFF9, 0xDDF7EE, 0x67E8F9, "light", 42, 20),
+    _look("neon", "Neon", "Black glass with a glowing edge", 0xFF2BD6, 0x0A0814, 0x04040A, 0xFAF5FF, 0xF0E8FA, 0x00E5FF, "dark", 70, 14, neon=True),
+    _look("graphite", "Graphite", "Quiet gray, no color", 0x98989D, 0x2C2C30, 0x1C1C20, 0xF0F0F2, 0xE2E2E6, -1, "dark", 50, 12),
+    _look("paper", "Paper", "Warm, solid and easy to read", 0xD97706, 0x24211C, 0x24211C, 0xFAF7F0, 0xFAF7F0, -1, "light", 95, 10, solid=True, flat=True),
+    _look("classic", "Classic", "The original GlassDesk 1.7 look", 0x7C9CFF, 0x12141C, 0x12141C, 0xF8F9FC, 0xF8F9FC, -1, "auto", 30, 16),
+    # Windows themes
+    _look("mica", "Mica material", "Calm and mostly solid", 0x60CDFF, 0x202020, 0x1C1C1C, 0xF3F3F3, 0xEEEEEE, -1, "auto", 82, 8, group="windows"),
+    _look("acrylic", "Acrylic material", "Fully blurred, see-through", 0x60CDFF, 0x2C2C2C, 0x202020, 0xFCFCFC, 0xF3F3F3, -1, "auto", 30, 8, glass="acrylic", group="windows"),
+    _look("mica-alt", "Mica Alt", "Deeper, darker Mica", 0x60CDFF, 0x0A0A0A, 0x141414, 0xE8E8E8, 0xDADADA, -1, "dark", 88, 8, group="windows"),
+    _look("win-light", "Windows Light", "Default light", 0x0078D4, 0x2B2B2B, 0x202020, 0xFFFFFF, 0xF3F3F3, -1, "light", 78, 8, group="windows"),
+    _look("win-dark", "Windows Dark", "Default dark", 0x4CC2FF, 0x2B2B2B, 0x1F1F1F, 0xF9F9F9, 0xEFEFEF, -1, "dark", 78, 8, group="windows"),
+    _look("bloom", "Bloom", "Blue Windows 11 flower", 0x0078D4, 0x0B2A5C, 0x061630, 0xEAF3FF, 0xD6E6FA, -1, "dark", 50, 8, glass="blur", group="windows"),
+    _look("glow", "Glow", "Purple light, soft acrylic", 0xC48BFF, 0x2A1846, 0x140A26, 0xF6EEFF, 0xE8DAFA, -1, "dark", 48, 8, glass="blur", group="windows"),
+    _look("sunrise", "Sunrise", "Warm orange morning", 0xFF9A3C, 0x4A2410, 0x200E06, 0xFFF3E8, 0xFFE4CC, -1, "light", 48, 8, glass="blur", group="windows"),
+    _look("flow", "Flow", "Fresh blue-green waves", 0x00B7C3, 0x08343C, 0x041A1E, 0xE6FBFC, 0xCFF2F4, -1, "dark", 48, 8, glass="blur", group="windows"),
+    _look("captured-motion", "Captured Motion", "Dark with deep pink motion", 0xE3008C, 0x2A0A20, 0x10040C, 0xFFEAF6, 0xF8D6EA, -1, "dark", 62, 8, group="windows"),
+]
+LOOK = {l["id"]: l for l in LOOKS}
+
+
+def apply_look(s, look):
+    """Picking a theme sets its colors, glass, tint, corners and mode. All can still be changed after."""
+    s["look"] = look["id"]
+    s["accent"] = look["accent"]
+    s["glass_style"] = "blur" if look["glass"] == "acrylic" else look["glass"]
+    s["opacity"] = look["tint"]
+    s["radius"] = look["radius"]
+    s["theme"] = look["mode"]
+
+
+def mix(a, b, t):
+    return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+
+
 class Theme:
-    def __init__(self, s):
+    def __init__(self, s, zoom=1.0):
         mode = s["theme"]
         self.dark = mode == "dark" or (mode == "auto" and system_prefers_dark())
-        self.scale = max(0.6, min(2.0, s["ui_scale"] / 100.0))
+        self.base_scale = max(0.6, min(2.0, s["ui_scale"] / 100.0))
+        self.scale = self.base_scale * zoom
         self.accent = hex_rgb(s["accent"])
+        self.accent2 = mix(self.accent, (0.69, 0.42, 1.0), 0.45)
+        look = LOOK.get(s.get("look") or "classic") or LOOK["classic"]
+        self.look = look["id"]
+        self.solid, self.flat, self.neon = look["solid"], look["flat"], look["neon"]
         self.style = s["glass_style"]
+        self.acrylic = look["id"] == "acrylic"
         a = s["opacity"] / 100.0
         if self.style == "transparent":
             a *= 0.3
+        if self.solid:
+            a = 1.0
+        a2 = a if look["id"] == "classic" or self.solid else min(1.0, a + 0.16)
+        top, bot = look["dark"] if self.dark else look["light"]
+        self.tint_top, self.tint_bottom = top + (a2,), bot + (a2,)
+        self.glow = (self.accent + (0.36 if self.dark else 0.21,)) if look["glow"] else None
+        self.glow2 = (look["glow2"] + (0.2 if self.dark else 0.14,)) if look["glow"] and look["glow2"] else None
         self.radius = s["radius"]
         if self.dark:
             self.tint = (18 / 255, 20 / 255, 28 / 255, a)
@@ -180,20 +264,34 @@ class Theme:
             self.border = (1, 1, 1, 0.3)
             self.hover = (0, 0, 0, 0.1)
             self.track = (0, 0, 0, 0.12)
+        if self.solid:
+            self.sub = (0.6, 0.6, 0.62, 1) if self.dark else (0.43, 0.43, 0.45, 1)
+        # colors for the app's own windows (Settings, search, menus): follow the theme
+        if self.dark:
+            self.ui_bg = mix(bot, top, 0.3); self.ui_side = mix(bot, (0, 0, 0), 0.15)
+            self.ui_card = mix(top, (1, 1, 1), 0.035); self.ui_line = mix(top, (1, 1, 1), 0.11)
+            self.ui_text = (0.94, 0.95, 0.98); self.ui_sub = mix((0.63, 0.65, 0.73), top, 0.15)
+        else:
+            self.ui_bg = mix(bot, top, 0.4); self.ui_side = mix(bot, (0, 0, 0), 0.03)
+            self.ui_card = mix(top, (1, 1, 1), 0.65); self.ui_line = mix(bot, (0, 0, 0), 0.09)
+            self.ui_text = (0.08, 0.09, 0.13); self.ui_sub = (0.39, 0.42, 0.5)
         self.font = "Inter, Cantarell, Ubuntu, Noto Sans, DejaVu Sans, sans-serif"
 
     def s(self, v):
         return v * self.scale
 
+    def zoomed(self, z):
+        import copy
+        t = copy.copy(self)
+        t.scale = self.base_scale * z
+        return t
 
-THEMES = {
-    "Ocean":    {"accent": "#38BDF8", "theme": "dark",  "opacity": 50, "glass_style": "frosted"},
-    "Sunset":   {"accent": "#FB923C", "theme": "dark",  "opacity": 45, "glass_style": "frosted"},
-    "Forest":   {"accent": "#4ADE80", "theme": "dark",  "opacity": 55, "glass_style": "blur"},
-    "Midnight": {"accent": "#A78BFA", "theme": "dark",  "opacity": 75, "glass_style": "frosted"},
-    "Frost":    {"accent": "#2563EB", "theme": "light", "opacity": 45, "glass_style": "frosted"},
-    "Rose":     {"accent": "#F472B6", "theme": "dark",  "opacity": 50, "glass_style": "clear"},
-}
+
+THEMES = {l["name"]: l for l in LOOKS}
+
+
+def rgb_hex(c):
+    return "#%02X%02X%02X" % tuple(int(max(0, min(1, v)) * 255) for v in c[:3])
 
 
 # ------------------------------------------------------------------ categories
