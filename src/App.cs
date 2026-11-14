@@ -375,6 +375,7 @@ namespace GlassDesk
                     foreach (var it in f.Items) it.Dispose();
                     f.Close(); f.Dispose();
                 }
+            groupHidden.Clear();   // every panel gets its own wanted state again right below
             foreach (var f in fences.Values) f.Wanted = true;
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
@@ -810,6 +811,7 @@ namespace GlassDesk
         public static string WidgetName(string id) { string n; return widgetNames.TryGetValue(id, out n) ? n : id; }
 
         List<string> GroupOf(string id) { foreach (var g in Settings.Groups) if (g.Contains(id)) return g; return null; }
+        readonly HashSet<string> groupHidden = new HashSet<string>();   // panels hidden only because another one of their stack shows
         readonly Dictionary<string, List<string>> liveGroups = new Dictionary<string, List<string>>();   // id -> wanted members of its group
 
         /// <summary>Only the first wanted widget of each group shows; the rest wait in the same spot.</summary>
@@ -820,13 +822,17 @@ namespace GlassDesk
             liveGroups.Clear();
             var byId = new Dictionary<string, GlassWindow>();
             foreach (var w in Windows) byId[w.Id] = w;
+            // panels this hid last time are wanted again before working out the stacks anew;
+            // otherwise switching one stack would break every other stack (and lose its tabs)
+            foreach (string id in groupHidden) { GlassWindow hw; if (byId.TryGetValue(id, out hw)) hw.Wanted = true; }
+            groupHidden.Clear();
             foreach (var g in Settings.Groups)
             {
                 var wanted = new List<string>();
                 foreach (string id in g) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Wanted) wanted.Add(id); }
                 if (wanted.Count < 2) continue;
                 foreach (string id in wanted) liveGroups[id] = wanted;
-                for (int i = 1; i < wanted.Count; i++) byId[wanted[i]].Wanted = false;
+                for (int i = 1; i < wanted.Count; i++) { byId[wanted[i]].Wanted = false; groupHidden.Add(wanted[i]); }
             }
             foreach (string id in liveGroups.Keys) touched.Add(id);
             Action redraw = delegate { foreach (string id in touched) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Visible) w.Redraw(); } };

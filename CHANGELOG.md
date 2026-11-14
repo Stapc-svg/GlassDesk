@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.2
+
+- Fixed: switching tabs in one stack made every other stack lose its tabs and come apart.
+
 ## 1.9.1
 
 - Switching tabs in a stack: the new content now rises up into place instead of sliding in from the side.
