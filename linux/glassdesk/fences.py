@@ -66,6 +66,17 @@ class Item:
         return pb
 
 
+class StackTile:
+    """Several files of the same type shown as one tile. Click it to open or close the stack."""
+    is_stack = True
+
+    def __init__(self, ext, members, open_):
+        self.ext, self.members, self.open = ext, members, open_
+        self.name = "%d %s files" % (len(members), ext.lstrip(".").upper())
+        self.path = None
+        self.is_dir = False
+
+
 class Organizer:
     """Reads the desktop folder and decides which fence each item goes in."""
 
@@ -175,6 +186,8 @@ class Fence(GlassWindow):
     def __init__(self, app, fid):
         self.fid = fid
         self.items = []
+        self.tiles = []
+        self.open_stacks = set()
         self.scroll = 0
         self.hover_title = False
         self.drop_hot = False
@@ -234,10 +247,50 @@ class Fence(GlassWindow):
             items.sort(key=lambda i: (not i.is_dir, i.name.lower()))
         n_old = len(self.items)
         self.items = items
+        self.build_tiles()
         saved = self.S["positions"].get(self.key)
         if n_old != len(items) and not (saved and len(saved) == 4):
             self.apply_size()
         self.queue_draw()
+
+    def build_tiles(self):
+        """What the fence shows: its items, with 4+ files of one type folded into a stack."""
+        if not self.S.get("stacks", True) or self.app.organizer.folder_of(self.fid):
+            self.tiles = list(self.items)
+            return
+        by = {}
+        for it in self.items:
+            if not it.is_dir and it.ext and it.ext not in (".desktop", ".lnk", ".url"):
+                by.setdefault(it.ext, []).append(it)
+        tiles, done = [], set()
+        for it in self.items:
+            grp = by.get(it.ext) if not it.is_dir else None
+            if grp and len(grp) >= 4:
+                if it.ext in done:
+                    continue
+                done.add(it.ext)
+                st = StackTile(it.ext, grp, it.ext in self.open_stacks)
+                tiles.append(st)
+                if st.open:
+                    tiles.extend(grp)
+            else:
+                tiles.append(it)
+        self.tiles = tiles
+
+    def toggle_stack(self, st):
+        if st.ext in self.open_stacks:
+            self.open_stacks.discard(st.ext)
+        else:
+            self.open_stacks.add(st.ext)
+        self.build_tiles()
+        self.scroll = min(self.scroll, self.max_scroll())
+        self.queue_draw()
+
+    def anim_top(self):
+        return self.title_rect()[1] + self.title_rect()[3]
+
+    def in_open_stack(self, it):
+        return any(getattr(t, "is_stack", False) and t.open and it in t.members for t in self.tiles)
 
     # ---- layout
     def title_rect(self):
@@ -269,12 +322,12 @@ class Fence(GlassWindow):
         if c < 0 or c >= cols:
             return None
         i = r * cols + c
-        return i if 0 <= i < len(self.items) else None
+        return i if 0 <= i < len(self.tiles) else None
 
     def max_scroll(self):
         gx, gy, gw, gh = self.grid_rect()
         cw, ch = self.cell()
-        rows = math.ceil(len(self.items) / self.cols())
+        rows = math.ceil(len(self.tiles) / self.cols())
         return max(0, rows * ch - gh)
 
     # ---- paint
@@ -298,7 +351,8 @@ class Fence(GlassWindow):
         name = self.app.organizer.fence_name(self.fid)
         if self.app.organizer.folder_of(self.fid):
             name = "📁 " + name
-        text(cr, name, tx + T.s(28), ty, tw - T.s(80), size=T.s(10.2), bold=True, color=T.text, h=th, valign="middle")
+        if not self.draw_tabs(cr, tx + T.s(24), ty, tw - T.s(80), th):
+            text(cr, name, tx + T.s(28), ty, tw - T.s(80), size=T.s(10.2), bold=True, color=T.text, h=th, valign="middle")
         text(cr, str(len(self.items)), tx, ty, tw - T.s(30), size=T.s(9), color=T.sub, align="right", h=th, valign="middle")
         # chevron
         cx, cy = tx + tw - T.s(16), ty + th / 2
@@ -326,7 +380,7 @@ class Fence(GlassWindow):
         cols = self.cols()
         pad = (gw - cols * cw) / 2
         ip = self.icon_px()
-        for i, it in enumerate(self.items):
+        for i, it in enumerate(self.tiles):
             r, c = divmod(i, cols)
             cx0 = gx + pad + c * cw
             cy0 = gy + r * ch - self.scroll
@@ -334,6 +388,13 @@ class Fence(GlassWindow):
                 continue
             if i == self.hover:
                 fill_round(cr, cx0 + 2, cy0 + 2, cw - 4, ch - 4, T.s(10), T.hover)
+            if getattr(it, "is_stack", False):
+                self.draw_stack(cr, it, cx0, cy0, cw, ip)
+                text(cr, it.name, cx0 + T.s(4), cy0 + T.s(8) + ip, cw - T.s(8), size=T.s(8.4), color=T.text,
+                     align="center", wrap=True, lines=2)
+                continue
+            if self.in_open_stack(it):
+                fill_round(cr, cx0 + 2, cy0 + 2, cw - 4, ch - 4, T.s(10), with_alpha(T.accent, 0.12))
             pb = it.icon(ip)
             if pb is not None:
                 Gdk.cairo_set_source_pixbuf(cr, pb, cx0 + (cw - pb.get_width()) / 2, cy0 + T.s(6) + (ip - pb.get_height()) / 2)
@@ -358,6 +419,31 @@ class Fence(GlassWindow):
                 for j in range(k + 1):
                     cr.arc(x + w - T.s(6) - k * T.s(4), y + h - T.s(6) - j * T.s(4), 1, 0, 2 * math.pi)
                     cr.fill()
+
+    def draw_stack(self, cr, st, cx0, cy0, cw, ip):
+        """Three of the files fanned out like a pile, with a count badge."""
+        T = self.T
+        n = min(3, len(st.members))
+        sz = ip * 0.8
+        for k in range(n - 1, -1, -1):
+            pb = st.members[k].icon(int(sz))
+            if pb is None:
+                continue
+            off = (k - 1) * ip * 0.14
+            px = cx0 + (cw - sz) / 2 + off
+            py = cy0 + T.s(6) + (ip - sz) / 2 - off * 0.4
+            cr.save()
+            cr.translate(px + sz / 2, py + sz / 2)
+            cr.rotate((k - 1) * 0.16)
+            Gdk.cairo_set_source_pixbuf(cr, pb, -pb.get_width() / 2, -pb.get_height() / 2)
+            cr.paint()
+            cr.restore()
+        label = "–" if st.open else str(len(st.members))
+        bh = T.s(17)
+        bw = max(bh, T.s(9) * len(label) + T.s(8))
+        bx, by = cx0 + (cw + ip) / 2 - bw + T.s(6), cy0 + T.s(2)
+        fill_round(cr, bx, by, bw, bh, bh / 2, with_alpha(T.accent, 1))
+        text(cr, label, bx, by, bw, size=T.s(8), bold=True, color=(1, 1, 1, 1), align="center", h=bh, valign="middle")
 
     # ---- input
     def is_drag_area(self, x, y):
@@ -393,8 +479,10 @@ class Fence(GlassWindow):
         if self.is_drag_area(x, y):
             return
         i = self.item_at(x, y)
-        if i is not None and self.S["single_click"]:
-            core.open_path(self.items[i].path)
+        if i is not None and getattr(self.tiles[i], "is_stack", False):
+            self.toggle_stack(self.tiles[i])
+        elif i is not None and self.S["single_click"]:
+            core.open_path(self.tiles[i].path)
 
     def on_double_click(self, x, y):
         if self.is_drag_area(x, y):
@@ -404,14 +492,14 @@ class Fence(GlassWindow):
                 self.apply_size()
             return
         i = self.item_at(x, y)
-        if i is not None:
-            core.open_path(self.items[i].path)
+        if i is not None and not getattr(self.tiles[i], "is_stack", False):
+            core.open_path(self.tiles[i].path)
 
     def on_drag_start(self, x, y, event):
         i = self.item_at(x, y)
-        if i is None:
+        if i is None or getattr(self.tiles[i], "is_stack", False):
             return
-        self._drag_item = self.items[i]
+        self._drag_item = self.tiles[i]
         tl = Gtk.TargetList.new(URI_TARGETS)
         ctx = self.drag_begin_with_coordinates(tl, Gdk.DragAction.MOVE | Gdk.DragAction.COPY | Gdk.DragAction.LINK, 1, event, -1, -1)
         pb = self._drag_item.icon(self.icon_px())
@@ -444,9 +532,9 @@ class Fence(GlassWindow):
                 paths.append(p)
         if not paths:
             return
-        copy = ctx.get_selected_action() == Gdk.DragAction.COPY
+        copy = ctx.get_selected_action() == Gdk.DragAction.COPY or not (ctx.get_actions() & Gdk.DragAction.MOVE)
         i = self.item_at(x, y)
-        target = self.items[i] if i is not None else None
+        target = self.tiles[i] if i is not None and not getattr(self.tiles[i], "is_stack", False) else None
         if target is not None and target.is_dir and target.path not in paths:
             self.app.move_files(paths, target.path, copy)
             return
@@ -481,8 +569,12 @@ class Fence(GlassWindow):
     def menu_items(self):
         x, y = self.get_pointer()
         i = self.item_at(x, y)
+        if i is not None and getattr(self.tiles[i], "is_stack", False):
+            st = self.tiles[i]
+            return [("Close stack" if st.open else "Open stack", lambda: self.toggle_stack(st)),
+                    ("Turn off stacks", lambda: (self.S.__setitem__("stacks", False), self.app.settings_changed()))]
         if i is not None:
-            return self.item_menu(self.items[i])
+            return self.item_menu(self.tiles[i])
         opt = self.opt
         def setopt(k, v):
             opt[k] = v
@@ -501,6 +593,7 @@ class Fence(GlassWindow):
                  None]
         if not self.app.organizer.folder_of(self.fid):
             items.append(("Add a rule to this fence…", lambda: self.app.add_rule_dialog(self.fid)))
+        items += self.app.stack_menu(self)
         items += [("New fence…", self.app.new_fence_dialog),
                   ("New folder fence…", self.app.new_folder_fence_dialog),
                   None,

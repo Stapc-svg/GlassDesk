@@ -1,5 +1,24 @@
 # Changelog
 
+## Linux 1.9.2
+
+- **All your apps in search:** the search window lists every app in your app menu, not only your desktop. Filter with **All**, **Desktop** and **Apps**.
+- **Drag apps onto fences:** drag an app from search onto a fence to put a launcher for it there (the app itself is never moved).
+- **Blurrier search** window.
+- Switching tabs in a stack: the highlight glides, the content rises up into place, and switching one stack no longer breaks the others.
+
+## Linux 1.8.6
+
+Everything from GlassDesk 1.8 for Windows, now on Linux:
+
+- **26 themes** in a gallery (Settings → Appearance), including Windows themes like *Mica material* and *Acrylic material*. Settings and right-click menus follow your theme. **Match my wallpaper** takes the accent color from your wallpaper.
+- **File stacks:** 4+ files of one type fold into a stack inside their fence.
+- **Stacks of fences and widgets:** drag one onto another, then click the tabs to switch, with a slide animation. A stack keeps one size.
+- **Music widget** (any MPRIS player: Spotify, Firefox, Chrome, VLC, Rhythmbox…) and **Today widget**.
+- **New search launcher** with a calculator, theme switching, commands and web search.
+- **Organize desktop** preview, **resizable widgets**, fences that resize from any edge, panels kept on screen, and **a layout for each monitor setup**.
+- A **welcome screen** the first time GlassDesk starts.
+
 ## 1.8.6
 
 - **Switch animation:** switching tabs in a stack slides the new widget or fence in with a fade.
