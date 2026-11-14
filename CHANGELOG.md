@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.8
+
+- **Smoother stack switching:** the tab highlight glides from the old tab to the new one, the content slides in smoothly, and there is no more flash or jump when you switch.
+
 ## 1.8.7
 
 - Fixed: stacked fences and widgets sometimes showed no tabs after GlassDesk started, until you rescanned the desktop.

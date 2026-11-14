@@ -472,12 +472,13 @@ namespace GlassDesk
             var taken = new List<Rectangle>();
             var pending = new List<GlassWindow>();
             var placed = new List<KeyValuePair<GlassWindow, Rectangle>>();
+            var toHide = new List<GlassWindow>();
 
             // windows you already placed keep their spot
             foreach (var w in Windows)
             {
                 bool show = w.Wanted && !hiddenByUser;
-                if (!show) { if (w.Visible) w.Hide(); continue; }
+                if (!show) { if (w.Visible) toHide.Add(w); continue; }
                 Rectangle saved;
                 if (Settings.Positions.TryGetValue(w.Id, out saved) && (preview || OnSomeScreen(saved)))
                 {
@@ -503,10 +504,13 @@ namespace GlassDesk
                 var win = kv.Key; var rect = kv.Value;
                 Safe("panel " + win.Id, delegate
                 {
-                    if (!preview && !win.Visible) win.Show();
+                    // move and draw it first, then show it: no flash of an old picture in an old spot
                     win.SetPanelBounds(rect);
+                    if (!preview && !win.Visible) win.Show();
                 });
             }
+            // hide after the others are showing, so switching inside a stack never leaves a gap
+            foreach (var w in toHide) w.Hide();
             if (changed && !preview) Settings.Save();
         }
 
@@ -885,9 +889,10 @@ namespace GlassDesk
             Settings.Save();
             // quick: only re-pick who shows in the stack, no full rescan
             foreach (var win in Windows) if (live.Contains(win.Id)) win.Wanted = true;
+            // start the slide before it is shown, so its very first picture is already the first frame
+            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir, w.Id); break; }
             ApplyGroups();
             PlaceAll();
-            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir); break; }
         }
 
         public void JoinGroup(GlassWindow w, GlassWindow target)
