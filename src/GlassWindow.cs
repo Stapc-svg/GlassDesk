@@ -234,17 +234,27 @@ namespace GlassDesk
             foreach (var m in members) want += Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) + T.Sf(6);
             float squeeze = want > area.Width ? area.Width / want : 1f;
             var sf = new StringFormat(Gfx.Center) { Trimming = StringTrimming.EllipsisCharacter };
+            RectangleF curR = RectangleF.Empty, fromR = RectangleF.Empty;
             foreach (var m in members)
             {
-                bool cur = m.Key == Id;
                 float tw = Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) * squeeze;
                 var tr = new RectangleF(x, ty, tw, th);
-                if (cur) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, T.Dark ? 110 : 80), tr, th / 2);
-                else Gfx.FillRound(g, T.Hover, tr, th / 2);
-                using (var b = new SolidBrush(cur ? T.Text : T.SubText)) g.DrawString(m.Value, f, b, RectangleF.Inflate(tr, -T.Sf(6), 0), sf);
+                Gfx.FillRound(g, T.Hover, tr, th / 2);
+                if (m.Key == Id) curR = tr;
+                if (m.Key == animFrom) fromR = tr;
                 tabRects.Add(new KeyValuePair<RectangleF, string>(tr, m.Key));
                 x += tw + T.Sf(6) * squeeze;
             }
+            // the highlight glides from the tab you came from to the one you picked
+            float p = AnimProgress;
+            if (p < 1f && !fromR.IsEmpty && !curR.IsEmpty)
+            {
+                float e = Ease(p);
+                curR = new RectangleF(fromR.X + (curR.X - fromR.X) * e, curR.Y, fromR.Width + (curR.Width - fromR.Width) * e, curR.Height);
+            }
+            if (!curR.IsEmpty) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, T.Dark ? 110 : 80), curR, th / 2);
+            foreach (var t in tabRects)
+                using (var b = new SolidBrush(t.Value == Id ? T.Text : T.SubText)) g.DrawString(members.Find(mm => mm.Key == t.Value).Value, f, b, RectangleF.Inflate(t.Key, -T.Sf(6), 0), sf);
             return true;
         }
 
@@ -283,20 +293,30 @@ namespace GlassDesk
                 if (t >= 1f) PaintContent(g);
                 else
                 {
-                    // switching inside a stack: the new content slides in and fades up
-                    using (var layer = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb))
+                    // switching inside a stack: the new content slides in and fades up.
+                    // The content is drawn once and reused for every frame, so the slide stays smooth.
+                    if (animLayer == null || animLayer.Size != bmp.Size)
                     {
-                        using (var lg = Graphics.FromImage(layer)) { Gfx.Setup(lg); lg.Clear(Color.Transparent); PaintContent(lg); }
-                        float e = 1f - (float)Math.Pow(1 - t, 3);   // ease out
+                        if (animLayer != null) animLayer.Dispose();
+                        animLayer = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb);
+                        using (var lg = Graphics.FromImage(animLayer)) { Gfx.Setup(lg); lg.Clear(Color.Transparent); PaintContent(lg); }
+                    }
+                    var layer = animLayer;
+                    {
+                        float e = Ease(t);
                         int top = Math.Max(0, Math.Min(bmp.Height, AnimTop));
-                        if (top > 0) g.DrawImage(layer, new Rectangle(0, 0, bmp.Width, top), new Rectangle(0, 0, bmp.Width, top), GraphicsUnit.Pixel);
-                        float dx = animDir * (1 - e) * T.Sf(46);
+                        if (top > 0)
+                        {
+                            // the title row (a fence's tabs) is drawn live so its highlight can glide
+                            var st0 = g.Save(); g.SetClip(new Rectangle(0, 0, bmp.Width, top)); PaintContent(g); g.Restore(st0);
+                        }
+                        float dy = (1 - e) * T.Sf(28);   // the new content rises up into place
                         using (var ia = new ImageAttributes())
                         {
                             ia.SetColorMatrix(new ColorMatrix { Matrix33 = 0.15f + 0.85f * e });
                             var st = g.Save();
                             g.SetClip(new Rectangle(Panel.X, top, Panel.Width, Panel.Bottom - top));
-                            g.DrawImage(layer, new Rectangle((int)dx, top, bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
+                            g.DrawImage(layer, new Rectangle(0, top + (int)Math.Round(dy), bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
                             g.Restore(st);
                         }
                     }
@@ -441,19 +461,39 @@ namespace GlassDesk
 
         // ---- the slide when you switch to this panel in a stack ----
         int animStartTick, animDir; System.Windows.Forms.Timer animTimer;
-        const int AnimMs = 260;
+        Bitmap animLayer; string animFrom;
+        const int AnimMs = 320;
+        /// <summary>Smooth start and stop (ease out, like iOS).</summary>
+        protected static float Ease(float t) { t = Math.Max(0, Math.Min(1, t)); return 1f - (float)Math.Pow(1 - t, 4); }
         float AnimProgress { get { if (animTimer == null || !animTimer.Enabled) return 1f; return Math.Min(1f, (Environment.TickCount - animStartTick) / (float)AnimMs); } }
         /// <summary>Content above this line (a fence's title) stays put while the rest slides.</summary>
         protected virtual int AnimTop { get { return Panel.Y; } }
-        public void PlayEnter(int dir)
+        public void PlayEnter(int dir, string from)
         {
-            animDir = dir >= 0 ? 1 : -1; animStartTick = Environment.TickCount;
+            animDir = dir >= 0 ? 1 : -1; animStartTick = Environment.TickCount; animFrom = from;
+            if (animLayer != null) { animLayer.Dispose(); animLayer = null; }
             if (animTimer == null)
             {
-                animTimer = new System.Windows.Forms.Timer { Interval = 15 };
-                animTimer.Tick += delegate { if (Environment.TickCount - animStartTick >= AnimMs) animTimer.Stop(); Redraw(); };
+                animTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                animTimer.Tick += delegate
+                {
+                    if (Environment.TickCount - animStartTick >= AnimMs)
+                    {
+                        animTimer.Stop(); animFrom = null;
+                        if (animLayer != null) { animLayer.Dispose(); animLayer = null; }
+                    }
+                    if (Visible) Redraw();
+                };
             }
-            animTimer.Start(); Redraw();
+            animTimer.Start();
+        }
+
+        /// <summary>Draws the panel even while it is hidden, so it has the right picture the moment it shows.</summary>
+        public void RedrawBeforeShow()
+        {
+            if (!Native.IsWindows || Width <= 0 || Height <= 0) return;
+            if (!IsHandleCreated) CreateHandle();
+            using (var bmp = RenderBitmap()) Push(bmp);
         }
 
         public void Redraw()

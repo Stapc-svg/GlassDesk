@@ -186,7 +186,50 @@ namespace GlassDesk
                 foreach (var it in f.Items)
                     if (seen.Add(it.Path)) items.Add(new KeyValuePair<DesktopItem, string>(it, f.Caption));
             items.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
+            // every app installed on the PC (its Start menu shortcut), after the desktop items
+            var names = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+            foreach (var kv in items) names.Add(kv.Key.Name);
+            var apps = new List<KeyValuePair<DesktopItem, string>>();
+            foreach (var it in InstalledApps()) if (names.Add(it.Name)) apps.Add(new KeyValuePair<DesktopItem, string>(it, LauncherForm.AppsTag));
+            apps.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
+            items.AddRange(apps);
             return new LauncherForm(this, items);
+        }
+
+        List<DesktopItem> appCache; DateTime appCacheAt;
+        /// <summary>The apps in the Start menu (for everyone and for you), without uninstallers and help files.</summary>
+        List<DesktopItem> InstalledApps()
+        {
+            if (preview) return PreviewData.Apps();
+            if (appCache != null && (DateTime.Now - appCacheAt).TotalMinutes < 5) return appCache;
+            var list = new List<DesktopItem>();
+            var seen = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+            string[] roots =
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+            };
+            string[] skip = { "uninstall", "deinstall", "remove ", "readme", "read me", "help", "documentation", "manual", "license", "website", "release notes", "changelog" };
+            foreach (string root in roots)
+            {
+                if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) continue;
+                try
+                {
+                    foreach (string f in Directory.GetFiles(root, "*.*", SearchOption.AllDirectories))
+                    {
+                        string ext = Path.GetExtension(f).ToLowerInvariant();
+                        if (ext != ".lnk" && ext != ".url" && ext != ".appref-ms") continue;
+                        string n = Path.GetFileNameWithoutExtension(f), nl = n.ToLowerInvariant();
+                        bool bad = false; foreach (string s in skip) if (nl.Contains(s)) { bad = true; break; }
+                        if (bad || !seen.Add(n)) continue;
+                        list.Add(new DesktopItem(f, false));
+                    }
+                }
+                catch (Exception ex) { Program.Log(ex); }
+            }
+            if (appCache != null) foreach (var it in appCache) it.Dispose();
+            appCache = list; appCacheAt = DateTime.Now;
+            return list;
         }
 
         public const string UnsortedId = "cust.unsorted";
@@ -332,6 +375,7 @@ namespace GlassDesk
                     foreach (var it in f.Items) it.Dispose();
                     f.Close(); f.Dispose();
                 }
+            groupHidden.Clear();   // every panel gets its own wanted state again right below
             foreach (var f in fences.Values) f.Wanted = true;
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
@@ -472,12 +516,13 @@ namespace GlassDesk
             var taken = new List<Rectangle>();
             var pending = new List<GlassWindow>();
             var placed = new List<KeyValuePair<GlassWindow, Rectangle>>();
+            var toHide = new List<GlassWindow>();
 
             // windows you already placed keep their spot
             foreach (var w in Windows)
             {
                 bool show = w.Wanted && !hiddenByUser;
-                if (!show) { if (w.Visible) w.Hide(); continue; }
+                if (!show) { if (w.Visible) toHide.Add(w); continue; }
                 Rectangle saved;
                 if (Settings.Positions.TryGetValue(w.Id, out saved) && (preview || OnSomeScreen(saved)))
                 {
@@ -503,10 +548,18 @@ namespace GlassDesk
                 var win = kv.Key; var rect = kv.Value;
                 Safe("panel " + win.Id, delegate
                 {
-                    if (!preview && !win.Visible) win.Show();
+                    // move and draw it first, then show it: no flash of an old picture in an old spot
                     win.SetPanelBounds(rect);
+                    if (!preview && !win.Visible)
+                    {
+                        win.RedrawBeforeShow();   // a hidden window isn't drawn by SetPanelBounds; without this it would show empty
+                        win.Show();
+                        win.Redraw();
+                    }
                 });
             }
+            // hide after the others are showing, so switching inside a stack never leaves a gap
+            foreach (var w in toHide) w.Hide();
             if (changed && !preview) Settings.Save();
         }
 
@@ -758,22 +811,33 @@ namespace GlassDesk
         public static string WidgetName(string id) { string n; return widgetNames.TryGetValue(id, out n) ? n : id; }
 
         List<string> GroupOf(string id) { foreach (var g in Settings.Groups) if (g.Contains(id)) return g; return null; }
+        readonly HashSet<string> groupHidden = new HashSet<string>();   // panels hidden only because another one of their stack shows
         readonly Dictionary<string, List<string>> liveGroups = new Dictionary<string, List<string>>();   // id -> wanted members of its group
 
         /// <summary>Only the first wanted widget of each group shows; the rest wait in the same spot.</summary>
         void ApplyGroups()
         {
+            // panels whose tabs may change must be drawn again, or they keep showing the old title
+            var touched = new HashSet<string>(liveGroups.Keys);
             liveGroups.Clear();
             var byId = new Dictionary<string, GlassWindow>();
             foreach (var w in Windows) byId[w.Id] = w;
+            // panels this hid last time are wanted again before working out the stacks anew;
+            // otherwise switching one stack would break every other stack (and lose its tabs)
+            foreach (string id in groupHidden) { GlassWindow hw; if (byId.TryGetValue(id, out hw)) hw.Wanted = true; }
+            groupHidden.Clear();
             foreach (var g in Settings.Groups)
             {
                 var wanted = new List<string>();
                 foreach (string id in g) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Wanted) wanted.Add(id); }
                 if (wanted.Count < 2) continue;
                 foreach (string id in wanted) liveGroups[id] = wanted;
-                for (int i = 1; i < wanted.Count; i++) byId[wanted[i]].Wanted = false;
+                for (int i = 1; i < wanted.Count; i++) { byId[wanted[i]].Wanted = false; groupHidden.Add(wanted[i]); }
             }
+            foreach (string id in liveGroups.Keys) touched.Add(id);
+            Action redraw = delegate { foreach (string id in touched) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Visible) w.Redraw(); } };
+            // after this, the caller places and shows the panels; draw once that is done
+            try { if (invoker != null && invoker.IsHandleCreated) invoker.BeginInvoke(redraw); else redraw(); } catch { redraw(); }
         }
 
         /// <summary>Which member this is (0-based) and how many show in its group; false when not grouped.</summary>
@@ -879,9 +943,10 @@ namespace GlassDesk
             Settings.Save();
             // quick: only re-pick who shows in the stack, no full rescan
             foreach (var win in Windows) if (live.Contains(win.Id)) win.Wanted = true;
+            // start the slide before it is shown, so its very first picture is already the first frame
+            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir, w.Id); break; }
             ApplyGroups();
             PlaceAll();
-            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir); break; }
         }
 
         public void JoinGroup(GlassWindow w, GlassWindow target)
@@ -1120,6 +1185,14 @@ namespace GlassDesk
             add("images", new[] { "wallpaper.jpg", "logo.png", "sketch.png", "icon.png", "screenshot-1.png", "photo-0912.heic", "banner.webp" }, false);
             add("media", new[] { "podcast.mp3", "clip.mp4" }, false);
             add("archives", new[] { "backup.zip", "assets.7z" }, false);
+        }
+
+        public static List<DesktopItem> Apps()
+        {
+            var l = new List<DesktopItem>();
+            foreach (var n in new[] { "Calculator", "Firefox", "GIMP", "Microsoft Edge", "Notepad", "Paint", "Photos", "Terminal", "VLC media player", "Word", "Excel", "PowerPoint", "Zoom", "WhatsApp", "Minecraft Launcher", "Epic Games Launcher" })
+                l.Add(new DesktopItem(Path.Combine(Path.GetTempPath(), "StartMenu", n + ".lnk"), false));
+            return l;
         }
 
         public static void FakeStats(SysStats s)
