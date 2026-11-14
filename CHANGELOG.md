@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.1
+
+- Switching tabs in a stack: the new content now rises up into place instead of sliding in from the side.
+
 ## 1.9.0
 
 - **All your apps in search:** Ctrl + Alt + F now lists every app installed on your PC (from the Start menu), not only your desktop. Filter with **All**, **Desktop** and **Apps**.

@@ -310,13 +310,13 @@ namespace GlassDesk
                             // the title row (a fence's tabs) is drawn live so its highlight can glide
                             var st0 = g.Save(); g.SetClip(new Rectangle(0, 0, bmp.Width, top)); PaintContent(g); g.Restore(st0);
                         }
-                        float dx = animDir * (1 - e) * T.Sf(46);
+                        float dy = (1 - e) * T.Sf(28);   // the new content rises up into place
                         using (var ia = new ImageAttributes())
                         {
                             ia.SetColorMatrix(new ColorMatrix { Matrix33 = 0.15f + 0.85f * e });
                             var st = g.Save();
                             g.SetClip(new Rectangle(Panel.X, top, Panel.Width, Panel.Bottom - top));
-                            g.DrawImage(layer, new Rectangle((int)dx, top, bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
+                            g.DrawImage(layer, new Rectangle(0, top + (int)Math.Round(dy), bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
                             g.Restore(st);
                         }
                     }
