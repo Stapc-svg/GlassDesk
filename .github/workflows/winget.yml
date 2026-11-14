@@ -1,0 +1,44 @@
+# Robot: when you publish a GitHub Release that has a GlassDesk .msi in it,
+# this sends the new version to winget (microsoft/winget-pkgs) for you.
+# One-time setup: add a repository secret called WINGET_TOKEN (see README).
+name: Send update to winget
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to send (e.g. v1.9.3)
+        required: true
+
+jobs:
+  winget:
+    runs-on: windows-latest
+    steps:
+      - name: Find the version from the .msi name
+        id: ver
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          $assets = gh release view "$env:TAG" -R "${{ github.repository }}" --json assets --jq '.assets[].name'
+          $msi = $assets | Where-Object { $_ -match 'GlassDesk-Setup-(\d+(\.\d+)+)\.msi$' } | Select-Object -First 1
+          if (-not $msi) { Write-Host "No GlassDesk-Setup-x.y.z.msi in this release, nothing to send."; "skip=true" >> $env:GITHUB_OUTPUT; exit 0 }
+          $v = [regex]::Match($msi, 'Setup-(\d+(\.\d+)+)\.msi').Groups[1].Value
+          Write-Host "Sending GlassDesk $v ($msi) to winget"
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "tag=$env:TAG" >> $env:GITHUB_OUTPUT
+          "skip=false" >> $env:GITHUB_OUTPUT
+
+      - name: Send to winget
+        if: steps.ver.outputs.skip == 'false'
+        uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: Stapc-svg.GlassDesk
+          version: ${{ steps.ver.outputs.version }}
+          release-tag: ${{ steps.ver.outputs.tag }}
+          installers-regex: 'GlassDesk-Setup-[\d.]+\.msi$'
+          fork-user: Stapc-svg
+          token: ${{ secrets.WINGET_TOKEN }}
