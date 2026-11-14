@@ -1,0 +1,69 @@
+# GlassDesk for Flathub. Build and test locally with:
+#   flatpak-builder --user --install --force-clean build io.github.Stapc_svg.GlassDesk.yml
+app-id: io.github.Stapc_svg.GlassDesk
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: glassdesk
+finish-args:
+  # GlassDesk's panels sit on the desktop at exact positions, which only X11 allows (XWayland on Wayland)
+  - --socket=x11
+  - --share=ipc
+  # weather, GitHub stats, quote of the day and the update check
+  - --share=network
+  # the desktop folder is what GlassDesk organizes
+  - --filesystem=xdg-desktop
+  # the photo widget shows a folder of pictures
+  - --filesystem=xdg-pictures:ro
+  # the wallpaper (for the frosted-glass blur), the computer's app list and app icons
+  - --filesystem=host-os:ro
+  - --filesystem=xdg-data/backgrounds:ro
+  - --filesystem=xdg-data/applications:ro
+  - --filesystem=xdg-data/icons:ro
+  - --filesystem=xdg-data/flatpak/exports/share:ro
+  - --filesystem=/var/lib/flatpak/exports/share:ro
+  - --filesystem=/var/lib/snapd/desktop:ro
+  # read the wallpaper setting and hide the desktop's own icons
+  - --filesystem=xdg-run/dconf
+  - --filesystem=~/.config/dconf:ro
+  - --talk-name=ca.desrt.dconf
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+  # open the apps and shortcuts in your fences: they run on the computer, outside the sandbox
+  - --talk-name=org.freedesktop.Flatpak
+  # tray icon, "show in folder", notifications and the music widget (MPRIS players)
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.FileManager1
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.mpris.MediaPlayer2.*
+modules:
+  # tray icon (with GObject introspection, which Python needs)
+  - ayatana/libayatana-appindicator-gtk3-gi.json
+
+  # the Ctrl + Alt + F / Ctrl + Alt + G shortcuts
+  - name: keybinder3
+    config-opts:
+      - --disable-gtk-doc
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - '*.la'
+    sources:
+      - type: archive
+        url: https://github.com/kupferlauncher/keybinder/releases/download/keybinder-3.0-v0.3.2/keybinder-3.0-0.3.2.tar.gz
+        sha256: e6e3de4e1f3b201814a956ab8f16dfc8a262db1937ff1eee4d855365398c6020
+
+  - name: glassdesk
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib/glassdesk
+      - cp -r linux/glassdesk /app/lib/glassdesk/
+      - install -Dm755 linux/flatpak/glassdesk.sh /app/bin/glassdesk
+      - install -Dm644 linux/flatpak/io.github.Stapc_svg.GlassDesk.desktop /app/share/applications/io.github.Stapc_svg.GlassDesk.desktop
+      - install -Dm644 linux/flatpak/io.github.Stapc_svg.GlassDesk.metainfo.xml /app/share/metainfo/io.github.Stapc_svg.GlassDesk.metainfo.xml
+      - install -Dm644 linux/glassdesk/icons/glassdesk.png /app/share/icons/hicolor/256x256/apps/io.github.Stapc_svg.GlassDesk.png
+      # the app also asks for its icon by the name "glassdesk"
+      - install -Dm644 linux/glassdesk/icons/glassdesk.png /app/share/icons/hicolor/256x256/apps/glassdesk.png
+    sources:
+      - type: git
+        url: https://github.com/Stapc-svg/GlassDesk.git
+        commit: 58efe4f6d394792580a98a662eff5b27b7ad41fb

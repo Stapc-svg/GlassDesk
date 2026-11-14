@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=GlassDesk
+GenericName=Desktop organizer
+Comment=Sort your desktop into glass fences, with widgets and themes
+Exec=glassdesk
+Icon=io.github.Stapc_svg.GlassDesk
+Terminal=false
+Categories=Utility;GTK;
+Keywords=desktop;organizer;fences;widgets;clock;themes;
+StartupNotify=false

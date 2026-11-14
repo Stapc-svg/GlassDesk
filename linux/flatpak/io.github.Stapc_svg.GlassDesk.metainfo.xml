@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.Stapc_svg.GlassDesk</id>
+  <name>GlassDesk</name>
+  <summary>Sort your desktop into glass fences, with widgets</summary>
+  <developer id="io.github.stapc_svg">
+    <name>Stapc-svg</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>GlassDesk sorts every file and shortcut on your desktop into frosted-glass fences, and adds widgets beside them. It blurs your own wallpaper, so the glass looks real on any desktop.</p>
+    <ul>
+      <li>Fences for apps, folders, documents, images, music and video, archives and other files, sorted as files change</li>
+      <li>Your own fences, folder fences and rules, like "*.pdf goes to School"</li>
+      <li>Stack fences or widgets with tabs, and fold 4 or more files of one type into a stack</li>
+      <li>14 widgets: clock, system monitor, calendar, notes, to-do, weather, photos, countdown, quote, GitHub stats, network, focus timer, music and Today</li>
+      <li>26 themes, including Mica and Acrylic, and an accent color that can match your wallpaper</li>
+      <li>A search window for your desktop and apps, with a calculator</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.Stapc_svg.GlassDesk.desktop</launchable>
+  <url type="homepage">https://glassdesk.freedev.app</url>
+  <url type="bugtracker">https://github.com/Stapc-svg/GlassDesk/issues</url>
+  <url type="vcs-browser">https://github.com/Stapc-svg/GlassDesk</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Fences, a file stack and widgets on the desktop</caption>
+      <image>https://raw.githubusercontent.com/Stapc-svg/GlassDesk/main/docs/screenshots/linux-desktop-1.8.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Search for anything on your desktop and in your apps</caption>
+      <image>https://raw.githubusercontent.com/Stapc-svg/GlassDesk/main/docs/screenshots/linux-search.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>26 themes</caption>
+      <image>https://raw.githubusercontent.com/Stapc-svg/GlassDesk/main/docs/screenshots/linux-themes.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Choose how your desktop gets organized</caption>
+      <image>https://raw.githubusercontent.com/Stapc-svg/GlassDesk/main/docs/screenshots/linux-organize.png</image>
+    </screenshot>
+  </screenshots>
+  <branding>
+    <color type="primary" scheme_preference="light">#B9C8FF</color>
+    <color type="primary" scheme_preference="dark">#1A2140</color>
+  </branding>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">1024</display_length>
+  </requires>
+  <releases>
+    <release version="1.9.2" date="2026-11-14">
+      <description>
+        <ul>
+          <li>Search lists every app, and you can drag apps onto fences</li>
+          <li>Smoother switching between stacked fences and widgets</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.8.6" date="2026-11-13">
+      <description>
+        <p>26 themes, stacks with tabs, music and Today widgets, a new search window and Organize desktop.</p>
+      </description>
+    </release>
+  </releases>
+</component>
