@@ -207,6 +207,7 @@ class GlassDeskApp(Gtk.Application):
             wd.wanted = bool(S.get(key))
         for f in self.fences.values():
             f.wanted = True
+        self._group_hidden = set()      # everything got its own wanted state just above
         self.apply_groups()
         self.place_all()
         self.show_hide()
@@ -771,6 +772,13 @@ menu separator {{ background-color: {line}; margin: 4px 6px; }}
     def apply_groups(self):
         """Only the first wanted panel of each stack shows; the others wait in the same spot."""
         self.live_groups = {}
+        # panels hidden last time only because of a stack are wanted again before the stacks are worked out anew;
+        # otherwise switching one stack would break every other stack
+        for k in getattr(self, "_group_hidden", set()):
+            w = self.window_by_key(k)
+            if w is not None:
+                w.wanted = True
+        self._group_hidden = set()
         for g in self.settings["groups"]:
             live = [k for k in g if self.window_by_key(k) is not None and self.window_by_key(k).wanted]
             if len(live) < 2:
@@ -779,6 +787,7 @@ menu separator {{ background-color: {line}; margin: 4px 6px; }}
                 self.live_groups[k] = live
             for k in live[1:]:
                 self.window_by_key(k).wanted = False
+                self._group_hidden.add(k)
 
     def group_members(self, key):
         live = self.live_groups.get(key)
