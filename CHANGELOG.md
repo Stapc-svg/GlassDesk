@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.0
+
+- **All your apps in search:** Ctrl + Alt + F now lists every app installed on your PC (from the Start menu), not only your desktop. Filter with **All**, **Desktop** and **Apps**.
+- **Drag apps onto fences:** drag an app from search onto any fence. GlassDesk puts a shortcut on your desktop in that fence (the app itself is never moved).
+- **Blurrier search:** the search window now fully blurs what is behind it.
+
 ## 1.8.9
 
 - Fixed: switching inside a stack could make the whole stack disappear, or show an empty or old picture for a moment. A panel is now fully drawn before it appears.

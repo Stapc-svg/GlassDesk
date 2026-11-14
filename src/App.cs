@@ -186,7 +186,50 @@ namespace GlassDesk
                 foreach (var it in f.Items)
                     if (seen.Add(it.Path)) items.Add(new KeyValuePair<DesktopItem, string>(it, f.Caption));
             items.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
+            // every app installed on the PC (its Start menu shortcut), after the desktop items
+            var names = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+            foreach (var kv in items) names.Add(kv.Key.Name);
+            var apps = new List<KeyValuePair<DesktopItem, string>>();
+            foreach (var it in InstalledApps()) if (names.Add(it.Name)) apps.Add(new KeyValuePair<DesktopItem, string>(it, LauncherForm.AppsTag));
+            apps.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
+            items.AddRange(apps);
             return new LauncherForm(this, items);
+        }
+
+        List<DesktopItem> appCache; DateTime appCacheAt;
+        /// <summary>The apps in the Start menu (for everyone and for you), without uninstallers and help files.</summary>
+        List<DesktopItem> InstalledApps()
+        {
+            if (preview) return PreviewData.Apps();
+            if (appCache != null && (DateTime.Now - appCacheAt).TotalMinutes < 5) return appCache;
+            var list = new List<DesktopItem>();
+            var seen = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+            string[] roots =
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+            };
+            string[] skip = { "uninstall", "deinstall", "remove ", "readme", "read me", "help", "documentation", "manual", "license", "website", "release notes", "changelog" };
+            foreach (string root in roots)
+            {
+                if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) continue;
+                try
+                {
+                    foreach (string f in Directory.GetFiles(root, "*.*", SearchOption.AllDirectories))
+                    {
+                        string ext = Path.GetExtension(f).ToLowerInvariant();
+                        if (ext != ".lnk" && ext != ".url" && ext != ".appref-ms") continue;
+                        string n = Path.GetFileNameWithoutExtension(f), nl = n.ToLowerInvariant();
+                        bool bad = false; foreach (string s in skip) if (nl.Contains(s)) { bad = true; break; }
+                        if (bad || !seen.Add(n)) continue;
+                        list.Add(new DesktopItem(f, false));
+                    }
+                }
+                catch (Exception ex) { Program.Log(ex); }
+            }
+            if (appCache != null) foreach (var it in appCache) it.Dispose();
+            appCache = list; appCacheAt = DateTime.Now;
+            return list;
         }
 
         public const string UnsortedId = "cust.unsorted";
@@ -1136,6 +1179,14 @@ namespace GlassDesk
             add("images", new[] { "wallpaper.jpg", "logo.png", "sketch.png", "icon.png", "screenshot-1.png", "photo-0912.heic", "banner.webp" }, false);
             add("media", new[] { "podcast.mp3", "clip.mp4" }, false);
             add("archives", new[] { "backup.zip", "assets.7z" }, false);
+        }
+
+        public static List<DesktopItem> Apps()
+        {
+            var l = new List<DesktopItem>();
+            foreach (var n in new[] { "Calculator", "Firefox", "GIMP", "Microsoft Edge", "Notepad", "Paint", "Photos", "Terminal", "VLC media player", "Word", "Excel", "PowerPoint", "Zoom", "WhatsApp", "Minecraft Launcher", "Epic Games Launcher" })
+                l.Add(new DesktopItem(Path.Combine(Path.GetTempPath(), "StartMenu", n + ".lnk"), false));
+            return l;
         }
 
         public static void FakeStats(SysStats s)

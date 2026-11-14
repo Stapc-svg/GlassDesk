@@ -48,7 +48,7 @@ namespace GlassDesk
                 try
                 {
                     Rectangle scr = app.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromControl(this).Bounds;
-                    Bitmap blur = Backdrop.For(scr, T.LookId == "acrylic" ? 3 : 2);
+                    Bitmap blur = Backdrop.For(scr, 3);   // full blur
                     if (blur != null)
                     {
                         g.InterpolationMode = InterpolationMode.Bilinear;
@@ -57,7 +57,7 @@ namespace GlassDesk
                 }
                 catch (Exception ex) { Program.Log(ex); }
             // a stronger tint than desktop panels so text stays easy to read
-            int a = T.Solid ? 255 : Math.Max(T.Dark ? 165 : 150, (int)T.TintTop.A);
+            int a = T.Solid ? 255 : Math.Max(T.Dark ? 135 : 125, Math.Min(200, (int)T.TintTop.A));
             using (var b = new LinearGradientBrush(new Point(0, -1), new Point(0, Height + 1), Color.FromArgb(a, T.TintTop), Color.FromArgb(a, T.TintBottom))) g.FillRectangle(b, r);
             if (!T.Glow.IsEmpty) Gfx.Glow(g, new PointF(Width * 0.92f, -Height * 0.05f), Math.Max(Width, Height) * 0.6f, T.Glow);
             if (!T.Glow2.IsEmpty) Gfx.Glow(g, new PointF(Width * 0.05f, Height * 1.05f), Math.Max(Width, Height) * 0.45f, T.Glow2);
@@ -109,8 +109,13 @@ namespace GlassDesk
     // =================================================================== search launcher
     internal class LauncherForm : GlassForm
     {
+        public const string AppsTag = "::apps";
         readonly List<KeyValuePair<DesktopItem, string>> all;
         readonly List<DesktopItem> shown = new List<DesktopItem>();
+        readonly HashSet<DesktopItem> appSet = new HashSet<DesktopItem>();
+        int filter;                       // 0 everything, 1 desktop, 2 apps
+        int pressIndex = -1; Point pressAt; bool dragging, hotChip;
+        int[] chipCount = new int[3];
         string query = "";
         int sel, hot = -1, scroll;
         bool caretOn = true, closing, hotClose, hotSettings;
@@ -120,6 +125,8 @@ namespace GlassDesk
         public LauncherForm(App app, List<KeyValuePair<DesktopItem, string>> items) : base(app)
         {
             all = items;
+            foreach (var kv in items) if (kv.Value == AppsTag) appSet.Add(kv.Key);
+            chipCount[0] = items.Count; chipCount[2] = appSet.Count; chipCount[1] = items.Count - appSet.Count;
             TopMost = true;
             int w = (int)(700 * k), h = (int)(500 * k);
             Rectangle wa = Screen.FromPoint(Cursor.Position).WorkingArea;
@@ -128,7 +135,7 @@ namespace GlassDesk
             caret.Tick += delegate { caretOn = !caretOn; Invalidate(SearchRect); };
             Filter();
             Load += delegate { caret.Start(); };
-            Deactivate += delegate { Finish(); };
+            Deactivate += delegate { if (!dragging) Finish(); };
             FormClosed += delegate { caret.Dispose(); };
         }
 
@@ -211,6 +218,8 @@ namespace GlassDesk
             var starts = new List<DesktopItem>(); var has = new List<DesktopItem>(); var loose = new List<DesktopItem>();
             foreach (var kv in all)
             {
+                bool isApp = kv.Value == AppsTag;
+                if ((filter == 1 && isApp) || (filter == 2 && !isApp)) continue;
                 string n = kv.Key.Name;
                 if (q.Length == 0 || n.StartsWith(q, StringComparison.CurrentCultureIgnoreCase)) starts.Add(kv.Key);
                 else if (n.IndexOf(q, StringComparison.CurrentCultureIgnoreCase) >= 0) has.Add(kv.Key);
@@ -257,7 +266,7 @@ namespace GlassDesk
             using (var b = new SolidBrush(P.Text)) g.DrawString(kbd, fSmall, b, kr, Gfx.Center);
             var textR = new RectangleF(tx, s.Y, kr.X - tx - 10 * k, s.Height);
             if (query.Length == 0)
-                using (var b = new SolidBrush(Gfx.WithAlpha(P.Sub, 200))) g.DrawString("Search your desktop…", fBig, b, textR, Gfx.Left);
+                using (var b = new SolidBrush(Gfx.WithAlpha(P.Sub, 200))) g.DrawString("Search your desktop and apps…", fBig, b, textR, Gfx.Left);
             else
                 using (var b = new SolidBrush(P.Text)) g.DrawString(query, fBig, b, textR, Gfx.Left);
             if (caretOn)
@@ -332,13 +341,35 @@ namespace GlassDesk
 
             // footer
             using (var pen = new Pen(T.Dark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(18, 0, 0, 0))) g.DrawLine(pen, Pad, FooterTop, Width - Pad, FooterTop);
+            // filter chips: everything / desktop / installed apps
+            for (int c = 0; c < 3; c++)
+            {
+                var cr = ChipRect(c);
+                if (c == filter)
+                    using (var p = Gfx.Round(cr, cr.Height / 2)) using (var b = new LinearGradientBrush(cr, Gfx.WithAlpha(P.Accent, 200), Gfx.WithAlpha(P.Accent2, 200), 0f)) g.FillPath(b, p);
+                else Chip(g, cr, cr.Height / 2, cr.Contains(PointToClient(Cursor.Position)));
+                using (var b = new SolidBrush(c == filter ? Color.White : P.Text))
+                    g.DrawString(ChipLabel(c), fSmall, b, cr, Gfx.Center);
+            }
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString(shown.Count + (shown.Count == 1 ? " item" : " items") + "   ·   Enter to open   ·   Shift + Enter to show in folder", fSmall, b,
-                    new RectangleF(Pad + 4 * k, FooterTop, SettingsRect.X - Pad, Height - FooterTop), Gfx.Left);
+                g.DrawString("Drag an app onto a fence to add it", fSmall, b,
+                    new RectangleF(ChipRect(2).Right + 12 * k, FooterTop, SettingsRect.X - ChipRect(2).Right - 16 * k, Height - FooterTop), Gfx.Left);
             var sr = SettingsRect;
             Chip(g, sr, 9 * k, hotSettings);
             DrawGear(g, new PointF(sr.X + 20 * k, sr.Y + sr.Height / 2f), 6.5f * k);
             using (var b = new SolidBrush(P.Text)) g.DrawString("Open Settings", fSmall, b, new RectangleF(sr.X + 32 * k, sr.Y, sr.Width - 36 * k, sr.Height), Gfx.Left);
+        }
+
+        string ChipLabel(int c) { return (c == 0 ? "All" : c == 1 ? "Desktop" : "Apps") + "  " + chipCount[c]; }
+        RectangleF ChipRect(int c)
+        {
+            float x = Pad;
+            using (var g = CreateGraphics())
+                for (int i = 0; i < c; i++) x += g.MeasureString(ChipLabel(i), Gfx.F(T.FontName, 11.5f * k, FontStyle.Regular)).Width + 26 * k + 6 * k;
+            float w;
+            using (var g = CreateGraphics()) w = g.MeasureString(ChipLabel(c), Gfx.F(T.FontName, 11.5f * k, FontStyle.Regular)).Width + 26 * k;
+            float h = 30 * k;
+            return new RectangleF(x, FooterTop + ((Height - FooterTop) - h) / 2, w, h);
         }
 
         void DrawGear(Graphics g, PointF c, float r)
@@ -409,9 +440,49 @@ namespace GlassDesk
             return i < shown.Count ? i : -1;
         }
 
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            base.OnMouseDown(e);
+            if (e.Button == MouseButtons.Left) { pressIndex = HitItem(e.Location); pressAt = e.Location; }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] static extern int GetWindowLong(IntPtr h, int i);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] static extern int SetWindowLong(IntPtr h, int i, int v);
+
+        /// <summary>Drag an app or file out onto a fence. The launcher turns see-through and click-through while you drag.</summary>
+        void StartDrag(int i)
+        {
+            var it = shown[i];
+            if (it.IsRecycleBin) return;
+            dragging = true;
+            int ex = 0;
+            try
+            {
+                if (Native.IsWindows) { ex = GetWindowLong(Handle, -20); SetWindowLong(Handle, -20, ex | 0x20 | 0x80000); }
+                Opacity = 0.25;
+                var data = new DataObject(DataFormats.FileDrop, new[] { it.Path });
+                // an app's Start menu shortcut is copied (never moved); a desktop item can also be pinned
+                var eff = appSet.Contains(it) ? DragDropEffects.Copy : DragDropEffects.Copy | DragDropEffects.Link;
+                var result = DoDragDrop(data, eff);
+                if (result != DragDropEffects.None) { Finish(); return; }
+            }
+            catch (Exception exn) { Program.Log(exn); }
+            finally
+            {
+                dragging = false; pressIndex = -1;
+                if (!closing && IsHandleCreated)
+                {
+                    if (Native.IsWindows) SetWindowLong(Handle, -20, ex);
+                    Opacity = 1; Activate();
+                }
+            }
+        }
+
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            if (pressIndex >= 0 && e.Button == MouseButtons.Left && !dragging &&
+                (Math.Abs(e.X - pressAt.X) > 6 || Math.Abs(e.Y - pressAt.Y) > 6)) { StartDrag(pressIndex); return; }
             int ha = -1; for (int a = 0; a < acts.Count; a++) if (ActRect(a).Contains(e.Location)) ha = a;
             if (ha != hotAct) { hotAct = ha; Invalidate(); }
             int h = HitItem(e.Location);
@@ -429,7 +500,10 @@ namespace GlassDesk
         {
             base.OnMouseClick(e);
             if (e.Button != MouseButtons.Left) return;
+            bool wasPress = pressIndex >= 0 || HitItem(e.Location) < 0; pressIndex = -1;
+            if (!wasPress) return;   // the mouse went down somewhere else (or a drag just ended)
             if (CloseRect.Contains(e.Location)) { Finish(); return; }
+            for (int c = 0; c < 3; c++) if (ChipRect(c).Contains(e.Location)) { filter = c; Filter(); return; }
             for (int a = 0; a < acts.Count; a++) if (ActRect(a).Contains(e.Location)) { acts[a].Run(); return; }
             if (SettingsRect.Contains(e.Location)) { Finish(); app.ShowSettings(); return; }
             int i = HitItem(e.Location);
