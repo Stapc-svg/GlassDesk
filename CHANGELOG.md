@@ -1,5 +1,12 @@
 # Changelog
 
+## Linux 1.9.2
+
+- **All your apps in search:** the search window lists every app in your app menu, not only your desktop. Filter with **All**, **Desktop** and **Apps**.
+- **Drag apps onto fences:** drag an app from search onto a fence to put a launcher for it there (the app itself is never moved).
+- **Blurrier search** window.
+- Switching tabs in a stack: the highlight glides, the content rises up into place, and switching one stack no longer breaks the others.
+
 ## Linux 1.8.6
 
 Everything from GlassDesk 1.8 for Windows, now on Linux:

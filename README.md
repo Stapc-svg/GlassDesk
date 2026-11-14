@@ -5,7 +5,7 @@
 
 <p align="center">
   <a href="../../releases/tag/v1.8.6"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
-  <a href="../../releases/tag/v1.8.6_Linux"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
+  <a href="../../releases/tag/v1.9.2_Linux"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
   <a href="../../releases"><img src="https://img.shields.io/badge/Download-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android"></a>
 </p>
 

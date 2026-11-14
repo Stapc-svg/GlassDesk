@@ -471,6 +471,13 @@ class GlassDeskApp(Gtk.Application):
                         shutil.copytree(p, dst_path)
                     else:
                         src.copy(dst, Gio.FileCopyFlags.NONE, None, None, None)
+                    if dst_path.endswith(".desktop"):
+                        # an app dragged in from search: make the launcher runnable from the desktop
+                        os.chmod(dst_path, 0o755)
+                        try:
+                            Gio.File.new_for_path(dst_path).set_attribute_string("metadata::trusted", "true", Gio.FileQueryInfoFlags.NONE, None)
+                        except Exception:
+                            pass
                 else:
                     src.move(dst, Gio.FileCopyFlags.NONE, None, None, None)
             except Exception as e:
@@ -949,7 +956,7 @@ menu separator {{ background-color: {line}; margin: 4px 6px; }}
     def _shot_forms(self, out):
         from .forms import Launcher, WelcomeWindow, OrganizeWindow
         l = Launcher(self)
-        l.items = sorted(self.organizer.all_items(), key=lambda it: it.name.lower())
+        l.load_items()
         l.set_query("")
         l.render_png(os.path.join(out, "launcher.png"), (610, 230))
         l.set_query("12*(3+4)")

@@ -8,7 +8,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import GLib, Gio, Gtk, Gdk, GdkPixbuf
 
-VERSION = "1.8.6"
+VERSION = "1.9.2"
 REPO = "Stapc-svg/GlassDesk"
 APP_ID = "app.glassdesk.GlassDesk"
 

@@ -1,7 +1,7 @@
 """Glass windows drawn in your theme: the search launcher, the welcome screen and "Organize desktop"."""
 import math, os, re, webbrowser
 import cairo
-from gi.repository import Gtk, Gdk, GLib, Pango, PangoCairo
+from gi.repository import Gtk, Gdk, GLib, Gio, Pango, PangoCairo
 
 from . import core
 from .glass import Backdrop, text, fill_round, rounded, with_alpha
@@ -37,6 +37,7 @@ class GlassForm(Gtk.Window):
         self.mouse = (-1, -1)
         self.hits = []          # [(x, y, w, h, callback)] made while painting
         self.fixed_pos = None   # (x, y) of the window on screen, for screenshots
+        self.full_blur = False
 
     @property
     def T(self):
@@ -70,7 +71,7 @@ class GlassForm(Gtk.Window):
             disp = Gdk.Display.get_default()
             mon = disp.get_primary_monitor() or disp.get_monitor(0)
             g = mon.get_geometry()
-            pb = Backdrop.get(g.width, g.height, "acrylic" if T.acrylic else "frosted")
+            pb = Backdrop.get(g.width, g.height, "acrylic" if (T.acrylic or self.full_blur) else "frosted")
             if pb is not None:
                 x, y = self.fixed_pos or self.get_position()
                 Gdk.cairo_set_source_pixbuf(cr, pb, -(x - g.x), -(y - g.y))
@@ -79,7 +80,8 @@ class GlassForm(Gtk.Window):
         if not drew:
             cr.set_source_rgb(*T.ui_bg)
             cr.paint()
-        a = 1.0 if T.solid else max(0.65 if T.dark else 0.6, T.tint_top[3])
+        a = 1.0 if T.solid else (max(0.53 if T.dark else 0.49, min(0.78, T.tint_top[3])) if self.full_blur
+                                 else max(0.65 if T.dark else 0.6, T.tint_top[3]))
         g = cairo.LinearGradient(0, 0, 0, h)
         g.add_color_stop_rgba(0, *(T.tint_top[:3] + (a,)))
         g.add_color_stop_rgba(1, *(T.tint_bottom[:3] + (a,)))
@@ -268,6 +270,15 @@ class Launcher(GlassForm):
         self.sel = 0
         self.scroll = 0
         self.caret = True
+        self.full_blur = True
+        self.apps = set()
+        self.filter = 0                 # 0 everything, 1 desktop, 2 apps
+        self.dragging = False
+        self._press_item = None
+        self._dragged = None
+        self.connect("drag-data-get", self._drag_get)
+        self.connect("drag-end", self._drag_end)
+        self.connect("drag-failed", lambda *a: (setattr(self, "_drop_failed", True), False)[1])
         self._had_focus = False
         self.connect("focus-in-event", lambda *a: setattr(self, "_had_focus", True))
         self.connect("focus-out-event", self._focus_out)
@@ -276,7 +287,7 @@ class Launcher(GlassForm):
 
     def _focus_out(self, *a):
         # close when you click somewhere else, but not in the moment it opens (the window manager may bounce focus)
-        if self._had_focus and GLib.get_monotonic_time() / 1e6 - getattr(self, "_opened", 0) > 0.6:
+        if not self.dragging and self._had_focus and GLib.get_monotonic_time() / 1e6 - getattr(self, "_opened", 0) > 0.6:
             self.finish()
         return False
 
@@ -285,10 +296,41 @@ class Launcher(GlassForm):
         self.queue_draw()
         return True
 
+    @staticmethod
+    def installed_apps():
+        """Every app in your app menu (its .desktop file), the same list your desktop's menu shows."""
+        from .fences import Item
+        out = []
+        try:
+            infos = Gio.AppInfo.get_all()
+        except Exception:
+            infos = []
+        for info in infos:
+            try:
+                if not info.should_show():
+                    continue
+                fn = info.get_filename() if hasattr(info, "get_filename") else None
+                if fn and os.path.exists(fn):
+                    out.append(Item(fn))
+            except Exception:
+                continue
+        return out
+
+    def load_items(self):
+        items = sorted(self.app.organizer.all_items(), key=lambda it: it.name.lower())
+        names = {it.name.lower() for it in items}
+        apps = []
+        for it in sorted(self.installed_apps(), key=lambda it: it.name.lower()):
+            if it.name.lower() not in names:
+                names.add(it.name.lower())
+                apps.append(it)
+        self.apps = set(apps)
+        self.counts = (len(items) + len(apps), len(items), len(apps))
+        self.all_items = items + apps
+        self.items = self.all_items
+
     def open(self):
-        items = self.app.organizer.all_items()
-        items.sort(key=lambda it: it.name.lower())
-        self.items = items
+        self.load_items()
         self.set_query("")
         self._opened = GLib.get_monotonic_time() / 1e6
         self.show_all()
@@ -297,6 +339,11 @@ class Launcher(GlassForm):
     def finish(self):
         self.hide()
         GLib.idle_add(lambda: (self.destroy(), False)[1])
+
+    def set_filter(self, f):
+        self.filter = f
+        self.items = [i for i in self.all_items if f == 0 or (f == 2) == (i in self.apps)]
+        self.set_query(self.query)
 
     def set_query(self, q):
         self.query = q
@@ -394,7 +441,7 @@ class Launcher(GlassForm):
         if self.query:
             tw, _th = text(cr, self.query, tx, sy, kx - tx - self.s(10), size=self.s(12.5), color=tc, h=sh, valign="middle")
         else:
-            text(cr, "Search your desktop…", tx, sy, kx - tx - self.s(10), size=self.s(12.5), color=sc, h=sh, valign="middle")
+            text(cr, "Search your desktop and apps…", tx, sy, kx - tx - self.s(10), size=self.s(12.5), color=sc, h=sh, valign="middle")
             tw = 0
         if self.caret:
             cx = min(kx - self.s(10), tx + tw + self.s(2))
@@ -467,14 +514,95 @@ class Launcher(GlassForm):
         cr.rectangle(self.pad(), ft, self.W - 2 * self.pad(), 1)
         cr.set_source_rgba(*((1, 1, 1, 0.1) if T.dark else (0, 0, 0, 0.07)))
         cr.fill()
-        n = len(self.shown)
-        text(cr, "%d %s   ·   Enter to open   ·   Shift + Enter to show in folder" % (n, "item" if n == 1 else "items"),
-             self.pad() + self.s(4), ft, self.W / 2 + self.s(80), size=self.s(8.8), color=sc, h=self.H - ft, valign="middle")
+        # filter chips: everything / desktop / installed apps
+        counts = getattr(self, "counts", (len(self.items), len(self.items), 0))
+        cx = self.pad()
+        ch = self.s(30)
+        cy = ft + (self.H - ft - ch) / 2
+        for i, label in enumerate(("All", "Desktop", "Apps")):
+            lab = "%s  %d" % (label, counts[i])
+            cw = self.s(16) + len(lab) * self.s(7.2)
+            if i == self.filter:
+                self.accent_fill(cr, cx, cy, cw, ch, ch / 2, 0.85)
+            else:
+                self.chip(cr, cx, cy, cw, ch, ch / 2, self.hot(cx, cy, cw, ch))
+            text(cr, lab, cx, cy, cw, size=self.s(8.8), color=(1, 1, 1, 1) if i == self.filter else tc, align="center", h=ch, valign="middle")
+            self.hit(cx, cy, cw, ch, lambda i=i: self.set_filter(i))
+            cx += cw + self.s(6)
+        text(cr, "Drag an app onto a fence to add it", cx + self.s(8), ft, self.W - cx - self.s(170), size=self.s(8.8), color=sc,
+             h=self.H - ft, valign="middle")
         bw, bh = self.s(140), self.s(34)
         bx, by = self.W - self.pad() - bw, ft + (self.H - ft - bh) / 2
         self.chip(cr, bx, by, bw, bh, self.s(9), self.hot(bx, by, bw, bh))
         text(cr, "⚙  Open Settings", bx, by, bw, size=self.s(9.4), color=tc, align="center", h=bh, valign="middle")
         self.hit(bx, by, bw, bh, lambda: (self.finish(), self.app.show_settings()))
+
+    # ---- drag an app or file out onto a fence
+    def _item_at(self, x, y):
+        gx, gy, gw, gh = self.grid_rect()
+        if not (gx <= x < gx + gw and gy <= y < gy + gh):
+            return None
+        cw, ch = self.cell()
+        c, r = int((x - gx) // cw), int((y - gy + self.scroll) // ch)
+        i = r * self.COLS + c
+        return self.shown[i] if 0 <= c < self.COLS and 0 <= i < len(self.shown) else None
+
+    def _press(self, w, e):
+        if e.button == 1 and e.type == Gdk.EventType.BUTTON_PRESS:
+            self._press_item = self._item_at(e.x, e.y)
+            self._press_at = (e.x, e.y)
+        return super()._press(w, e)
+
+    def _motion(self, w, e):
+        it = self._press_item
+        if it is not None and not self.dragging and e.state & Gdk.ModifierType.BUTTON1_MASK and \
+                (abs(e.x - self._press_at[0]) > 6 or abs(e.y - self._press_at[1]) > 6):
+            self._start_drag(it, e)
+            return True
+        return super()._motion(w, e)
+
+    def _start_drag(self, it, e):
+        self.dragging = True
+        self._dragged = it
+        self._drop_failed = False
+        tl = Gtk.TargetList.new([Gtk.TargetEntry.new("text/uri-list", 0, 0)])
+        # apps are always copied (a shortcut on your desktop), never moved
+        acts = Gdk.DragAction.COPY if it in self.apps else Gdk.DragAction.COPY | Gdk.DragAction.LINK
+        ctx = self.drag_begin_with_coordinates(tl, acts, 1, e, int(e.x), int(e.y))
+        pb = it.icon(int(self.s(48)))
+        if pb is not None and ctx is not None:
+            Gtk.drag_set_icon_pixbuf(ctx, pb, pb.get_width() // 2, pb.get_height() // 2)
+        # see-through and click-through while you drag, so you can see and reach your fences
+        self.set_opacity(0.25)
+        try:
+            import cairo as _c
+            self.input_shape_combine_region(_c.Region())
+        except Exception:
+            pass
+
+    def _drag_get(self, _w, ctx, data, info, t):
+        if self._dragged is not None:
+            data.set_uris([Gio.File.new_for_path(self._dragged.path).get_uri()])
+
+    def _drag_end(self, *a):
+        self.dragging = False
+        self._press_item = None
+        if not getattr(self, "_drop_failed", False):
+            self.finish()
+            return
+        self.set_opacity(1)
+        try:
+            self.input_shape_combine_region(None)
+        except Exception:
+            pass
+        self.present()
+
+    def _release(self, w, e):
+        it = self._press_item
+        self._press_item = None
+        if it is None and self._item_at(e.x, e.y) is not None:
+            return True      # the mouse went down somewhere else
+        return super()._release(w, e)
 
     def open_item(self, it, reveal=False):
         if reveal:

@@ -12,9 +12,9 @@ Pick one:
 
 | Your Linux | Download | How |
 |---|---|---|
-| Ubuntu, Mint, Debian, Pop!_OS, Zorin | `glassdesk_1.8.6_all.deb` | Double-click it, or `sudo apt install ./glassdesk_1.8.6_all.deb` |
-| Any distro (one file) | `GlassDesk-1.8.6-x86_64.AppImage` | Right-click → Properties → *Allow executing*, then double-click. Or `chmod +x GlassDesk-*.AppImage && ./GlassDesk-*.AppImage` |
-| Fedora, Arch, openSUSE, others | `GlassDesk-1.8.6-linux.tar.gz` | Unzip it, open a terminal in the folder, run `./install.sh` |
+| Ubuntu, Mint, Debian, Pop!_OS, Zorin | `glassdesk_1.9.2_all.deb` | Double-click it, or `sudo apt install ./glassdesk_1.9.2_all.deb` |
+| Any distro (one file) | `GlassDesk-1.9.2-x86_64.AppImage` | Right-click → Properties → *Allow executing*, then double-click. Or `chmod +x GlassDesk-*.AppImage && ./GlassDesk-*.AppImage` |
+| Fedora, Arch, openSUSE, others | `GlassDesk-1.9.2-linux.tar.gz` | Unzip it, open a terminal in the folder, run `./install.sh` |
 
 GlassDesk uses Python 3 with GTK 3, which almost every Linux desktop already has. If yours doesn't, the app tells you the one command to run:
 

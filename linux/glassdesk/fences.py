@@ -532,7 +532,7 @@ class Fence(GlassWindow):
                 paths.append(p)
         if not paths:
             return
-        copy = ctx.get_selected_action() == Gdk.DragAction.COPY
+        copy = ctx.get_selected_action() == Gdk.DragAction.COPY or not (ctx.get_actions() & Gdk.DragAction.MOVE)
         i = self.item_at(x, y)
         target = self.tiles[i] if i is not None and not getattr(self.tiles[i], "is_stack", False) else None
         if target is not None and target.is_dir and target.path not in paths:
