@@ -212,12 +212,16 @@ class GlassDeskApp(Gtk.Application):
         self.show_hide()
 
     def show_hide(self):
+        # show first, hide after: switching inside a stack never leaves a gap
+        hide = []
         for win in self.all_windows():
             win.apply_size()
             if win.wanted and self.visible_all:
                 win.show_all()
             else:
-                win.hide()
+                hide.append(win)
+        for win in hide:
+            win.hide()
 
     def all_windows(self):
         return list(self.fences.values()) + list(self.widgets.values())
@@ -811,12 +815,12 @@ menu separator {{ background-color: {line}; margin: 4px 6px; }}
         self.settings.save()
         for k in live:
             self.window_by_key(k).wanted = True
+        nxt = self.window_by_key(key)
+        if nxt:
+            nxt.play_enter(d, win.key)       # start before it shows, so the first frame is the first picture
         self.apply_groups()
         self.place_all()
         self.show_hide()
-        nxt = self.window_by_key(key)
-        if nxt:
-            nxt.play_enter(d)
 
     def join_group(self, win, target):
         mine = self.group_of(win.key)

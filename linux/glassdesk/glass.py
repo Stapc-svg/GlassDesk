@@ -269,7 +269,7 @@ class GlassWindow(Gtk.Window):
                 self.paint(cr)
             else:
                 # switching inside a stack: the new content slides in and fades up
-                e = 1 - (1 - t) ** 3
+                e = 1 - (1 - t) ** 4
                 top = self.anim_top()
                 cr.save()
                 cr.rectangle(x, y, w, top - y)
@@ -298,18 +298,19 @@ class GlassWindow(Gtk.Window):
     def _anim_progress(self):
         if not self._anim:
             return 1
-        t = (GLib.get_monotonic_time() / 1e6 - self._anim[0]) / 0.26
+        t = (GLib.get_monotonic_time() / 1e6 - self._anim[0]) / 0.32
         if t >= 1:
             self._anim = None
             return 1
         return t
 
-    def play_enter(self, direction):
-        self._anim = (GLib.get_monotonic_time() / 1e6, 1 if direction >= 0 else -1)
-        def tick():
+    def play_enter(self, direction, came_from=None):
+        self._anim = (GLib.get_monotonic_time() / 1e6, 1 if direction >= 0 else -1, came_from)
+        def tick(clock):
             self.queue_draw()
             return self._anim is not None
-        GLib.timeout_add(15, tick)
+        # redraw in step with the screen's refresh, not on a fixed timer: no stutter
+        self.add_tick_callback(lambda w, clock: tick(clock))
 
     def draw_tabs(self, cr, x, y, w, h):
         """One tab per panel in this stack; returns False when it isn't stacked."""
@@ -332,17 +333,27 @@ class GlassWindow(Gtk.Window):
         want = sum(sizes) + T.s(6) * len(sizes)
         k = min(1.0, w / want) if want > 0 else 1
         cx = x
+        cur_r = from_r = None
+        came = self._anim[2] if self._anim else None
         for (key, name), tw in zip(members, sizes):
             tw *= k
-            cur = key == self.key
-            if cur:
-                fill_round(cr, cx, ty, tw, th, th / 2, with_alpha(T.accent, 0.42 if T.dark else 0.32))
-            else:
-                fill_round(cr, cx, ty, tw, th, th / 2, T.hover)
-            text(cr, name, cx + T.s(6), ty, tw - T.s(12), size=T.s(9.4), bold=True, color=T.text if cur else T.sub,
-                 align="center", h=th, valign="middle")
+            fill_round(cr, cx, ty, tw, th, th / 2, T.hover)
+            if key == self.key:
+                cur_r = (cx, tw)
+            if key == came:
+                from_r = (cx, tw)
             self.tab_rects.append(((cx, ty, tw, th), key))
             cx += tw + T.s(6) * k
+        # the highlight glides from the tab you came from to the one you picked
+        if cur_r:
+            t = self._anim_progress()
+            if t < 1 and from_r:
+                e = 1 - (1 - t) ** 4
+                cur_r = (from_r[0] + (cur_r[0] - from_r[0]) * e, from_r[1] + (cur_r[1] - from_r[1]) * e)
+            fill_round(cr, cur_r[0], ty, cur_r[1], th, th / 2, with_alpha(T.accent, 0.42 if T.dark else 0.32))
+        for ((tx, tyy, tw, thh), key), (k2, name) in zip(self.tab_rects, members):
+            text(cr, name, tx + T.s(6), tyy, tw - T.s(12), size=T.s(9.4), bold=True,
+                 color=T.text if key == self.key else T.sub, align="center", h=thh, valign="middle")
         return True
 
     def paint_overlay(self, cr):
