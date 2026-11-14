@@ -66,4 +66,4 @@ modules:
     sources:
       - type: git
         url: https://github.com/Stapc-svg/GlassDesk.git
-        commit: 58efe4f6d394792580a98a662eff5b27b7ad41fb
+        commit: 4adcadbb446e544eb4cf47739f0bc4b23f96f49d
