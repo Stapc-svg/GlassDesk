@@ -279,7 +279,7 @@ class GlassWindow(Gtk.Window):
                 cr.save()
                 cr.rectangle(x, top, w, y + h - top)
                 cr.clip()
-                cr.translate(self._anim[1] * (1 - e) * self.T.s(46), 0)
+                cr.translate(0, (1 - e) * self.T.s(28))     # the new content rises up into place
                 cr.push_group()
                 self.paint(cr)
                 cr.pop_group_to_source()
