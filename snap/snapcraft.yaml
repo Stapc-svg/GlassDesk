@@ -1,6 +1,6 @@
 name: glassdesk
 base: core22
-version: '1.9.2'
+adopt-info: glassdesk
 summary: Glass desktop organizer with fences and widgets
 description: |
   GlassDesk sorts the files on your desktop into frosted-glass fences
@@ -42,6 +42,9 @@ parts:
   glassdesk:
     plugin: dump
     source: linux
+    override-pull: |
+      craftctl default
+      craftctl set version="$(sed -n 's/^VERSION = "\(.*\)"/\1/p' glassdesk/core.py)"
     organize:
       glassdesk: lib/glassdesk/glassdesk
     stage:
