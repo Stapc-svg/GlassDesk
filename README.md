@@ -7,10 +7,11 @@
   <a href="../../releases/tag/v1.8.6"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
   <a href="../../releases/tag/v1.9.2_Linux"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
   <a href="../../releases"><img src="https://img.shields.io/badge/Download-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android"></a>
+  <a href="https://snapcraft.io/glassdesk"><img src="https://img.shields.io/badge/Get%20it%20on-Snap%20Store-E95420?style=for-the-badge&logo=snapcraft&logoColor=white" alt="Get it on the Snap Store"></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.8.6-7C9CFF" alt="Version 1.8.6">
+  <img src="https://img.shields.io/badge/version-1.9.2-7C9CFF" alt="Version 1.9.2">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/Linux-beta-FCC624" alt="Linux beta">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84" alt="Android 8+">
