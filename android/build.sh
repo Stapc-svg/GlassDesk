@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 ANDROID_JAR=${ANDROID_JAR:-sdk/android.jar}
-VER=1.7.2
+VER=$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml)
 OUT=build
 rm -rf $OUT/desk $OUT/gen $OUT/classes $OUT/*.apk $OUT/classes.dex
 mkdir -p $OUT/desk $OUT/gen $OUT/classes $OUT/sc
@@ -31,6 +31,7 @@ echo "== package"
 cp $OUT/res.apk $OUT/unsigned.apk
 (cd $OUT && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f -p 4 $OUT/unsigned.apk $OUT/aligned.apk
+if [ "${UNSIGNED:-}" = 1 ]; then cp $OUT/aligned.apk $OUT/GlassDesk-Android-$VER-unsigned.apk; ls -la $OUT/*-unsigned.apk; exit 0; fi
 if [ ! -f keystore/glassdesk.jks ]; then
   mkdir -p keystore
   keytool -genkeypair -keystore keystore/glassdesk.jks -alias glassdesk -keyalg RSA -keysize 2048 -validity 10000 \

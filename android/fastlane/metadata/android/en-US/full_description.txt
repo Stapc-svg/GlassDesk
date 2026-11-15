@@ -1,0 +1,17 @@
+GlassDesk brings frosted-glass widgets to your Android home screen, matching the GlassDesk desktop organizer for Windows and Linux.
+
+Widgets:
+• Fences – group your favourite apps in a glass box
+• Clock – big, clean time and date
+• Weather – current conditions for your city
+• Calendar
+• Notes and To-do list
+• Countdown to an event
+• System info
+• Daily quote
+
+Features:
+• Many glass themes, light and dark
+• Resizable widgets that adapt to their size
+• No ads, no tracking, no account
+• Free and open source (MIT)
