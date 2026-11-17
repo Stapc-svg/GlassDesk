@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.3
+
+- **Weather works with "City, Country":** typing "Tel Aviv, Israel" or "Paris France" now finds the place (before, only the plain city name worked).
+- **Weather recovers by itself:** if there's no internet when the PC starts, the widget tries again every minute instead of waiting 30 minutes. Weather in a stack keeps updating too.
+- **Softer theme previews:** the bars in the theme cards are see-through glass instead of bright white.
+
 ## 1.9.2
 
 - Fixed: switching tabs in one stack made every other stack lose its tabs and come apart.

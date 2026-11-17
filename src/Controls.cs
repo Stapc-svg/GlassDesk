@@ -226,8 +226,8 @@ namespace GlassDesk
                     Color ink = L.Id == "paper" && !d ? Color.FromArgb(46, 40, 32) : d ? Color.FromArgb(240, 244, 246, 252) : Color.FromArgb(230, 18, 20, 28);
                     float px = pr.X + pr.Width * 0.12f, lh = pr.Height * 0.12f;
                     using (var b = new SolidBrush(L.Accent)) g.FillEllipse(b, px, pr.Y + pr.Height * 0.16f, lh, lh);
-                    Gfx.FillRound(g, Color.FromArgb(150, ink), new RectangleF(px + lh * 1.6f, pr.Y + pr.Height * 0.16f + lh * 0.15f, pr.Width * 0.38f, lh * 0.7f), lh * 0.35f);
-                    Gfx.FillRound(g, Color.FromArgb(230, ink), new RectangleF(px, pr.Y + pr.Height * 0.42f, pr.Width * 0.5f, lh * 1.25f), lh * 0.4f);
+                    Gfx.FillRound(g, Color.FromArgb(d ? 70 : 90, ink), new RectangleF(px + lh * 1.6f, pr.Y + pr.Height * 0.16f + lh * 0.15f, pr.Width * 0.38f, lh * 0.7f), lh * 0.35f);
+                    Gfx.FillRound(g, Color.FromArgb(d ? 105 : 130, ink), new RectangleF(px, pr.Y + pr.Height * 0.42f, pr.Width * 0.5f, lh * 1.25f), lh * 0.4f);
                     Gfx.FillRound(g, Color.FromArgb(d ? 40 : 30, ink), new RectangleF(px, pr.Y + pr.Height * 0.72f, pr.Width * 0.76f, lh * 0.55f), lh * 0.3f);
                     Gfx.FillRound(g, L.Accent, new RectangleF(px, pr.Y + pr.Height * 0.72f, pr.Width * 0.46f, lh * 0.55f), lh * 0.3f);
                     if (L.Neon)

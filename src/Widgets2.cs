@@ -19,6 +19,7 @@ namespace GlassDesk
         readonly List<Day> days = new List<Day>();
         string status = "";              // shown instead of the weather when something is missing
         bool busy;
+        DateTime lastOk = DateTime.MinValue;
         System.Windows.Forms.Timer refresh;
 
         public WeatherWidget(App app) : base(app, "weather") { }
@@ -27,8 +28,15 @@ namespace GlassDesk
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            refresh = new System.Windows.Forms.Timer { Interval = 30 * 60 * 1000 };   // every 30 minutes
-            refresh.Tick += delegate { if (Visible && !App.Paused) Fetch(); };
+            // check every minute: fetch when the data is 30+ minutes old, or retry 1 minute after an error
+            // (e.g. the PC started before Wi-Fi connected). Hidden widgets (in a stack) still update.
+            refresh = new System.Windows.Forms.Timer { Interval = 60 * 1000 };
+            refresh.Tick += delegate
+            {
+                if (App.Paused) return;
+                if (status.Length > 0 && !status.StartsWith("Couldn") && !string.IsNullOrEmpty(Cfg.WeatherCity)) Fetch();
+                else if ((DateTime.Now - lastOk).TotalMinutes >= 30) Fetch();
+            };
             refresh.Start();
             Fetch();
         }
@@ -58,10 +66,8 @@ namespace GlassDesk
                 {
                     if (double.IsNaN(lat))
                     {
-                        var g = Http.GetJson("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=" + Uri.EscapeDataString(city));
-                        var results = Json.Arr(g, "results");
-                        if (results == null || results.Count == 0) throw new Exception("NOTFOUND");
-                        var r0 = (Dictionary<string, object>)results[0];
+                        var r0 = FindCity(city);
+                        if (r0 == null) throw new Exception("NOTFOUND");
                         lat = Json.Num(r0, "latitude"); lon = Json.Num(r0, "longitude");
                         place = Json.Str(r0, "name") + (Json.Str(r0, "country") != "" ? ", " + Json.Str(r0, "country") : "");
                     }
@@ -69,7 +75,7 @@ namespace GlassDesk
                         "https://api.open-meteo.com/v1/forecast?latitude={0}&longitude={1}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4{2}",
                         lat, lon, f ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : ""));
                 }
-                catch (Exception ex) { err = ex.Message == "NOTFOUND" ? "Couldn't find \"" + city + "\". Double-click to try another city." : "Can't reach the weather service right now"; }
+                catch (Exception ex) { err = ex.Message == "NOTFOUND" ? "Couldn't find \"" + city + "\". Double-click to try another city." : "Can't reach the weather service – trying again in a minute"; }
                 try
                 {
                     BeginInvoke(new Action(delegate
@@ -82,6 +88,36 @@ namespace GlassDesk
                 }
                 catch { busy = false; }
             });
+        }
+
+        /// <summary>Open-Meteo only understands a plain place name, so "Tel Aviv, Israel" or "Paris France"
+        /// finds nothing. Try the full text first, then the part before the comma (or first words),
+        /// preferring a result whose country/region matches the rest.</summary>
+        static Dictionary<string, object> FindCity(string text)
+        {
+            var tries = new List<KeyValuePair<string, string>>();
+            text = text.Trim();
+            tries.Add(new KeyValuePair<string, string>(text, ""));
+            int comma = text.IndexOf(',');
+            if (comma > 0) tries.Add(new KeyValuePair<string, string>(text.Substring(0, comma).Trim(), text.Substring(comma + 1).Trim()));
+            var words = text.Replace(",", " ").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int n = words.Length - 1; n >= 1; n--)
+                tries.Add(new KeyValuePair<string, string>(string.Join(" ", words, 0, n), string.Join(" ", words, n, words.Length - n)));
+            foreach (var t in tries)
+            {
+                if (t.Key.Length < 2) continue;
+                var g = Http.GetJson("https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&name=" + Uri.EscapeDataString(t.Key));
+                var results = Json.Arr(g, "results");
+                if (results == null || results.Count == 0) continue;
+                if (t.Value.Length > 0)
+                    foreach (Dictionary<string, object> r in results)
+                    {
+                        string where = (Json.Str(r, "country") + " " + Json.Str(r, "country_code") + " " + Json.Str(r, "admin1")).ToLowerInvariant();
+                        if (where.Contains(t.Value.ToLowerInvariant())) return r;
+                    }
+                return (Dictionary<string, object>)results[0];
+            }
+            return null;
         }
 
         void Apply(Dictionary<string, object> j)
@@ -97,7 +133,7 @@ namespace GlassDesk
                 var t = Json.Arr(d, "time"); var mx = Json.Arr(d, "temperature_2m_max"); var mn = Json.Arr(d, "temperature_2m_min"); var c = Json.Arr(d, "weather_code");
                 for (int i = 0; t != null && i < t.Count && i < 4; i++)
                     days.Add(new Day { Date = DateTime.ParseExact((string)t[i], "yyyy-MM-dd", CultureInfo.InvariantCulture), Max = Convert.ToDouble(mx[i]), Min = Convert.ToDouble(mn[i]), Code = Convert.ToInt32(c[i]) });
-                status = "";
+                status = ""; lastOk = DateTime.Now;
             }
             catch { status = "The weather service sent something unexpected"; }
             Redraw();
