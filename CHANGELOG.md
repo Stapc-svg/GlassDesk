@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.10
+
+- **New Clipboard widget:** shows the last things you copied (links, colors, file paths and text, each with a little colored mark). Click one to copy it again. It's kept in memory only, never saved to disk, and copies from password managers are skipped. Right-click to pause it or clear the history.
+
 ## 1.9.9
 
 - **Smooth fade-in:** panels and widgets fade in gently, one after another, instead of popping up.
