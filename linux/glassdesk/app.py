@@ -149,7 +149,7 @@ class GlassDeskApp(Gtk.Application):
     def make_widgets(self):
         self.widgets = {cls.SETTING: cls(self) for cls in W.ALL}
         if core.PREVIEW:
-            self._fixed_now = datetime.datetime(2026, 10, 22, 9, 41)
+            self._fixed_now = datetime.datetime(2026, 10, 22, int(os.environ.get("GLASSDESK_PREVIEW_HOUR", "9")), 41)
             for wd in self.widgets.values():
                 for fn in ("sample", "set_sample"):
                     if hasattr(wd, fn):
@@ -375,21 +375,35 @@ class GlassDeskApp(Gtk.Application):
                 if manual:
                     self.message("Couldn't check for updates", "GitHub couldn't be reached. Try again later.")
                 return
-            tag = (j.get("tag_name") or "").lstrip("vV")
+            # look through recent releases (the newest one may be the Windows or Android release) and take the
+            # newest that has a Linux download; its version comes from the file name, e.g. glassdesk_1.9.8_all.deb
+            import re
             def ver(s):
                 try:
                     return tuple(int(p) for p in s.split("."))
                 except Exception:
                     return (0,)
-            if ver(tag) > ver(core.VERSION):
+            best = None
+            for r in (j if isinstance(j, list) else [j]):
+                if r.get("draft") or r.get("prerelease"):
+                    continue
+                for a in r.get("assets", []):
+                    n = a.get("name", "")
+                    if not re.search(r"\.(deb|AppImage|tar\.gz)$", n):
+                        continue
+                    m = re.search(r"(\d+\.\d+(?:\.\d+)?)", n) or re.search(r"(\d+\.\d+(?:\.\d+)?)", r.get("tag_name", ""))
+                    if m and (best is None or ver(m.group(1)) > ver(best[0])):
+                        best = (m.group(1), r.get("html_url") or "https://github.com/%s/releases" % core.REPO)
+            tag = best[0] if best else ""
+            if best and ver(tag) > ver(core.VERSION):
                 core.notify("GlassDesk %s is available" % tag, "Open Settings → About to download it.")
-                self.update_available = (tag, j.get("html_url") or "https://github.com/%s/releases" % core.REPO)
+                self.update_available = (tag, best[1])
                 if manual:
                     if self.confirm("GlassDesk %s is available" % tag, "Open the download page?"):
                         core.open_path(self.update_available[1])
             elif manual:
                 self.message("You're up to date", "GlassDesk %s is the newest version." % core.VERSION)
-        core.in_background(lambda: core.http_json("https://api.github.com/repos/%s/releases/latest" % core.REPO), done)
+        core.in_background(lambda: core.http_json("https://api.github.com/repos/%s/releases?per_page=30" % core.REPO), done)
 
     # ------------------------------------------------------------ tray + keys
     def make_tray(self):

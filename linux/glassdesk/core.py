@@ -8,7 +8,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import GLib, Gio, Gtk, Gdk, GdkPixbuf
 
-VERSION = "1.9.2"
+VERSION = "1.9.8"
 REPO = "Stapc-svg/GlassDesk"
 APP_ID = "app.glassdesk.GlassDesk"
 
@@ -55,7 +55,7 @@ DEFAULTS = {
     "show_quote": True, "show_github": True, "show_network": True, "show_focus": True,
     "note_text": "Double-click to write a note.",
     "todo": [["Try GlassDesk on Linux", False], ["Drag a file into a fence", False]],
-    "weather_city": "", "weather_lat": None, "weather_lon": None, "weather_units": "c",
+    "weather_city": "", "weather_lat": None, "weather_lon": None, "weather_units": "c", "weather_city_found": "", "weather_scene": True, "clock_style": "photo",
     "photo_folder": "", "photo_interval": 60,
     "countdown_title": "New Year", "countdown_date": "",
     "github_user": "",
