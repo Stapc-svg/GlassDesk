@@ -106,6 +106,52 @@ namespace GlassDesk
         public ClockWidget(App app) : base(app, "clock") { }
         protected override Size BaseSize { get { return new Size(320, 150); } }
 
+        static readonly System.Collections.Generic.Dictionary<string, Bitmap> photos = new System.Collections.Generic.Dictionary<string, Bitmap>();
+        static Bitmap Photo(string name)
+        {
+            Bitmap b;
+            if (photos.TryGetValue(name, out b)) return b;
+            try
+            {
+                using (var st = typeof(ClockWidget).Assembly.GetManifestResourceStream("GlassDesk.scene." + name + ".jpg"))
+                    b = st == null ? null : new Bitmap(st);
+            }
+            catch { b = null; }
+            photos[name] = b;
+            return b;
+        }
+
+        /// <summary>A free (CC0) photo behind the clock that matches the time of day.</summary>
+        bool PaintPhoto(Graphics g, DateTime now)
+        {
+            int h = now.Hour;
+            string name = h >= 5 && h < 10 ? "morning" : h >= 10 && h < 17 ? "day" : h >= 17 && h < 20 ? "sunset" : "night";
+            var img = Photo(name);
+            if (img == null) return false;
+            int t = TabH;
+            var pr = new RectangleF(Panel.X + 1, Panel.Y + 1 + t, Panel.Width - 2, Panel.Height - 2 - t);
+            if (pr.Width < 10 || pr.Height < 10) return true;
+            var st = g.Save();
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var clip = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+            {
+                g.SetClip(clip, CombineMode.Intersect);
+                // cover-crop: fill the panel, keep the picture's middle
+                float sc = Math.Max(pr.Width / img.Width, pr.Height / img.Height);
+                float sw = pr.Width / sc, sh = pr.Height / sc;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.DrawImage(img, pr, new RectangleF((img.Width - sw) / 2, (img.Height - sh) / 2, sw, sh), GraphicsUnit.Pixel);
+                // shade top and bottom so the text stays readable on any photo
+                using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(90, 0, 0, 0), Color.FromArgb(130, 0, 0, 0)))
+                {
+                    lg.InterpolationColors = new ColorBlend { Colors = new[] { Color.FromArgb(95, 0, 0, 0), Color.FromArgb(25, 0, 0, 0), Color.FromArgb(140, 0, 0, 0) }, Positions = new[] { 0f, 0.5f, 1f } };
+                    g.FillRectangle(lg, pr);
+                }
+            }
+            g.Restore(st);
+            return true;
+        }
+
         /// <summary>A little landscape behind the clock: the sky's colors, the sun or moon and the stars follow
         /// the real time of day; two layers of mountains sit at the bottom.</summary>
         void PaintScene(Graphics g, DateTime now)
@@ -195,8 +241,9 @@ namespace GlassDesk
         {
             DateTime now = App.Now;
             Rectangle r = Inner;
-            bool scene = Cfg.ClockScene;
-            if (scene) PaintScene(g, now);
+            bool scene = Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "drawn";
+            if (Cfg.ClockStyle == "photo") { if (!PaintPhoto(g, now)) PaintScene(g, now); }
+            else if (scene) PaintScene(g, now);
             string greet = now.Hour < 5 ? "Good night" : now.Hour < 12 ? "Good morning" : now.Hour < 18 ? "Good afternoon" : "Good evening";
             Color ink = scene ? Color.White : T.Text, sub = scene ? Color.FromArgb(225, 255, 255, 255) : T.SubText;
             Txt(g, greet, Gfx.F(T.FontName, T.Sf(13), FontStyle.Regular), sub, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Left);

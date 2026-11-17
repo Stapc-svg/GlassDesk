@@ -358,7 +358,10 @@ namespace GlassDesk
             Section("Clock");
             Row("Clock", "Time, date and a friendly greeting", Toggle(S.ShowClock, v => S.ShowClock = v));
             Row("Show seconds", "Updates every second (otherwise once a minute)", Toggle(S.ShowSeconds, v => S.ShowSeconds = v));
-            Row("Sky scene", "Sky, sun, moon and mountains behind the clock that change with the time of day", Toggle(S.ClockScene, v => S.ClockScene = v));
+            string[] cstyles = { "photo", "drawn", "off" };
+            var cs = new Segmented(P, k, new[] { "Photos", "Drawn sky", "Off" }, Math.Max(0, Array.IndexOf(cstyles, S.ClockStyle))) { Font = fSmall };
+            cs.SelectionChanged += delegate { S.ClockStyle = cstyles[cs.SelectedIndex]; S.Save(); app.ApplySettings(); };
+            Row("Clock background", "Changes with the time of day: morning, day, sunset and night", cs);
             Row("24-hour time", "Turn off for 12-hour time with AM / PM", Toggle(S.Clock24, v => S.Clock24 = v));
             Section("More widgets");
             Row("System monitor", "CPU, memory, disk and battery", Toggle(S.ShowSystem, v => S.ShowSystem = v));

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.7
+
+- **Photo backgrounds for the clock:** free public-domain (CC0) photos that change with the time of day: green hills in the morning, snowy mountains by day, a city sunset in the evening and city lights at night. Choose **Photos**, **Drawn sky** or **Off** in Settings › Widgets › Clock background. Photo credits: assets/scenes/CREDITS.md.
+
 ## 1.9.6
 
 - **New weather design:** city and today's high/low, a big glowing icon and temperature, glass chips for humidity, wind and chance of rain, a sunrise-to-sunset arc showing where the sun is now, and the next 5 hours.
