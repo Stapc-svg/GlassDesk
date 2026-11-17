@@ -1163,7 +1163,9 @@ from .music import MusicWidget, DayWidget
 NAMES = {"show_clock": "Clock", "show_system": "System", "show_calendar": "Calendar", "show_notes": "Notes",
          "show_todo": "To-do", "show_weather": "Weather", "show_photos": "Photos", "show_countdown": "Countdown",
          "show_quote": "Quote", "show_github": "GitHub", "show_network": "Network", "show_focus": "Focus",
-         "show_music": "Music", "show_day": "Today"}
+         "show_music": "Music", "show_day": "Today", "show_clip": "Clipboard"}
 
 ALL = [ClockWidget, SystemWidget, CalendarWidget, NotesWidget, TodoWidget, WeatherWidget, PhotoWidget,
        CountdownWidget, QuoteWidget, GitHubWidget, NetworkWidget, FocusWidget, MusicWidget, DayWidget]
+from .clip import ClipWidget
+ALL.append(ClipWidget)

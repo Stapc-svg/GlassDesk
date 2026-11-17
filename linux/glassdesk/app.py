@@ -251,7 +251,7 @@ class GlassDeskApp(Gtk.Application):
             colw = max(colw, pw)
         # widgets: columns from the right
         order = ["show_clock", "show_system", "show_calendar", "show_weather", "show_music", "show_day", "show_github", "show_focus",
-                 "show_network", "show_todo", "show_notes", "show_quote", "show_countdown", "show_photos"]
+                 "show_network", "show_todo", "show_clip", "show_notes", "show_quote", "show_countdown", "show_photos"]
         x, y, colw = wa.x + wa.width - gap, wa.y + gap, 0
         for key in order:
             wd = self.widgets[key]

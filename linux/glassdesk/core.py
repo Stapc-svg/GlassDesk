@@ -8,7 +8,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import GLib, Gio, Gtk, Gdk, GdkPixbuf
 
-VERSION = "1.9.9"
+VERSION = "1.9.10"
 REPO = "Stapc-svg/GlassDesk"
 APP_ID = "app.glassdesk.GlassDesk"
 
@@ -72,7 +72,7 @@ DEFAULTS = {
     "last_update_check": 0,
     # 1.8
     "look": "glassdesk",            # theme id (see LOOKS)
-    "show_music": True, "show_day": True,
+    "show_music": True, "show_day": True, "show_clip": True,
     "last_song": "", "last_artist": "",
     "stacks": True,                 # 4+ files of one type fold into a stack
     "per_display": True,            # a layout for each monitor setup

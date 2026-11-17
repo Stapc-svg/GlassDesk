@@ -1,5 +1,9 @@
 # Changelog
 
+## Linux 1.9.10
+
+- **New Clipboard widget:** the last things you copied; click one to copy it again. Memory only, never saved; copies marked private by password managers are skipped. Right-click to pause or clear.
+
 ## Linux 1.9.9
 
 - **Smooth fade-in** of panels and widgets, one after another; **fade-out** before hiding them all.

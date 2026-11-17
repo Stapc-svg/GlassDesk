@@ -383,7 +383,8 @@ class SettingsWindow(Gtk.Window):
                                ("show_network", "Network meter", "Live download and upload speed"),
                                ("show_focus", "Focus timer", "Pomodoro: focus, then a short break"),
                                ("show_music", "Music", "The song that's playing, or the last one you listened to"),
-                               ("show_day", "Today", "Rings for the day, week, month and year")):
+                               ("show_day", "Today", "Rings for the day, week, month and year"),
+                               ("show_clip", "Clipboard", "The last things you copied; click one to copy it again. Memory only, never saved")):
             self.row(name, sub, self.toggle(key))
         self.section("Stacks and sizes")
         self.row("Stack widgets", "Drag a widget onto another one, then click the tabs to switch. Fences stack the same way.", None)
