@@ -61,7 +61,8 @@ namespace GlassDesk
             string city = Cfg.WeatherCity; double lat = Cfg.WeatherLat, lon = Cfg.WeatherLon; bool f = Cfg.WeatherF;
             ThreadPool.QueueUserWorkItem(delegate
             {
-                string place = null, err = null; Dictionary<string, object> json = null;
+                string place = null, err = null; Dictionary<string, object> json = null, wttr = null;
+                bool notFound = false;
                 try
                 {
                     if (double.IsNaN(lat))
@@ -75,19 +76,96 @@ namespace GlassDesk
                         "https://api.open-meteo.com/v1/forecast?latitude={0}&longitude={1}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4{2}",
                         lat, lon, f ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : ""));
                 }
-                catch (Exception ex) { err = ex.Message == "NOTFOUND" ? "Couldn't find \"" + city + "\". Double-click to try another city." : "Can't reach the weather service – trying again in a minute"; }
+                catch (Exception ex)
+                {
+                    notFound = ex.Message == "NOTFOUND";
+                    Program.Log(new Exception("Weather (Open-Meteo) failed: " + ex.Message, ex));
+                    json = null;
+                }
+                // second weather service: wttr.in understands city names directly
+                if (json == null)
+                    try { wttr = Http.GetJson("https://wttr.in/" + Uri.EscapeDataString(city) + "?format=j1"); place = null; }
+                    catch (Exception ex2)
+                    {
+                        Program.Log(new Exception("Weather (wttr.in) failed: " + ex2.Message, ex2));
+                        err = notFound ? "Couldn't find \"" + city + "\". Double-click to try another city." : "Can't reach the weather service – trying again in a minute";
+                    }
                 try
                 {
                     BeginInvoke(new Action(delegate
                     {
                         busy = false;
                         if (err != null) { status = err; Redraw(); return; }
+                        if (wttr != null) { ApplyWttr(wttr, f); return; }
                         if (place != null) { Cfg.WeatherLat = lat; Cfg.WeatherLon = lon; Cfg.WeatherPlace = place; Cfg.Save(); }
                         Apply(json);
                     }));
                 }
                 catch { busy = false; }
             });
+        }
+
+        /// <summary>wttr.in uses WorldWeatherOnline codes; turn them into the Open-Meteo (WMO) codes the icons use.</summary>
+        static int WwoToWmo(int c)
+        {
+            switch (c)
+            {
+                case 113: return 0;
+                case 116: return 2;
+                case 119: case 122: return 3;
+                case 143: case 248: case 260: return 45;
+                case 176: case 263: case 266: case 293: case 296: case 353: return 61;
+                case 299: case 302: case 305: case 308: case 356: case 359: return 63;
+                case 185: case 281: case 284: case 311: case 314: case 182: case 317: case 320: case 362: case 365: case 374: case 377: case 350: return 66;
+                case 179: case 227: case 230: case 323: case 326: case 329: case 332: case 335: case 338: case 368: case 371: return 73;
+                case 200: case 386: case 389: case 392: case 395: return 95;
+                default: return 3;
+            }
+        }
+        static double NumS(Dictionary<string, object> o, string k)
+        {
+            double v; return double.TryParse(Json.Str(o, k), NumberStyles.Float, CultureInfo.InvariantCulture, out v) ? v : double.NaN;
+        }
+        static Dictionary<string, object> First(Dictionary<string, object> o, string k)
+        {
+            var a = Json.Arr(o, k); return a != null && a.Count > 0 ? a[0] as Dictionary<string, object> : null;
+        }
+
+        void ApplyWttr(Dictionary<string, object> j, bool f)
+        {
+            try
+            {
+                var cur = First(j, "current_condition");
+                if (cur == null) throw new Exception("no data");
+                temp = NumS(cur, f ? "temp_F" : "temp_C"); feels = NumS(cur, f ? "FeelsLikeF" : "FeelsLikeC");
+                humidity = NumS(cur, "humidity"); wind = NumS(cur, f ? "windspeedMiles" : "windspeedKmph");
+                code = WwoToWmo((int)NumS(cur, "weatherCode"));
+                int h = DateTime.Now.Hour; isDay = h >= 6 && h < 18;
+                days.Clear();
+                var w = Json.Arr(j, "weather");
+                for (int i = 0; w != null && i < w.Count && i < 4; i++)
+                {
+                    var d = w[i] as Dictionary<string, object>;
+                    var hourly = Json.Arr(d, "hourly");
+                    var noon = hourly != null && hourly.Count > 4 ? hourly[4] as Dictionary<string, object> : null;
+                    days.Add(new Day
+                    {
+                        Date = DateTime.ParseExact(Json.Str(d, "date"), "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        Max = NumS(d, f ? "maxtempF" : "maxtempC"), Min = NumS(d, f ? "mintempF" : "mintempC"),
+                        Code = noon != null ? WwoToWmo((int)NumS(noon, "weatherCode")) : code
+                    });
+                }
+                var area = First(j, "nearest_area");
+                if (area != null)
+                {
+                    var n = First(area, "areaName"); var c = First(area, "country");
+                    string place = (n != null ? Json.Str(n, "value") : "") + (c != null && Json.Str(c, "value") != "" ? ", " + Json.Str(c, "value") : "");
+                    if (place.Trim(',', ' ').Length > 0) { Cfg.WeatherPlace = place; Cfg.Save(); }
+                }
+                status = ""; lastOk = DateTime.Now;
+            }
+            catch (Exception ex) { Program.Log(ex); status = "The weather service sent something unexpected"; }
+            Redraw();
         }
 
         /// <summary>Open-Meteo only understands a plain place name, so "Tel Aviv, Israel" or "Paris France"

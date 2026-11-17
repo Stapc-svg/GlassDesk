@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.5
+
+- **No more white title bars:** the Settings window and the small pop-up boxes now use your theme's colors for their title bar. GlassDesk was misreading the Windows version (Windows reports "Windows 8" to apps unless asked properly), which also switched off dark title bars and rounded corners on Windows 10/11.
+- **Weather has a backup service:** if Open-Meteo can't be reached, GlassDesk asks wttr.in instead. Errors are written to error.log in the GlassDesk folder.
+
 ## 1.9.4
 
 - **Glass settings window:** the Settings window now shows your blurred wallpaper through it, like the desktop panels.

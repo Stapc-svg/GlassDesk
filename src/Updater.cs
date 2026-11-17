@@ -287,7 +287,7 @@ namespace GlassDesk
                 later.Click += delegate { DialogResult = DialogResult.Cancel; };
                 skip.Click += delegate { DialogResult = DialogResult.Ignore; };
                 Controls.AddRange(new Control[] { head, cur, box, bar, state, go, later, skip });
-                Load += delegate { Native.SetDarkTitleBar(Handle, t.Dark); };
+                Load += delegate { Native.ThemeTitleBar(Handle, t.Dark, BackColor, ForeColor); };
                 FormClosing += (s, e) => { if (dl != null) { dl.CancelAsync(); } };
             }
 

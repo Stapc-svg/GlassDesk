@@ -356,7 +356,7 @@ namespace GlassDesk
                 ok.FlatAppearance.BorderSize = 0;
                 f.Controls.Add(tb); f.Controls.Add(ok); f.Controls.Add(cancel);
                 f.AcceptButton = ok; f.CancelButton = cancel;
-                f.Load += delegate { Native.SetDarkTitleBar(f.Handle, t.Dark); };
+                f.Load += delegate { Native.ThemeTitleBar(f.Handle, t.Dark, f.BackColor, f.ForeColor); };
                 return f.ShowDialog() == DialogResult.OK ? tb.Text : null;
             }
         }

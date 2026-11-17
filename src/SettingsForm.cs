@@ -44,7 +44,7 @@ namespace GlassDesk
             var moveTimer = new System.Windows.Forms.Timer { Interval = 40 };
             moveTimer.Tick += delegate { moveTimer.Stop(); if (glass) Invalidate(true); };
             Move += delegate { if (glass) { moveTimer.Stop(); moveTimer.Start(); } };
-            Load += delegate { Native.SetDarkTitleBar(Handle, P.Dark); Native.SetRoundCorners(Handle); };
+            Load += delegate { Native.ThemeTitleBar(Handle, P.Dark, P.Side, P.Text); Native.SetRoundCorners(Handle); };
             FormClosed += delegate { perfTimer.Stop(); perfTimer.Dispose(); Gfx.ClearFonts(); if (app.Settings.TrimMemory) Native.TrimMemory(); };
         }
 
@@ -110,7 +110,7 @@ namespace GlassDesk
             ResumeLayout();
             ShowPage(page);
             content.Resize += delegate { if (!rebuilding) { rebuilding = true; ShowPage(page); rebuilding = false; } };
-            if (IsHandleCreated) { Native.SetDarkTitleBar(Handle, P.Dark); Refresh(); }
+            if (IsHandleCreated) { Native.ThemeTitleBar(Handle, P.Dark, P.Side, P.Text); Refresh(); }
         }
         bool rebuilding;
         int lastWidth;
@@ -378,7 +378,7 @@ namespace GlassDesk
                 Button("Change…", false, delegate { app.CountdownW.Edit(); Refresh(0); }));
 
             Section("Weather");
-            Row("Weather", "Today and the next 3 days, from Open-Meteo (free, no account)", Toggle(S.ShowWeather, v => S.ShowWeather = v));
+            Row("Weather", "Today and the next days, from Open-Meteo or wttr.in (free, no account)", Toggle(S.ShowWeather, v => S.ShowWeather = v));
             Row("City", string.IsNullOrEmpty(S.WeatherCity) ? "Not set yet" : (string.IsNullOrEmpty(S.WeatherPlace) ? S.WeatherCity : S.WeatherPlace),
                 Button("Change…", false, delegate { app.WeatherW.ChooseCity(); Refresh(0); }));
             Row("Use °F and mph", "Turn off for °C and km/h", Toggle(S.WeatherF, v => { S.WeatherF = v; app.WeatherW.UnitsChanged(); }));

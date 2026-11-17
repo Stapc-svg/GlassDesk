@@ -8,7 +8,19 @@ namespace GlassDesk
     internal static class Native
     {
         public static readonly bool IsWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
-        public static readonly int WinBuild = IsWindows ? Environment.OSVersion.Version.Build : 0;
+        /// <summary>The real Windows build number. Environment.OSVersion lies (says Windows 8, build 9200)
+        /// to apps without a compatibility manifest, which silently switched off dark title bars,
+        /// rounded corners and Acrylic on Windows 10/11, so ask ntdll directly.</summary>
+        public static readonly int WinBuild = RealBuild();
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct OSVERSIONINFOEX { public int dwOSVersionInfoSize, dwMajorVersion, dwMinorVersion, dwBuildNumber, dwPlatformId; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string szCSDVersion; public ushort wServicePackMajor, wServicePackMinor, wSuiteMask; public byte wProductType, wReserved; }
+        [DllImport("ntdll.dll")] static extern int RtlGetVersion(ref OSVERSIONINFOEX v);
+        static int RealBuild()
+        {
+            if (!IsWindows) return 0;
+            try { var v = new OSVERSIONINFOEX(); v.dwOSVersionInfoSize = Marshal.SizeOf(v); if (RtlGetVersion(ref v) == 0 && v.dwBuildNumber > 0) return v.dwBuildNumber; } catch { }
+            return Environment.OSVersion.Version.Build;
+        }
 
         // ---------- Layered windows ----------
         [StructLayout(LayoutKind.Sequential)] public struct POINT { public int x, y; public POINT(int x, int y) { this.x = x; this.y = y; } }
@@ -66,6 +78,18 @@ namespace GlassDesk
         {
             if (!IsWindows || WinBuild < 17763) return;
             try { int v = dark ? 1 : 0; if (DwmSetWindowAttribute(hwnd, 20, ref v, 4) != 0) DwmSetWindowAttribute(hwnd, 19, ref v, 4); } catch { }
+        }
+        /// <summary>Colors the title bar to match the theme (Windows 11), with a dark/light fallback for Windows 10.</summary>
+        public static void ThemeTitleBar(IntPtr hwnd, bool dark, System.Drawing.Color caption, System.Drawing.Color text)
+        {
+            SetDarkTitleBar(hwnd, dark);
+            if (!IsWindows || WinBuild < 22000) return;
+            try
+            {
+                int c = caption.R | (caption.G << 8) | (caption.B << 16); DwmSetWindowAttribute(hwnd, 35, ref c, 4);
+                int t = text.R | (text.G << 8) | (text.B << 16); DwmSetWindowAttribute(hwnd, 36, ref t, 4);
+            }
+            catch { }
         }
         public static void SetRoundCorners(IntPtr hwnd)
         {
