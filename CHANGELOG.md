@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.6
+
+- **New weather design:** city and today's high/low, a big glowing icon and temperature, glass chips for humidity, wind and chance of rain, a sunrise-to-sunset arc showing where the sun is now, and the next 5 hours.
+- **Vinyl music widget:** the cover now sits on a spinning vinyl record with a tone arm that lowers while a song plays, and a soft glow in the cover's colors.
+- **Sky scene clock:** the clock sits on a little landscape whose sky, sun, moon and stars follow the real time of day. Turn it off in Settings › Widgets › Sky scene.
+
 ## 1.9.5
 
 - **No more white title bars:** the Settings window and the small pop-up boxes now use your theme's colors for their title bar. GlassDesk was misreading the Windows version (Windows reports "Windows 8" to apps unless asked properly), which also switched off dark title bars and rounded corners on Windows 10/11.

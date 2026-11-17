@@ -15,15 +15,18 @@ namespace GlassDesk
     internal class WeatherWidget : Widget
     {
         class Day { public DateTime Date; public double Max, Min; public int Code; }
-        double temp = double.NaN, feels, wind, humidity; int code = -1; bool isDay = true;
+        class Hour { public DateTime Time; public double Temp; public int Code; }
+        double temp = double.NaN, feels, wind, humidity, rainChance = double.NaN; int code = -1; bool isDay = true;
+        DateTime sunrise, sunset;        // today, local time (MinValue = unknown)
         readonly List<Day> days = new List<Day>();
+        readonly List<Hour> hours = new List<Hour>();
         string status = "";              // shown instead of the weather when something is missing
         bool busy;
         DateTime lastOk = DateTime.MinValue;
         System.Windows.Forms.Timer refresh;
 
         public WeatherWidget(App app) : base(app, "weather") { }
-        protected override Size BaseSize { get { return new Size(320, 196); } }
+        protected override Size BaseSize { get { return new Size(330, 322); } }
 
         protected override void OnHandleCreated(EventArgs e)
         {
@@ -51,6 +54,10 @@ namespace GlassDesk
             var d0 = App.Now.Date;
             int[] codes = { 2, 61, 0, 3 }; double[] mx = { 21, 19, 24, 22 }, mn = { 14, 13, 15, 15 };
             for (int i = 0; i < 4; i++) days.Add(new Day { Date = d0.AddDays(i), Max = mx[i], Min = mn[i], Code = codes[i] });
+            rainChance = 12; sunrise = d0.AddHours(6).AddMinutes(38); sunset = d0.AddHours(17).AddMinutes(12);
+            hours.Clear();
+            double[] ht = { 18, 19, 20, 21, 21 }; int[] hc = { 2, 2, 0, 0, 1 };
+            for (int i = 0; i < 5; i++) hours.Add(new Hour { Time = App.Now.Date.AddHours(App.Now.Hour + 1 + i), Temp = ht[i], Code = hc[i] });
         }
 
         public void Fetch()
@@ -73,7 +80,7 @@ namespace GlassDesk
                         place = Json.Str(r0, "name") + (Json.Str(r0, "country") != "" ? ", " + Json.Str(r0, "country") : "");
                     }
                     json = Http.GetJson(string.Format(CultureInfo.InvariantCulture,
-                        "https://api.open-meteo.com/v1/forecast?latitude={0}&longitude={1}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4{2}",
+                        "https://api.open-meteo.com/v1/forecast?latitude={0}&longitude={1}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=4{2}",
                         lat, lon, f ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : ""));
                 }
                 catch (Exception ex)
@@ -155,6 +162,30 @@ namespace GlassDesk
                         Code = noon != null ? WwoToWmo((int)NumS(noon, "weatherCode")) : code
                     });
                 }
+                sunrise = sunset = DateTime.MinValue; rainChance = double.NaN; hours.Clear();
+                try
+                {
+                    var w0 = w != null && w.Count > 0 ? w[0] as Dictionary<string, object> : null;
+                    var ast = First(w0, "astronomy");
+                    DateTime t0;
+                    if (ast != null && DateTime.TryParse(Json.Str(ast, "sunrise"), CultureInfo.InvariantCulture, DateTimeStyles.None, out t0)) sunrise = DateTime.Today.Add(t0.TimeOfDay);
+                    if (ast != null && DateTime.TryParse(Json.Str(ast, "sunset"), CultureInfo.InvariantCulture, DateTimeStyles.None, out t0)) sunset = DateTime.Today.Add(t0.TimeOfDay);
+                    // wttr.in gives 3-hourly steps; take the next five after now
+                    for (int di = 0; w != null && di < w.Count && hours.Count < 5; di++)
+                    {
+                        var d = w[di] as Dictionary<string, object>;
+                        var date = DateTime.ParseExact(Json.Str(d, "date"), "yyyy-MM-dd", CultureInfo.InvariantCulture);
+                        var hl = Json.Arr(d, "hourly");
+                        for (int hi = 0; hl != null && hi < hl.Count && hours.Count < 5; hi++)
+                        {
+                            var hh = hl[hi] as Dictionary<string, object>;
+                            var tm = date.AddHours(NumS(hh, "time") / 100);
+                            if (di == 0 && double.IsNaN(rainChance)) rainChance = NumS(hh, "chanceofrain");
+                            if (tm > DateTime.Now) hours.Add(new Hour { Time = tm, Temp = NumS(hh, f ? "tempF" : "tempC"), Code = WwoToWmo((int)NumS(hh, "weatherCode")) });
+                        }
+                    }
+                }
+                catch (Exception ex) { Program.Log(ex); }
                 var area = First(j, "nearest_area");
                 if (area != null)
                 {
@@ -211,6 +242,24 @@ namespace GlassDesk
                 var t = Json.Arr(d, "time"); var mx = Json.Arr(d, "temperature_2m_max"); var mn = Json.Arr(d, "temperature_2m_min"); var c = Json.Arr(d, "weather_code");
                 for (int i = 0; t != null && i < t.Count && i < 4; i++)
                     days.Add(new Day { Date = DateTime.ParseExact((string)t[i], "yyyy-MM-dd", CultureInfo.InvariantCulture), Max = Convert.ToDouble(mx[i]), Min = Convert.ToDouble(mn[i]), Code = Convert.ToInt32(c[i]) });
+                sunrise = sunset = DateTime.MinValue; rainChance = double.NaN; hours.Clear();
+                try
+                {
+                    var sr = Json.Arr(d, "sunrise"); var ss = Json.Arr(d, "sunset"); var pp = Json.Arr(d, "precipitation_probability_max");
+                    if (sr != null && sr.Count > 0) sunrise = DateTime.Parse((string)sr[0], CultureInfo.InvariantCulture);
+                    if (ss != null && ss.Count > 0) sunset = DateTime.Parse((string)ss[0], CultureInfo.InvariantCulture);
+                    if (pp != null && pp.Count > 0 && pp[0] is double) rainChance = (double)pp[0];
+                    // next hours, starting after the place's current time
+                    var h = Json.Obj(j, "hourly");
+                    var ht = Json.Arr(h, "time"); var htv = Json.Arr(h, "temperature_2m"); var hc = Json.Arr(h, "weather_code");
+                    DateTime now = DateTime.Parse(Json.Str(cur, "time"), CultureInfo.InvariantCulture);
+                    for (int i = 0; ht != null && i < ht.Count && hours.Count < 5; i++)
+                    {
+                        var tm = DateTime.Parse((string)ht[i], CultureInfo.InvariantCulture);
+                        if (tm > now && htv[i] is double) hours.Add(new Hour { Time = tm, Temp = (double)htv[i], Code = Convert.ToInt32(hc[i]) });
+                    }
+                }
+                catch (Exception ex) { Program.Log(ex); }
                 status = ""; lastOk = DateTime.Now;
             }
             catch { status = "The weather service sent something unexpected"; }
@@ -233,37 +282,99 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
-            Title(g, "Weather", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             string place = string.IsNullOrEmpty(Cfg.WeatherPlace) ? Cfg.WeatherCity : Cfg.WeatherPlace;
-            if (!string.IsNullOrEmpty(place))
-                Txt(g, place, Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X + T.Sf(70), r.Y, r.Width - T.Sf(70), T.Sf(20)), Gfx.Right);
             if (status.Length > 0 || double.IsNaN(temp))
             {
+                Title(g, "Weather", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
                 string msg = status.Length > 0 ? status : busy ? "Loading…" : "Double-click to choose your city";
                 WeatherIcon(g, new RectangleF(r.X, r.Y + T.Sf(34), T.Sf(54), T.Sf(54)), 2, true);
                 Txt(g, msg, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.Text, new RectangleF(r.X + T.Sf(70), r.Y + T.Sf(36), r.Width - T.Sf(70), T.Sf(70)), Gfx.TopLeftWrap);
                 return;
             }
             string unit = Cfg.WeatherF ? "°F" : "°C";
-            WeatherIcon(g, new RectangleF(r.X - T.Sf(2), r.Y + T.Sf(28), T.Sf(62), T.Sf(62)), code, isDay);
-            var big = Gfx.F(T.DisplayFont, T.Sf(46), FontStyle.Regular);
-            string ts = Math.Round(temp).ToString(CultureInfo.InvariantCulture) + "°";
-            Txt(g, ts, big, T.Text, new RectangleF(r.X + T.Sf(66), r.Y + T.Sf(24), T.Sf(130), T.Sf(56)), Gfx.Left);
-            float x2 = r.X + T.Sf(170);
-            Txt(g, Describe(code), Gfx.F(T.FontName, T.Sf(14), FontStyle.Bold), T.Text, new RectangleF(x2, r.Y + T.Sf(30), r.Right - x2, T.Sf(20)), Gfx.Left);
-            Txt(g, "Feels " + Math.Round(feels) + unit, Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), T.SubText, new RectangleF(x2, r.Y + T.Sf(50), r.Right - x2, T.Sf(18)), Gfx.Left);
-            Txt(g, Math.Round(humidity) + "% · " + Math.Round(wind) + (Cfg.WeatherF ? " mph" : " km/h"), Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), T.SubText, new RectangleF(x2, r.Y + T.Sf(67), r.Right - x2, T.Sf(18)), Gfx.Left);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // next days
-            float top = r.Y + T.Sf(100), cw = r.Width / 4f;
-            using (var pen = new Pen(Gfx.WithAlpha(T.Text, 26))) g.DrawLine(pen, r.X, top - T.Sf(6), r.Right, top - T.Sf(6));
-            for (int i = 0; i < days.Count && i < 4; i++)
+            // ── header: place, today's high / low
+            string city = string.IsNullOrEmpty(place) ? "Weather" : place.Split(',')[0];
+            Txt(g, city, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), T.Text, new RectangleF(r.X, r.Y - T.Sf(1), r.Width * .62f, T.Sf(20)), Gfx.Left);
+            if (days.Count > 0)
+                Txt(g, "H " + Math.Round(days[0].Max) + "°  L " + Math.Round(days[0].Min) + "°", Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
+
+            // ── hero: glowing icon, big temperature, condition
+            float hy = r.Y + T.Sf(26);
+            Color glow = !isDay ? Color.FromArgb(70, 150, 170, 255) : code <= 2 ? Color.FromArgb(90, 255, 190, 80) : Color.FromArgb(60, 170, 200, 255);
+            Gfx.Glow(g, new PointF(r.X + T.Sf(34), hy + T.Sf(34)), T.Sf(52), glow);
+            WeatherIcon(g, new RectangleF(r.X, hy, T.Sf(68), T.Sf(68)), code, isDay);
+            var big = Gfx.F(T.DisplayFont, T.Sf(50), FontStyle.Regular);
+            string ts = Math.Round(temp).ToString(CultureInfo.InvariantCulture) + "°";
+            var tsz = g.MeasureString(ts, big);
+            Txt(g, ts, big, T.Text, new RectangleF(r.X + T.Sf(76), hy - T.Sf(4), tsz.Width + T.Sf(10), T.Sf(64)), Gfx.Left);
+            float x2 = r.X + T.Sf(80) + tsz.Width;
+            Txt(g, Describe(code), Gfx.F(T.FontName, T.Sf(14), FontStyle.Bold), T.Text, new RectangleF(x2, hy + T.Sf(12), r.Right - x2, T.Sf(20)), Gfx.Left);
+            Txt(g, "Feels " + Math.Round(feels) + unit, Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), T.SubText, new RectangleF(x2, hy + T.Sf(32), r.Right - x2, T.Sf(18)), Gfx.Left);
+
+            // ── three glass chips: humidity, wind, rain
+            float cy = hy + T.Sf(78), ch = T.Sf(46), gap = T.Sf(8), cw = (r.Width - 2 * gap) / 3f;
+            string[][] chips = {
+                new[] { "Humidity", Math.Round(humidity) + "%" },
+                new[] { "Wind", Math.Round(wind) + (Cfg.WeatherF ? " mph" : " km/h") },
+                new[] { "Rain", double.IsNaN(rainChance) ? "—" : Math.Round(rainChance) + "%" } };
+            for (int i = 0; i < 3; i++)
             {
-                var d = days[i]; float x = r.X + i * cw;
-                string dn = i == 0 ? "Today" : d.Date.ToString("ddd", CultureInfo.CurrentCulture);
-                Txt(g, dn, Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Bold), T.SubText, new RectangleF(x, top, cw, T.Sf(16)), Gfx.Center);
-                WeatherIcon(g, new RectangleF(x + cw / 2 - T.Sf(12), top + T.Sf(18), T.Sf(24), T.Sf(24)), d.Code, true);
-                Txt(g, Math.Round(d.Max) + "° " + Math.Round(d.Min) + "°", Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), T.Text, new RectangleF(x, top + T.Sf(44), cw, T.Sf(18)), Gfx.Center);
+                var cr = new RectangleF(r.X + i * (cw + gap), cy, cw, ch);
+                using (var path = Gfx.Round(cr, T.Sf(12)))
+                {
+                    using (var b2 = new SolidBrush(Gfx.WithAlpha(T.Text, T.Dark ? 16 : 22))) g.FillPath(b2, path);
+                    using (var pen = new Pen(Gfx.WithAlpha(T.Text, 22))) g.DrawPath(pen, path);
+                }
+                Txt(g, chips[i][0], Gfx.F(T.FontName, T.Sf(10.5f), FontStyle.Regular), T.SubText, new RectangleF(cr.X, cr.Y + T.Sf(5), cr.Width, T.Sf(16)), Gfx.Center);
+                Txt(g, chips[i][1], Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), T.Text, new RectangleF(cr.X, cr.Y + T.Sf(21), cr.Width, T.Sf(20)), Gfx.Center);
+            }
+
+            // ── sun path: sunrise → sunset arc with the sun where it is now
+            float sy = cy + ch + T.Sf(12);
+            if (sunrise != DateTime.MinValue && sunset > sunrise)
+            {
+                var sf = Gfx.F(T.FontName, T.Sf(10.5f), FontStyle.Regular);
+                var sb = Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold);
+                Txt(g, "Sunrise", sf, T.SubText, new RectangleF(r.X, sy, T.Sf(60), T.Sf(15)), Gfx.Left);
+                Txt(g, sunrise.ToString("HH:mm"), sb, T.Text, new RectangleF(r.X, sy + T.Sf(14), T.Sf(60), T.Sf(18)), Gfx.Left);
+                Txt(g, "Sunset", sf, T.SubText, new RectangleF(r.Right - T.Sf(60), sy, T.Sf(60), T.Sf(15)), Gfx.Right);
+                Txt(g, sunset.ToString("HH:mm"), sb, T.Text, new RectangleF(r.Right - T.Sf(60), sy + T.Sf(14), T.Sf(60), T.Sf(18)), Gfx.Right);
+                var arc = new RectangleF(r.X + T.Sf(62), sy + T.Sf(4), r.Width - T.Sf(124), T.Sf(52));
+                using (var pen = new Pen(Gfx.WithAlpha(T.Text, 40), T.Sf(1.5f)) { DashStyle = DashStyle.Dash }) g.DrawArc(pen, arc, 180, 180);
+                double now = App.Now.TimeOfDay.TotalMinutes, a0 = sunrise.TimeOfDay.TotalMinutes, a1 = sunset.TimeOfDay.TotalMinutes;
+                float f = (float)Math.Max(0, Math.Min(1, (now - a0) / (a1 - a0)));
+                using (var pen = new Pen(Color.FromArgb(230, 255, 196, 90), T.Sf(2.2f)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                    if (f > 0.01f) g.DrawArc(pen, arc, 180, 180 * f);
+                double ang = Math.PI * (1 - f);
+                var sp = new PointF(arc.X + arc.Width / 2 + (float)Math.Cos(ang) * arc.Width / 2, arc.Y + arc.Height / 2 - (float)Math.Sin(ang) * arc.Height / 2);
+                bool up = now > a0 && now < a1;
+                Gfx.Glow(g, sp, T.Sf(12), Color.FromArgb(up ? 160 : 60, 255, 200, 90));
+                using (var b2 = new SolidBrush(up ? Color.FromArgb(255, 255, 210, 110) : Gfx.WithAlpha(T.Text, 90))) g.FillEllipse(b2, sp.X - T.Sf(4.5f), sp.Y - T.Sf(4.5f), T.Sf(9), T.Sf(9));
+                sy += T.Sf(40);
+            }
+
+            // ── next hours (or next days if hourly data is missing)
+            float hy2 = sy + T.Sf(4);
+            if (r.Bottom - hy2 < T.Sf(60)) return;
+            using (var pen = new Pen(Gfx.WithAlpha(T.Text, 24))) g.DrawLine(pen, r.X, hy2, r.Right, hy2);
+            hy2 += T.Sf(8);
+            int n = hours.Count > 0 ? Math.Min(5, hours.Count) : Math.Min(4, days.Count);
+            float colw = r.Width / Math.Max(1f, n);
+            for (int i = 0; i < n; i++)
+            {
+                float x = r.X + i * colw;
+                string top; int c; string tv;
+                if (hours.Count > 0) { var h = hours[i]; top = h.Time.ToString("HH:mm"); c = h.Code; tv = Math.Round(h.Temp) + "°"; }
+                else { var d = days[i]; top = i == 0 ? "Today" : d.Date.ToString("ddd", CultureInfo.CurrentCulture); c = d.Code; tv = Math.Round(d.Max) + "° " + Math.Round(d.Min) + "°"; }
+                if (i == 0)
+                    using (var path = Gfx.Round(new RectangleF(x + T.Sf(3), hy2 - T.Sf(2), colw - T.Sf(6), T.Sf(66)), T.Sf(12)))
+                    using (var b2 = new SolidBrush(Gfx.WithAlpha(T.Accent, 46))) g.FillPath(b2, path);
+                Txt(g, top, Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(x, hy2 + T.Sf(2), colw, T.Sf(16)), Gfx.Center);
+                bool dayAt = hours.Count == 0 || sunrise == DateTime.MinValue || (hours[i].Time.TimeOfDay > sunrise.TimeOfDay && hours[i].Time.TimeOfDay < sunset.TimeOfDay);
+                WeatherIcon(g, new RectangleF(x + colw / 2 - T.Sf(12), hy2 + T.Sf(19), T.Sf(24), T.Sf(24)), c, dayAt);
+                Txt(g, tv, Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Bold), T.Text, new RectangleF(x, hy2 + T.Sf(44), colw, T.Sf(18)), Gfx.Center);
             }
         }
 

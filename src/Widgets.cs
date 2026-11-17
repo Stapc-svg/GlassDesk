@@ -1,5 +1,6 @@
 // GlassDesk - widgets: clock, system monitor, calendar, notes.
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
@@ -105,18 +106,107 @@ namespace GlassDesk
         public ClockWidget(App app) : base(app, "clock") { }
         protected override Size BaseSize { get { return new Size(320, 150); } }
 
+        /// <summary>A little landscape behind the clock: the sky's colors, the sun or moon and the stars follow
+        /// the real time of day; two layers of mountains sit at the bottom.</summary>
+        void PaintScene(Graphics g, DateTime now)
+        {
+            int t = TabH;
+            var pr = new RectangleF(Panel.X + 1, Panel.Y + 1 + t, Panel.Width - 2, Panel.Height - 2 - t);
+            if (pr.Width < 10 || pr.Height < 10) return;
+            float h = (float)now.TimeOfDay.TotalHours;
+            // sky colors through the day
+            float[] at = { 0, 5, 6.5f, 9, 16.5f, 18.5f, 20.5f, 24 };
+            Color[][] sky = {
+                new[] { Color.FromArgb(10, 14, 40), Color.FromArgb(30, 38, 84) },     // night
+                new[] { Color.FromArgb(18, 22, 60), Color.FromArgb(70, 60, 120) },    // before dawn
+                new[] { Color.FromArgb(90, 110, 200), Color.FromArgb(255, 150, 110) },// sunrise
+                new[] { Color.FromArgb(56, 140, 236), Color.FromArgb(160, 210, 255) },// day
+                new[] { Color.FromArgb(56, 140, 236), Color.FromArgb(160, 210, 255) },// day
+                new[] { Color.FromArgb(90, 70, 170), Color.FromArgb(255, 130, 90) },  // sunset
+                new[] { Color.FromArgb(14, 18, 50), Color.FromArgb(50, 44, 100) },    // dusk
+                new[] { Color.FromArgb(10, 14, 40), Color.FromArgb(30, 38, 84) } };
+            int i = 0; while (i < at.Length - 2 && h >= at[i + 1]) i++;
+            float f = (h - at[i]) / (at[i + 1] - at[i]);
+            Func<Color, Color, float, Color> mix = (a, b, k) => Color.FromArgb((int)(a.R + (b.R - a.R) * k), (int)(a.G + (b.G - a.G) * k), (int)(a.B + (b.B - a.B) * k));
+            Color top = mix(sky[i][0], sky[i + 1][0], f), bot = mix(sky[i][1], sky[i + 1][1], f);
+            float night = h < 5.5f || h > 19.5f ? 1f : h < 7 ? (7 - h) / 1.5f : h > 18 ? (h - 18) / 1.5f : 0f;
+            night = Math.Max(0, Math.Min(1, night));
+            var st = g.Save();
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var clip = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+            {
+                g.SetClip(clip, CombineMode.Intersect);
+                using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(235, top), Color.FromArgb(235, bot))) g.FillRectangle(lg, pr);
+                // stars
+                if (night > 0.05f)
+                {
+                    var rnd = new Random(7);
+                    for (int s = 0; s < 46; s++)
+                    {
+                        float sx = pr.X + (float)rnd.NextDouble() * pr.Width, sy = pr.Y + (float)rnd.NextDouble() * pr.Height * 0.65f, sz = T.Sf(0.8f + (float)rnd.NextDouble() * 1.6f);
+                        using (var b = new SolidBrush(Color.FromArgb((int)(night * (90 + rnd.Next(150))), 255, 255, 255))) g.FillEllipse(b, sx, sy, sz, sz);
+                    }
+                }
+                // sun by day, moon by night, travelling across the sky
+                bool sun = h >= 6 && h < 19;
+                float p = sun ? (h - 6) / 13f : ((h + 24 - 19) % 24) / 11f;
+                float bx = pr.X + pr.Width * (0.56f + 0.38f * p), by = pr.Bottom - pr.Height * (0.34f + 0.42f * (float)Math.Sin(Math.PI * p));   // right side, away from the time
+                float br = T.Sf(sun ? 15 : 12);
+                if (sun)
+                {
+                    Gfx.Glow(g, new PointF(bx, by), br * 4.5f, Color.FromArgb(140, 255, 214, 140));
+                    using (var b = new SolidBrush(Color.FromArgb(255, 255, 236, 180))) g.FillEllipse(b, bx - br, by - br, br * 2, br * 2);
+                }
+                else
+                {
+                    Gfx.Glow(g, new PointF(bx, by), br * 3.5f, Color.FromArgb(70, 200, 210, 255));
+                    using (var b = new SolidBrush(Color.FromArgb(255, 236, 240, 255))) g.FillEllipse(b, bx - br, by - br, br * 2, br * 2);
+                    using (var b = new SolidBrush(Color.FromArgb(255, top))) g.FillEllipse(b, bx - br + br * 0.55f, by - br - br * 0.2f, br * 2, br * 2);   // crescent
+                }
+                // mountains: a far, lighter range and a near, darker one
+                DrawRange(g, pr, 0.62f, 0.20f, 3, mix(bot, top, 0.55f), 200);
+                DrawRange(g, pr, 0.78f, 0.16f, 11, mix(top, Color.Black, 0.55f), 235);
+                // darken the top a little so the time stays readable
+                using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Top + pr.Height * 0.6f), Color.FromArgb(60, 0, 0, 0), Color.FromArgb(0, 0, 0, 0))) g.FillRectangle(lg, pr.X, pr.Y, pr.Width, pr.Height * 0.6f);
+            }
+            g.Restore(st);
+        }
+        void DrawRange(Graphics g, RectangleF pr, float baseY, float amp, int seed, Color c, int alpha)
+        {
+            var rnd = new Random(seed);
+            var pts = new List<PointF> { new PointF(pr.X, pr.Bottom) };
+            int n = 9;
+            for (int k = 0; k <= n; k++)
+            {
+                float x = pr.X + pr.Width * k / n, y = pr.Y + pr.Height * (baseY - amp * (float)rnd.NextDouble());
+                pts.Add(new PointF(x, y));
+            }
+            pts.Add(new PointF(pr.Right, pr.Bottom));
+            using (var path = new GraphicsPath())
+            {
+                path.AddCurve(pts.GetRange(1, pts.Count - 2).ToArray(), 0.35f);
+                path.AddLine(pr.Right, pr.Bottom, pr.X, pr.Bottom);
+                path.CloseFigure();
+                using (var b = new SolidBrush(Color.FromArgb(alpha, c))) g.FillPath(b, path);
+            }
+        }
+
         protected override void PaintContent(Graphics g)
         {
             DateTime now = App.Now;
             Rectangle r = Inner;
+            bool scene = Cfg.ClockScene;
+            if (scene) PaintScene(g, now);
             string greet = now.Hour < 5 ? "Good night" : now.Hour < 12 ? "Good morning" : now.Hour < 18 ? "Good afternoon" : "Good evening";
-            Txt(g, greet, Gfx.F(T.FontName, T.Sf(13), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Left);
+            Color ink = scene ? Color.White : T.Text, sub = scene ? Color.FromArgb(225, 255, 255, 255) : T.SubText;
+            Txt(g, greet, Gfx.F(T.FontName, T.Sf(13), FontStyle.Regular), sub, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Left);
 
             string time = Cfg.Clock24 ? now.ToString("HH:mm", CultureInfo.InvariantCulture) : now.ToString("h:mm", CultureInfo.InvariantCulture);
             var big = Gfx.F(T.DisplayFont, T.Sf(58), FontStyle.Regular);
             float y = r.Y + T.Sf(18);
             SizeF ts = g.MeasureString(time, big, PointF.Empty, StringFormat.GenericTypographic);
-            using (var b = new SolidBrush(T.Text)) g.DrawString(time, big, b, new PointF(r.X - T.Sf(2), y), StringFormat.GenericTypographic);
+            if (scene) using (var b = new SolidBrush(Color.FromArgb(70, 0, 0, 0))) g.DrawString(time, big, b, new PointF(r.X - T.Sf(1), y + T.Sf(2)), StringFormat.GenericTypographic);
+            using (var b = new SolidBrush(ink)) g.DrawString(time, big, b, new PointF(r.X - T.Sf(2), y), StringFormat.GenericTypographic);
             string extra = "";
             if (Cfg.ShowSeconds) extra = now.ToString(":ss", CultureInfo.InvariantCulture);
             if (!Cfg.Clock24) extra += (extra.Length > 0 ? " " : " ") + now.ToString("tt", CultureInfo.InvariantCulture);
@@ -127,9 +217,9 @@ namespace GlassDesk
                     g.DrawString(extra.Trim(), sm, b, new PointF(r.X + ts.Width + T.Sf(6), y + ts.Height - T.Sf(32)), StringFormat.GenericTypographic);
             }
             string date = now.ToString("dddd, MMMM d", CultureInfo.CurrentCulture);
-            Txt(g, date, Gfx.F(T.FontName, T.Sf(14.5f), FontStyle.Bold), T.Text, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Left);
+            Txt(g, date, Gfx.F(T.FontName, T.Sf(14.5f), FontStyle.Bold), ink, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Left);
             Txt(g, "Week " + CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday),
-                Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Right);
+                Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), sub, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Right);
         }
     }
 

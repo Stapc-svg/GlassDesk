@@ -1168,6 +1168,7 @@ namespace GlassDesk
             if (look != null) { Settings.Look = look.Id; Settings.Accent = look.Accent; Settings.Radius = look.Radius; Settings.Opacity = look.Tint; }
             Theme = Theme.From(Settings, DpiScale);
             FixedNow = new DateTime(2026, 10, 22, 9, 41, 0);
+            { int ph; if (int.TryParse(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_HOUR"), out ph)) FixedNow = new DateTime(2026, 10, 22, ph, 41, 0); }
             PreviewData.FakeStats(Stats);
             string demoDesk = Path.Combine(Path.GetTempPath(), "Desktop");
             Settings.CustomFences.Add("cust.demo");
@@ -1179,7 +1180,7 @@ namespace GlassDesk
             Settings.FenceColor["cust.demo"] = "22BE82";
             Settings.FenceIcons["cat.folders"] = "large";
             Settings.CountdownTitle = "Summer trip"; Settings.CountdownDate = "2026-11-29";
-            Settings.ShowWeather = false; Settings.ShowPhotos = false;
+            Settings.ShowWeather = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WEATHER") == "1"; Settings.ShowPhotos = false;
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote
