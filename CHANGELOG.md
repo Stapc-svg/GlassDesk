@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.4
+
+- **Glass settings window:** the Settings window now shows your blurred wallpaper through it, like the desktop panels.
+- **Glass scroll bar:** a thin, rounded scroll bar that matches the theme replaces the white Windows one. Drag it, click above/below it, or scroll over it.
+- **Updates just work:** GlassDesk now always checks its official GitHub page for new versions. No need to type a GitHub address any more. It finds the newest Windows installer even when the latest release is for Linux or Android.
+- **Recycle Bin icon fixed:** the full/empty icon now updates within a few seconds when you delete or empty files anywhere, and works on PCs where Windows reported the bin as empty by mistake.
+
 ## 1.9.3
 
 - **Weather works with "City, Country":** typing "Tel Aviv, Israel" or "Paris France" now finds the place (before, only the plain city name worked).

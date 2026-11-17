@@ -20,7 +20,7 @@ namespace GlassDesk
         public bool Paused;
 
         /// <summary>Where the updater looks for new versions ("owner/repo" on GitHub). Can also be changed in Settings > About.</summary>
-        public const string DefaultRepo = "YOUR-USERNAME/GlassDesk";
+        public const string DefaultRepo = "Stapc-svg/GlassDesk";
         public static Version VersionNumber { get { return typeof(App).Assembly.GetName().Version; } }
         public static string Version { get { return Updater.Short(VersionNumber); } }
         public bool Preview { get { return preview; } }
@@ -738,9 +738,28 @@ namespace GlassDesk
             if (Now.Date != lastDay) { lastDay = Now.Date; if (calendar.Visible) calendar.Redraw(); if (countdown.Visible) countdown.Redraw(); if (quote.Visible) quote.Redraw(); Backup.Daily(this); }
         }
 
+        bool? binFull;
+        int binTick;
+        /// <summary>The Recycle Bin can fill or empty without the desktop changing (deleting from Explorer,
+        /// emptying it), so check it every few seconds and swap the full/empty icon when it changes.</summary>
+        void CheckRecycleBin()
+        {
+            if (++binTick % 2 != 0 && binFull.HasValue) return;
+            bool full = Native.RecycleBinFull();
+            if (binFull.HasValue && binFull.Value == full) return;
+            binFull = full;
+            foreach (var f in fences.Values)
+            {
+                bool hit = false;
+                foreach (var it in f.Items) if (it.IsRecycleBin) { it.ResetIcon(); hit = true; }
+                if (hit) f.Redraw();
+            }
+        }
+
         void StatsTick()
         {
             CheckPause();
+            if (!Paused && !hiddenByUser) CheckRecycleBin();
             if (Paused || hiddenByUser || !system.Visible) return;
             Stats.Sample();
             system.Redraw();

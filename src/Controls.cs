@@ -266,6 +266,7 @@ namespace GlassDesk
     internal class GlowPanel : Panel
     {
         readonly Palette P;
+        public Action<Graphics, Control> Back;   // paints glass behind the side bar
         public GlowPanel(Palette p)
         {
             P = p;
@@ -275,7 +276,9 @@ namespace GlassDesk
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var lg = new LinearGradientBrush(new Point(0, 0), new Point(0, Math.Max(2, Height)), P.Side, P.Side2)) g.FillRectangle(lg, ClientRectangle);
+            if (Back != null) Back(g, this);
+            int sa = Back != null ? (P.Dark ? 120 : 110) : 255;
+            using (var lg = new LinearGradientBrush(new Point(0, 0), new Point(0, Math.Max(2, Height)), Color.FromArgb(sa, P.Side), Color.FromArgb(sa, P.Side2))) g.FillRectangle(lg, ClientRectangle);
             Gfx.Glow(g, new PointF(Width * 0.25f, -Width * 0.15f), Width * 1.1f, Color.FromArgb(P.Dark ? 70 : 50, P.Accent));
             Gfx.Glow(g, new PointF(Width * 0.9f, Height + Width * 0.1f), Width * 0.9f, Color.FromArgb(P.Dark ? 40 : 30, P.Accent2));
             using (var pen = new Pen(P.Line)) g.DrawLine(pen, Width - 1, 0, Width - 1, Height);
@@ -332,22 +335,22 @@ namespace GlassDesk
     /// <summary>A rounded card that holds setting rows separated by thin lines.</summary>
     internal class Card : Panel
     {
-        public Palette P; public float Radius;
+        public Palette P; public float Radius; public int Alpha = 255;
         public System.Collections.Generic.List<int> Dividers = new System.Collections.Generic.List<int>();
         public Card(Palette p, float k)
         {
             P = p; Radius = 16 * k;
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
         }
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(Parent != null ? Parent.BackColor : P.Bg);
+            if (BackColor.A == 255) g.Clear(Parent != null && Parent.BackColor.A == 255 ? Parent.BackColor : P.Bg);
             var r = new RectangleF(0.5f, 0.5f, Width - 1, Height - 1);
             using (var path = Gfx.Round(r, Radius))
             {
-                using (var lg = new LinearGradientBrush(new PointF(0, 0), new PointF(0, Math.Max(2, Height)), P.Card, P.Card2)) g.FillPath(lg, path);
+                using (var lg = new LinearGradientBrush(new PointF(0, 0), new PointF(0, Math.Max(2, Height)), Color.FromArgb(Alpha, P.Card), Color.FromArgb(Alpha, P.Card2))) g.FillPath(lg, path);
                 using (var pen = new Pen(P.Line)) g.DrawPath(pen, path);
             }
             // a soft highlight along the top edge

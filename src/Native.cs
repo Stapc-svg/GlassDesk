@@ -327,18 +327,36 @@ namespace GlassDesk
         [StructLayout(LayoutKind.Sequential, Pack = 1)] struct SHQUERYRBINFO32 { public int cbSize; public long i64Size, i64NumItems; }
         [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "SHQueryRecycleBinW")] static extern int SHQueryRecycleBin64(string root, ref SHQUERYRBINFO64 info);
         [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "SHQueryRecycleBinW")] static extern int SHQueryRecycleBin32(string root, ref SHQUERYRBINFO32 info);
+        /// <summary>Items in the bin for one drive ("C:\\") or all drives (null); -1 if Windows refused.</summary>
+        static long BinItems(string root)
+        {
+            if (IntPtr.Size == 8)
+            {
+                var q = new SHQUERYRBINFO64(); q.cbSize = Marshal.SizeOf(q);
+                return SHQueryRecycleBin64(root, ref q) == 0 ? q.i64NumItems : -1;
+            }
+            var q32 = new SHQUERYRBINFO32(); q32.cbSize = Marshal.SizeOf(q32);
+            return SHQueryRecycleBin32(root, ref q32) == 0 ? q32.i64NumItems : -1;
+        }
         public static bool RecycleBinFull()
         {
             if (!IsWindows) return false;
             try
             {
-                if (IntPtr.Size == 8)
+                long all = BinItems(null);
+                if (all > 0) return true;
+                // Asking for "all drives" fails or says 0 on some PCs (a card reader, an unplugged or
+                // network drive in the list), so also ask each local drive on its own.
+                foreach (var d in System.IO.DriveInfo.GetDrives())
                 {
-                    var q = new SHQUERYRBINFO64(); q.cbSize = Marshal.SizeOf(q);
-                    return SHQueryRecycleBin64(null, ref q) == 0 && q.i64NumItems > 0;
+                    try
+                    {
+                        if ((d.DriveType != System.IO.DriveType.Fixed && d.DriveType != System.IO.DriveType.Removable) || !d.IsReady) continue;
+                        if (BinItems(d.RootDirectory.FullName) > 0) return true;
+                    }
+                    catch { }
                 }
-                var q32 = new SHQUERYRBINFO32(); q32.cbSize = Marshal.SizeOf(q32);
-                return SHQueryRecycleBin32(null, ref q32) == 0 && q32.i64NumItems > 0;
+                return false;
             }
             catch { return false; }
         }

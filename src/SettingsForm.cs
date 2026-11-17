@@ -12,7 +12,9 @@ namespace GlassDesk
         readonly App app;
         Palette P;
         float k;
-        Panel side, content;
+        Panel side, content, host;
+        GlassScrollBar bar;
+        bool glass;
         readonly List<NavItem> navs = new List<NavItem>();
         int page;
         Font fBody, fSmall, fH1, fSection, fGlyph, fBig;
@@ -39,6 +41,9 @@ namespace GlassDesk
             perfTimer = new Timer { Interval = 2000 };
             perfTimer.Tick += delegate { UpdatePerf(); };
             Build();
+            var moveTimer = new System.Windows.Forms.Timer { Interval = 40 };
+            moveTimer.Tick += delegate { moveTimer.Stop(); if (glass) Invalidate(true); };
+            Move += delegate { if (glass) { moveTimer.Stop(); moveTimer.Start(); } };
             Load += delegate { Native.SetDarkTitleBar(Handle, P.Dark); Native.SetRoundCorners(Handle); };
             FormClosed += delegate { perfTimer.Stop(); perfTimer.Dispose(); Gfx.ClearFonts(); if (app.Settings.TrimMemory) Native.TrimMemory(); };
         }
@@ -72,9 +77,17 @@ namespace GlassDesk
             ClientSize = new Size((int)(860 * k), (int)(600 * k));
             MinimumSize = new Size((int)(700 * k), (int)(460 * k));
 
-            content = new DoubleBufferedPanel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = P.Bg };
-            side = new GlowPanel(P) { Dock = DockStyle.Left, Width = (int)(226 * k), BackColor = P.Side };
-            Controls.Add(content); Controls.Add(side);
+            glass = !app.Theme.Solid;
+            // The page scrolls inside "host". The panel is a scroll-bar's width wider than host so Windows'
+            // own white scroll bar is hidden off the edge, and a thin glass bar is drawn on top instead.
+            host = new GlassPanel { Dock = DockStyle.Fill, BackColor = glass ? Color.Transparent : P.Bg, Paint2 = PaintBack };
+            content = new GlassPanel { AutoScroll = true, BackColor = glass ? Color.Transparent : P.Bg, Paint2 = PaintBack, Location = Point.Empty };
+            bar = new GlassScrollBar(content, P, k) { Dock = DockStyle.Right, Width = (int)(12 * k), BackColor = Color.Transparent };
+            host.Controls.Add(content); host.Controls.Add(bar); bar.BringToFront();
+            host.Resize += delegate { content.Size = new Size(host.ClientSize.Width + SystemInformation.VerticalScrollBarWidth, host.ClientSize.Height); };
+            content.Size = new Size(Math.Max(1, ClientSize.Width - (int)(226 * k)) + SystemInformation.VerticalScrollBarWidth, ClientSize.Height);
+            side = new GlowPanel(P) { Dock = DockStyle.Left, Width = (int)(226 * k), BackColor = P.Side, Back = glass ? (Action<Graphics, Control>)PaintBack : null };
+            Controls.Add(host); Controls.Add(side);
 
             var logo = new LogoBox(app, k) { Location = new Point((int)(18 * k), (int)(20 * k)), BackColor = Color.Transparent };
             side.Controls.Add(logo);
@@ -139,12 +152,12 @@ namespace GlassDesk
 
         // ------------------------------------------------------------ page builders
         int y; Card card; int rowY;
-        int CardWidth { get { return Math.Max((int)(380 * k), content.ClientSize.Width - (int)(56 * k) - SystemInformation.VerticalScrollBarWidth); } }
+        int CardWidth { get { return Math.Max((int)(380 * k), (host != null ? host.ClientSize.Width : content.ClientSize.Width) - (int)(64 * k)); } }
 
         void H1(string title, string sub)
         {
             var hero = new HeroBanner(P, k, title, sub, Pages[page][0], fH1, fBody, fGlyph)
-            { Location = new Point((int)(28 * k), y), Size = new Size(CardWidth, (int)(112 * k)), BackColor = P.Bg };
+            { Location = new Point((int)(28 * k), y), Size = new Size(CardWidth, (int)(112 * k)), BackColor = Color.Transparent };
             content.Controls.Add(hero);
             y += hero.Height + (int)(14 * k);
         }
@@ -155,7 +168,8 @@ namespace GlassDesk
             y += (int)(12 * k);
             content.Controls.Add(new Label { UseMnemonic = false, Text = title.ToUpperInvariant(), Font = fSection, ForeColor = P.Sub, AutoSize = true, Location = new Point((int)(30 * k), y + (int)(2 * k)) });
             y += (int)(28 * k);
-            card = new Card(P, k) { Location = new Point((int)(28 * k), y), Width = CardWidth, Height = 10 };
+            card = new Card(P, k) { Location = new Point((int)(28 * k), y), Width = CardWidth, Height = 10, Alpha = glass ? (P.Dark ? 175 : 190) : 255 };
+            if (glass) card.BackColor = Color.Transparent;
             content.Controls.Add(card);
             rowY = 0;
         }
@@ -528,14 +542,7 @@ namespace GlassDesk
             Section("Updates");
             Row("Version", "GlassDesk " + App.Version, Button("Check now", true, delegate { app.Updates.Check(true); }));
             Row("Check automatically", "Look for a new version once a day and let you know", Toggle(S.AutoUpdate, v => S.AutoUpdate = v));
-            Row("Update source", Updater.RepoConfigured(S.UpdateRepo) ? "github.com/" + S.UpdateRepo : "Not set — add your GitHub repository", Button("Change…", false, delegate
-            {
-                string r = InputBox.Ask("GitHub repository (owner/name)", Updater.RepoConfigured(S.UpdateRepo) ? S.UpdateRepo : "", app.Theme);
-                if (r == null) return;
-                r = r.Trim().Replace("https://", "").Replace("http://", "").Replace("github.com/", "").Trim('/');
-                if (r.Split('/').Length != 2) { MessageBox.Show("Use the form  owner/repository, for example  yourname/GlassDesk.", "GlassDesk"); return; }
-                S.UpdateRepo = r; S.Save(); Refresh(0);
-            }));
+            Row("Updates come from", "github.com/" + App.DefaultRepo + " — the official GlassDesk page", Button("Open", false, delegate { try { System.Diagnostics.Process.Start("https://github.com/" + App.DefaultRepo + "/releases"); } catch { } }));
 
             Section("Backup & sync");
             Row("Save my layout", "Fences, rules, widgets and look in one .glassdesk file", Button("Export…", true, delegate { Backup.Export(app); }));
@@ -560,6 +567,118 @@ namespace GlassDesk
         {
             base.OnFormClosing(e);
             S.Save();
+        }
+
+        /// <summary>Blurred wallpaper behind the window plus the theme's tint: the same glass as the desktop
+        /// panels. Drawn in screen coordinates, so the side bar, the page and the scroll bar line up.</summary>
+        void PaintBack(Graphics g, Control c)
+        {
+            if (!glass) { using (var b = new SolidBrush(P.Bg)) g.FillRectangle(b, c.ClientRectangle); return; }
+            var T = app.Theme;
+            Point o = c.IsHandleCreated ? c.PointToScreen(Point.Empty) : Point.Empty;
+            var r = new Rectangle(0, 0, c.Width, c.Height);
+            using (var b = new SolidBrush(P.Bg)) g.FillRectangle(b, r);
+            try
+            {
+                Rectangle scr = app.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromControl(c).Bounds;
+                Bitmap blur = Backdrop.For(scr, 3);
+                if (blur != null)
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+                    g.DrawImage(blur, r, new Rectangle(o.X - scr.X, o.Y - scr.Y, c.Width, c.Height), GraphicsUnit.Pixel);
+                }
+            }
+            catch (Exception ex) { Program.Log(ex); }
+            int a = Math.Max(T.Dark ? 150 : 140, Math.Min(205, (int)T.TintTop.A));
+            Rectangle win = RectangleToScreen(ClientRectangle);
+            // one gradient over the whole window, so neighbouring panels match
+            using (var b = new System.Drawing.Drawing2D.LinearGradientBrush(new Point(0, win.Top - o.Y - 1), new Point(0, win.Bottom - o.Y + 1), Color.FromArgb(a, T.TintTop), Color.FromArgb(a, T.TintBottom)))
+                g.FillRectangle(b, r);
+        }
+
+        /// <summary>A panel that lets the form decide how its background is painted.</summary>
+        class GlassPanel : Panel
+        {
+            public Action<Graphics, Control> Paint2;
+            public GlassPanel()
+            {
+                SetStyle(ControlStyles.SupportsTransparentBackColor | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+            }
+            protected override void OnPaintBackground(PaintEventArgs e) { if (Paint2 != null) Paint2(e.Graphics, this); else base.OnPaintBackground(e); }
+            protected override void OnScroll(ScrollEventArgs se) { base.OnScroll(se); Invalidate(true); }
+            protected override void OnMouseWheel(MouseEventArgs e) { base.OnMouseWheel(e); Invalidate(true); }
+        }
+
+        /// <summary>A thin rounded glass scroll bar that drives the page's own scrolling.</summary>
+        class GlassScrollBar : Control
+        {
+            readonly ScrollableControl target; readonly Palette P; readonly float k;
+            readonly System.Windows.Forms.Timer watch = new System.Windows.Forms.Timer { Interval = 50 };
+            int lastValue = -1, lastMax = -1; bool hot, dragging; int dragOffset;
+            public GlassScrollBar(ScrollableControl target, Palette p, float k)
+            {
+                this.target = target; P = p; this.k = k;
+                SetStyle(ControlStyles.SupportsTransparentBackColor | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+                // keep in step with wheel / keyboard / code scrolling
+                watch.Tick += delegate
+                {
+                    var v = target.VerticalScroll;
+                    if (v.Value != lastValue || v.Maximum != lastMax)
+                    {
+                        if (lastValue >= 0 && v.Value != lastValue) target.Invalidate(true);
+                        lastValue = v.Value; lastMax = v.Maximum; Invalidate();
+                    }
+                };
+                watch.Start();
+            }
+            protected override void Dispose(bool disposing) { if (disposing) { watch.Stop(); watch.Dispose(); } base.Dispose(disposing); }
+
+            bool Needed { get { var v = target.VerticalScroll; return target.VerticalScroll.Visible && v.Maximum > v.LargeChange; } }
+            RectangleF Thumb()
+            {
+                var v = target.VerticalScroll;
+                float pad = 6 * k, track = Height - 2 * pad;
+                float range = Math.Max(1, v.Maximum - v.LargeChange + 1);
+                float h = Math.Max(36 * k, track * v.LargeChange / Math.Max(1f, v.Maximum + 1));
+                float y = pad + (track - h) * Math.Min(1f, v.Value / range);
+                float w = (hot || dragging ? 6 : 4) * k;
+                return new RectangleF(Width - w - 3 * k, y, w, h);
+            }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                if (!Needed) return;
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var t = Thumb();
+                Color ink = P.Dark ? Color.White : Color.Black;
+                using (var path = Gfx.Round(t, t.Width / 2))
+                using (var b = new SolidBrush(Color.FromArgb(dragging ? 170 : hot ? 130 : 80, ink))) g.FillPath(b, path);
+            }
+            void ScrollTo(int value)
+            {
+                var v = target.VerticalScroll;
+                value = Math.Max(0, Math.Min(v.Maximum - v.LargeChange + 1, value));
+                target.AutoScrollPosition = new Point(0, value);
+                target.Invalidate(true); Invalidate();
+            }
+            protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { hot = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnMouseDown(MouseEventArgs e)
+            {
+                if (!Needed || e.Button != MouseButtons.Left) return;
+                var t = Thumb();
+                if (e.Y >= t.Top && e.Y <= t.Bottom) { dragging = true; dragOffset = (int)(e.Y - t.Top); Capture = true; Invalidate(); }
+                else ScrollTo(target.VerticalScroll.Value + (e.Y < t.Top ? -1 : 1) * target.VerticalScroll.LargeChange);
+            }
+            protected override void OnMouseMove(MouseEventArgs e)
+            {
+                if (!dragging) return;
+                var v = target.VerticalScroll; var t = Thumb();
+                float pad = 6 * k, track = Height - 2 * pad - t.Height;
+                float f = track <= 0 ? 0 : (e.Y - dragOffset - pad) / track;
+                ScrollTo((int)(Math.Max(0, Math.Min(1, f)) * (v.Maximum - v.LargeChange + 1)));
+            }
+            protected override void OnMouseUp(MouseEventArgs e) { if (dragging) { dragging = false; Capture = false; Invalidate(); } }
+            protected override void OnMouseWheel(MouseEventArgs e) { if (Needed) ScrollTo(target.VerticalScroll.Value - e.Delta / 120 * (int)(60 * k)); }
         }
 
         class DoubleBufferedPanel : Panel
