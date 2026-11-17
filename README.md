@@ -4,18 +4,18 @@
 </picture>
 
 <p align="center">
-  <a href="../../releases/tag/v1.8.6"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
-  <a href="../../releases/tag/v1.9.2_Linux"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
+  <a href="../../releases"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge" alt="Download for Windows"></a>
+  <a href="../../releases"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
   <a href="../../releases"><img src="https://img.shields.io/badge/Download-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android"></a>
   <a href="https://snapcraft.io/glassdesk"><img src="https://img.shields.io/badge/Get%20it%20on-Snap%20Store-E95420?style=for-the-badge&logo=snapcraft&logoColor=white" alt="Get it on the Snap Store"></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.2-7C9CFF" alt="Version 1.9.2">
+  <img src="https://img.shields.io/badge/version-1.9.10-7C9CFF" alt="Version 1.9.10">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/Linux-beta-FCC624" alt="Linux beta">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84" alt="Android 8+">
-  <img src="https://img.shields.io/badge/size-~250%20KB-B57BFF" alt="About 250 KB">
+  <img src="https://img.shields.io/badge/size-~0.8%20MB-B57BFF" alt="About 0.8 MB">
   <a href="../../stargazers"><img src="https://img.shields.io/github/stars/Stapc-svg/GlassDesk?style=flat&color=FFD60A&logo=github" alt="GitHub stars"></a>
   <img src="https://img.shields.io/github/downloads/Stapc-svg/GlassDesk/total?color=5BD68A&label=downloads" alt="Total downloads">
 </p>
@@ -54,6 +54,57 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 <p align="center">
   <img src="docs/screenshots/windows-demo.gif" width="100%" alt="GlassDesk fences and widgets appearing on the desktop (animated)">
 </p>
+
+### ✨ New in 1.9
+- **New weather widget:** your city with today's high and low, a big glowing icon, glass chips for humidity, wind and chance of rain, a **sunrise-to-sunset arc** that shows where the sun is now, and the **next 5 hours**.
+- **Weather pictures:** a drawn sky that matches the weather (sun, clouds, rain, thunderstorm, snow, fog or a starry night) fills the top of the widget and **fades into the glass**.
+- **Weather that works more often:** type "City, Country" (like *Paris, France*), it retries every minute after a network error, and it switches to [wttr.in](https://wttr.in) when Open-Meteo can't be reached.
+- **Clock backgrounds:** free public-domain (CC0) photos for **morning, day, sunset and night**, or a **drawn sky** with the sun, moon, stars and mountains that follow the real time. Settings → Widgets → *Clock background*.
+- **Vinyl music widget:** the album cover spins on a vinyl record while a song plays, with a tone arm and a glow in the cover's colors.
+- **Clipboard widget:** the last things you copied; click one to copy it again. Kept in memory only (never saved), and copies from password managers are skipped.
+- **Glass Settings window** with a thin glass scroll bar, smooth scrolling, title bars in your theme's colors and see-through theme previews.
+- **Smoother everywhere:** panels fade in one after another, fade out with <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>G</kbd>, and glow softly in your accent color when you point at them.
+- **Search lists every app** on your PC (filter *All / Desktop / Apps*), and you can **drag an app onto a fence**.
+- **Fixes:** the Recycle Bin icon now shows full or empty correctly, rounded corners and dark title bars work on every Windows 10/11 PC, and updates are found automatically from this page.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <b>🌤️ Weather with pictures</b><br>
+      <sub>Sun, rain and a starry night: the picture fades into the glass.</sub><br><br>
+      <img src="docs/screenshots/weather-1.9.jpg" width="100%" alt="Three weather widgets: clear, rain and a clear night, each with a matching sky fading into the glass">
+    </td>
+    <td width="50%" valign="top">
+      <b>🕘 Clock photos</b><br>
+      <sub>Morning, day, sunset and night, changing on their own.</sub><br><br>
+      <img src="docs/screenshots/clock-1.9.jpg" width="100%" alt="Four clock widgets with photos of green hills, snowy mountains, a city sunset and city lights at night">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>💿 Vinyl music</b><br>
+      <sub>The cover spins on a record while a song plays.</sub><br><br>
+      <img src="docs/screenshots/music-1.9.jpg" width="100%" alt="The music widget with the album cover on a vinyl record and a tone arm">
+    </td>
+    <td width="50%" valign="top">
+      <b>📋 Clipboard</b><br>
+      <sub>Your last copies, one click away. Memory only.</sub><br><br>
+      <img src="docs/screenshots/clipboard-1.9.jpg" width="100%" alt="The clipboard widget listing recently copied text, a link and a color">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>🪟 Glass Settings</b><br>
+      <sub>Your wallpaper shows through, with a thin glass scroll bar.</sub><br><br>
+      <img src="docs/screenshots/settings-glass-1.9.jpg" width="100%" alt="The GlassDesk Settings window made of glass, showing the theme gallery">
+    </td>
+    <td width="50%" valign="top">
+      <b>🔍 Every app in search</b><br>
+      <sub>Find any installed app and drag it onto a fence.</sub><br><br>
+      <img src="docs/screenshots/launcher.jpg" width="100%" alt="The search launcher with a grid of icons">
+    </td>
+  </tr>
+</table>
 
 ### ✨ New in 1.8
 - **26 themes**, including a new **Windows themes** set: *Mica material, Acrylic material, Mica Alt, Windows Light, Windows Dark, Bloom, Glow, Sunrise, Flow* and *Captured Motion*.
@@ -128,18 +179,19 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - Roll fences up and down, resize them, and scroll them. Panels snap to the screen edges and to each other.
 
 ### Widgets
-- **Clock:** time, date, week number and a greeting.
+- **Clock:** time, date, week number and a greeting, on a photo or drawn sky that changes with the time of day (or plain glass).
 - **System monitor:** live CPU (with a small graph), memory, disk and battery.
 - **Calendar:** month view with today highlighted.
 - **Notes:** a sticky note. Double-click it to write.
 - **To-do:** a checklist you tick off right on the desktop.
-- **Weather:** today and the next 3 days for your city, from [Open-Meteo](https://open-meteo.com) (free, no account).
+- **Weather:** temperature, humidity, wind, chance of rain, sunrise and sunset, and the next 5 hours, with a picture of the sky that matches the weather. From [Open-Meteo](https://open-meteo.com), or [wttr.in](https://wttr.in) as a backup (both free, no account).
 - **Photo frame:** pictures from a folder you choose, one at a time.
 - **Countdown** to a date and **Quote of the day**.
 - **GitHub stats:** your stars, followers, repos, most-starred project and a 14-day activity chart. Double-click and type your username (public data, no sign-in).
 - **Network meter:** live download and upload speed with small graphs.
 - **Focus timer:** Pomodoro (25 min focus, 5 min break) with a progress ring and a notification when time is up.
-- **Music:** what's playing in Spotify, YouTube or any player, with its cover, progress and controls. Shows your last song when nothing plays.
+- **Music:** what's playing in Spotify, YouTube or any player, with its cover spinning on a vinyl record, progress and controls. Shows your last song when nothing plays.
+- **Clipboard:** the last things you copied; click one to copy it again (memory only, never saved).
 - **Today:** four rings for the day, week, month and year.
 - **Widget stacks:** drag a widget onto another to stack them. Click a tab to switch.
 
@@ -171,11 +223,16 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 </p>
 
 ### Download & install
-1. Download **`GlassDesk-Setup-1.8.6.msi`** from the [Releases](../../releases) page.
+1. Download the newest **`GlassDesk-Setup-<version>.msi`** from the [Releases](../../releases) page.
 2. Double-click it. It installs just for your user account, with no admin password needed, into `%LocalAppData%\Programs\GlassDesk`.
 3. GlassDesk starts right away and then **every time you sign in**. It is also in the Start menu.
 
 > **"Windows protected your PC"?** The installer is not code-signed, so SmartScreen may warn you. Click **More info → Run anyway**, or build it yourself (see below).
+
+**Or with winget** (once it's approved in the winget catalog):
+```
+winget install Stapc-svg.GlassDesk
+```
 
 **Uninstall:** Settings → Apps → Installed apps → GlassDesk → Uninstall. This closes the app, removes the startup entry and brings your normal desktop icons back.
 
@@ -189,6 +246,8 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 
 GlassDesk also runs on **Ubuntu, Linux Mint, Debian, Fedora, Arch, openSUSE** and more, on GNOME, KDE Plasma, Cinnamon, XFCE and MATE. It has the same fences, widgets, glass blur and settings, rebuilt with Python and GTK.
 
+**New in 1.9.10 for Linux:** the new weather widget with weather pictures, clock photos and drawn sky, the vinyl music widget, the Clipboard widget, a glass Settings window, fade-in and hover glow, and an update check that finds Linux downloads.
+
 **New in 1.8.6 for Linux:** 26 themes (with Mica and Acrylic), file stacks, stacks of fences and widgets with tabs, the music and Today widgets, the new search launcher with a calculator, Organize desktop, resizable widgets, per-monitor layouts and Match my wallpaper, the same as on Windows.
 
 ![GlassDesk 1.8 on Linux](docs/screenshots/linux-desktop-1.8.jpg)
@@ -198,6 +257,7 @@ GlassDesk also runs on **Ubuntu, Linux Mint, Debian, Fedora, Arch, openSUSE** an
 | Ubuntu, Mint, Debian, Pop!_OS, Zorin | `glassdesk_<version>_all.deb` | Double-click it, or `sudo apt install ./glassdesk_*_all.deb` |
 | Any distro (one file) | `GlassDesk-<version>-x86_64.AppImage` | Allow executing, then double-click |
 | Fedora, Arch, openSUSE, others | `GlassDesk-<version>-linux.tar.gz` | Unzip, then run `./install.sh` |
+| Any distro with Snap | [Snap Store](https://snapcraft.io/glassdesk) | `sudo snap install glassdesk` |
 
 More details: [linux/README.md](linux/README.md).
 
@@ -274,13 +334,13 @@ Settings has six pages: **General** (start with Windows, hotkey, lock positions)
 Your settings are saved in `%AppData%\GlassDesk\settings.ini`. Delete that file to start fresh.
 
 ### Updates
-GlassDesk checks this repository's [Releases](../../releases) once a day. When a newer version is there, it shows a notification. One click downloads the `.msi` from GitHub and installs it; your fences, widgets and settings are kept. You can also click **Check now** in Settings → About.
+GlassDesk checks this repository's [Releases](../../releases) once a day, by itself (there's nothing to set up). It picks the newest release that has a Windows installer, even when the latest release is for Linux or Android. When a newer version is there, it shows a notification. One click downloads the `.msi` from GitHub and installs it; your fences, widgets and settings are kept. You can also click **Check now** in Settings → About.
 
 **Publishing a new version** (for maintainers):
 
 1. Raise the version in `src/Program.cs` (`AssemblyVersion`) and in `installer/GlassDesk.wxs` (`Version` and the two `UpgradeVersion` lines).
 2. Build the `.msi` (`./build.sh msi`).
-3. On GitHub, create a release with a tag like `v1.7.2` and attach `GlassDesk-Setup.msi`. The release notes are shown to people in the update window.
+3. On GitHub, create a release and attach the installer named with its version, like `GlassDesk-Setup-1.9.10.msi` (the updater and the winget robot read the version from the file name). The release notes are shown to people in the update window.
 
 The updater only downloads installers from `github.com` over HTTPS, and only runs files that are real Windows Installer packages.
 
@@ -349,3 +409,6 @@ Android: see [android/README.md](android/README.md).
 ### Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+### Credits
+- Clock photos: from the [Budgie Desktop backgrounds](https://github.com/BuddiesOfBudgie/budgie-backgrounds), public domain (CC0). Weather pictures are drawn by GlassDesk itself.
