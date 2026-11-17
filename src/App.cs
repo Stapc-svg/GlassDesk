@@ -780,7 +780,25 @@ namespace GlassDesk
 
         public void MarkDirty(GlassWindow w) { dirty.Add(w); }
 
+        bool fadingOut;
         public void ToggleVisible()
+        {
+            if (fadingOut) return;
+            if (!hiddenByUser && !Settings.LowPower)
+            {
+                // fade every panel out together, then hide them
+                var vis = Windows.FindAll(x => x.Visible && x.IsHandleCreated);
+                if (vis.Count > 0)
+                {
+                    fadingOut = true;
+                    int left = vis.Count;
+                    foreach (var w in vis) w.FadeTo(0f, 170, delegate { if (--left == 0) { fadingOut = false; FinishToggle(); } });
+                    return;
+                }
+            }
+            FinishToggle();
+        }
+        void FinishToggle()
         {
             hiddenByUser = !hiddenByUser;
             PlaceAll();

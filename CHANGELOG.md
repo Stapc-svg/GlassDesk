@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.9
+
+- **Smooth fade-in:** panels and widgets fade in gently, one after another, instead of popping up.
+- **Smooth fade-out:** Ctrl + Alt + G (show / hide panels) fades everything out before hiding it.
+- **Hover glow:** a panel's edge lights up softly in your accent color and its shadow deepens while the mouse is over it.
+- **Smooth scrolling in Settings:** the mouse wheel glides the page instead of jumping.
+- All of this is switched off in power-saving mode.
+
 ## 1.9.8
 
 - **Weather pictures:** the weather widget shows a sky that matches the weather: sun, a few clouds, overcast, rain, thunderstorm, snow, fog, and a starry night with a crescent moon. Turn it off in Settings › Widgets › Weather picture.

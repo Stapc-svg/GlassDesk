@@ -354,7 +354,7 @@ namespace GlassDesk
                 {
                     float f = 1f - (float)i / pad;
                     var rr = new RectangleF(Panel.X - i, Panel.Y - i + T.Sf(3), Panel.Width + 2 * i, Panel.Height + 2 * i);
-                    using (var p = Gfx.Round(rr, r + i)) using (var pen = new Pen(Color.FromArgb((int)(f * f * 26), 0, 0, 0), 1.2f))
+                    using (var p = Gfx.Round(rr, r + i)) using (var pen = new Pen(Color.FromArgb((int)(f * f * (26 + 16 * hover)), 0, 0, 0), 1.2f))
                         g.DrawPath(pen, p);
                 }
             }
@@ -433,6 +433,10 @@ namespace GlassDesk
                 lg.InterpolationColors = cb;
                 using (var pen = new Pen(lg, T.Sf(1.25f))) g.DrawPath(pen, p);
             }
+            // hovering: a soft light along the rim in the accent color
+            if (hover > 0.01f)
+                using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
+                using (var pen = new Pen(Color.FromArgb((int)(70 * hover), T.Accent), T.Sf(1.4f))) g.DrawPath(pen, p);
             // 6. a hairline highlight along the top edge, just inside the rim
             if (r < pr.Width / 2 - 2)
                 using (var lg = new LinearGradientBrush(new PointF(pr.X + r, 0), new PointF(pr.Right - r, 0), Color.FromArgb(90, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
@@ -470,6 +474,10 @@ namespace GlassDesk
         protected virtual int AnimTop { get { return Panel.Y; } }
         public void PlayEnter(int dir, string from)
         {
+            // switching inside a stack has its own slide, so skip the fade-in
+            if (fadeTimer != null) fadeTimer.Stop();
+            fadeDone = null; fadeAlpha = 255;
+            if (IsHandleCreated) Native.SetLayeredAlpha(Handle, 255);
             animDir = dir >= 0 ? 1 : -1; animStartTick = Environment.TickCount; animFrom = from;
             if (animLayer != null) { animLayer.Dispose(); animLayer = null; }
             if (animTimer == null)
@@ -503,6 +511,76 @@ namespace GlassDesk
             using (var bmp = RenderBitmap()) Push(bmp);
         }
 
+        // ---- smooth appearance: panels fade in when they show up, fade out when hidden together,
+        // and glow a little brighter while the mouse is over them ----
+        byte fadeAlpha = 255;
+        System.Windows.Forms.Timer fadeTimer;
+        int fadeStart, fadeMs; float fadeFrom, fadeTo; Action fadeDone;
+        bool Smooth { get { return !Cfg.LowPower && !App.Preview; } }
+
+        public void FadeTo(float target, int ms, Action done)
+        {
+            if (!IsHandleCreated || !Smooth) { fadeAlpha = (byte)(target * 255); if (IsHandleCreated) Native.SetLayeredAlpha(Handle, fadeAlpha); if (done != null) done(); return; }
+            if (fadeTimer == null)
+            {
+                fadeTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                fadeTimer.Tick += delegate
+                {
+                    float t = Math.Min(1f, (Environment.TickCount - fadeStart) / (float)Math.Max(1, fadeMs));
+                    float e = fadeTo > fadeFrom ? Ease(t) : t * t;   // ease out when appearing, ease in when leaving
+                    fadeAlpha = (byte)Math.Round(255 * (fadeFrom + (fadeTo - fadeFrom) * e));
+                    Native.SetLayeredAlpha(Handle, fadeAlpha);
+                    if (t >= 1f) { fadeTimer.Stop(); var d = fadeDone; fadeDone = null; if (d != null) d(); }
+                };
+            }
+            fadeTimer.Stop();
+            fadeFrom = fadeAlpha / 255f; fadeTo = target; fadeMs = ms; fadeStart = Environment.TickCount; fadeDone = done;
+            fadeTimer.Start();
+        }
+
+        protected override void SetVisibleCore(bool value)
+        {
+            // start see-through so there's no flash before the fade-in begins
+            if (value && !Visible && Smooth && IsHandleCreated) { fadeAlpha = 0; Native.SetLayeredAlpha(Handle, 0); }
+            base.SetVisibleCore(value);
+        }
+
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            if (Visible && Smooth && IsHandleCreated && fadeAlpha == 0)
+            {
+                // a small delay per panel so they appear one after another, not all at once
+                int delay = Math.Min(160, (Math.Abs(Id.GetHashCode()) % 6) * 30);
+                var t0 = new System.Windows.Forms.Timer { Interval = Math.Max(1, delay) };
+                t0.Tick += delegate { t0.Stop(); t0.Dispose(); if (fadeAlpha < 255 && Visible) FadeTo(1f, 260, null); };
+                t0.Start();
+            }
+            base.OnVisibleChanged(e);
+        }
+
+        float hover;                          // 0..1, animated
+        bool hoverWanted;
+        System.Windows.Forms.Timer hoverTimer;
+        void SetHover(bool on)
+        {
+            if (hoverWanted == on) return;
+            hoverWanted = on;
+            if (!Smooth) { hover = on ? 1 : 0; Redraw(); return; }
+            if (hoverTimer == null)
+            {
+                hoverTimer = new System.Windows.Forms.Timer { Interval = 30 };
+                hoverTimer.Tick += delegate
+                {
+                    float target = hoverWanted ? 1f : 0f;
+                    hover += Math.Sign(target - hover) * 0.25f;
+                    if (Math.Abs(hover - target) < 0.13f) { hover = target; hoverTimer.Stop(); }
+                    Redraw();
+                };
+            }
+            hoverTimer.Start();
+        }
+        protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); SetHover(true); }
+
         void Push(Bitmap bmp)
         {
             IntPtr screen = Native.GetDC(IntPtr.Zero);
@@ -515,7 +593,7 @@ namespace GlassDesk
                 var size = new Native.SIZE(bmp.Width, bmp.Height);
                 var src = new Native.POINT(0, 0);
                 var dst = new Native.POINT(Left, Top);
-                var blend = new Native.BLENDFUNCTION { BlendOp = Native.AC_SRC_OVER, SourceConstantAlpha = 255, AlphaFormat = Native.AC_SRC_ALPHA };
+                var blend = new Native.BLENDFUNCTION { BlendOp = Native.AC_SRC_OVER, SourceConstantAlpha = fadeAlpha, AlphaFormat = Native.AC_SRC_ALPHA };
                 Native.UpdateLayeredWindow(Handle, screen, ref dst, ref size, mem, ref src, 0, ref blend, Native.ULW_ALPHA);
             }
             finally
@@ -657,6 +735,7 @@ namespace GlassDesk
         {
             base.OnMouseLeave(e);
             if (hoverPanel && !resizing) { hoverPanel = hoverGrip = false; Redraw(); }
+            SetHover(false);
             OnHover(new Point(-1, -1));
         }
 

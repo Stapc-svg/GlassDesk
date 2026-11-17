@@ -611,7 +611,29 @@ namespace GlassDesk
             }
             protected override void OnPaintBackground(PaintEventArgs e) { if (Paint2 != null) Paint2(e.Graphics, this); else base.OnPaintBackground(e); }
             protected override void OnScroll(ScrollEventArgs se) { base.OnScroll(se); Invalidate(true); }
-            protected override void OnMouseWheel(MouseEventArgs e) { base.OnMouseWheel(e); Invalidate(true); }
+
+            // smooth scrolling: the wheel sets a target and the page glides there
+            int target = -1; System.Windows.Forms.Timer glide;
+            protected override void OnMouseWheel(MouseEventArgs e)
+            {
+                if (!AutoScroll || !VerticalScroll.Visible) { base.OnMouseWheel(e); return; }
+                int max = Math.Max(0, VerticalScroll.Maximum - VerticalScroll.LargeChange + 1);
+                if (target < 0 || glide == null || !glide.Enabled) target = VerticalScroll.Value;
+                target = Math.Max(0, Math.Min(max, target - e.Delta * Math.Max(60, SystemInformation.MouseWheelScrollLines * 22) / 120));
+                if (glide == null)
+                {
+                    glide = new System.Windows.Forms.Timer { Interval = 12 };
+                    glide.Tick += delegate
+                    {
+                        int cur = VerticalScroll.Value, d = target - cur;
+                        if (Math.Abs(d) <= 1) { AutoScrollPosition = new Point(0, target); glide.Stop(); Invalidate(true); return; }
+                        AutoScrollPosition = new Point(0, cur + (int)Math.Round(d * 0.22f + Math.Sign(d)));
+                        Invalidate(true);
+                    };
+                }
+                glide.Start();
+            }
+            protected override void Dispose(bool disposing) { if (disposing && glide != null) glide.Dispose(); base.Dispose(disposing); }
         }
 
         /// <summary>A thin rounded glass scroll bar that drives the page's own scrolling.</summary>
