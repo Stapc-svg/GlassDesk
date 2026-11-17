@@ -290,6 +290,25 @@ class GlassDeskApp(Gtk.Application):
         self.settings.save()
 
     def toggle_all(self):
+        if getattr(self, "_fading", False):
+            return
+        if self.visible_all:
+            # fade everything out together, then hide
+            vis = [w for w in self.all_windows() if w.get_visible()]
+            if vis:
+                self._fading = True
+                left = [len(vis)]
+                def one():
+                    left[0] -= 1
+                    if left[0] == 0:
+                        self._fading = False
+                        self._finish_toggle()
+                for w in vis:
+                    w.fade_to(0.0, 0.17, one)
+                return
+        self._finish_toggle()
+
+    def _finish_toggle(self):
         self.visible_all = not self.visible_all
         for w in self.all_windows():
             if self.visible_all and w.wanted:

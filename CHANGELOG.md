@@ -1,5 +1,11 @@
 # Changelog
 
+## Linux 1.9.9
+
+- **Smooth fade-in** of panels and widgets, one after another; **fade-out** before hiding them all.
+- **Hover glow:** the edge lights up softly in your accent color and the shadow deepens under the mouse.
+- Needs a compositor (GNOME, KDE, Cinnamon…); without one, panels simply appear.
+
 ## Linux 1.9.8
 
 Everything from Windows 1.9.3–1.9.8, now on Linux:
