@@ -383,6 +383,7 @@ namespace GlassDesk
 
             Section("Weather");
             Row("Weather", "Today and the next days, from Open-Meteo or wttr.in (free, no account)", Toggle(S.ShowWeather, v => S.ShowWeather = v));
+            Row("Weather picture", "A sky that matches the weather (sun, clouds, rain, storm, snow, fog, night) fading into the glass", Toggle(S.WeatherScene, v => S.WeatherScene = v));
             Row("City", string.IsNullOrEmpty(S.WeatherCity) ? "Not set yet" : (string.IsNullOrEmpty(S.WeatherPlace) ? S.WeatherCity : S.WeatherPlace),
                 Button("Change…", false, delegate { app.WeatherW.ChooseCity(); Refresh(0); }));
             Row("Use °F and mph", "Turn off for °C and km/h", Toggle(S.WeatherF, v => { S.WeatherF = v; app.WeatherW.UnitsChanged(); }));

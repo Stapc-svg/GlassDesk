@@ -131,24 +131,15 @@ namespace GlassDesk
             int t = TabH;
             var pr = new RectangleF(Panel.X + 1, Panel.Y + 1 + t, Panel.Width - 2, Panel.Height - 2 - t);
             if (pr.Width < 10 || pr.Height < 10) return true;
-            var st = g.Save();
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var clip = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+            // half picture, half glass: the photo fills the top and fades into the panel below
+            SceneArt.DrawFaded(g, pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f), "clock:" + name, (pw, ph) =>
             {
-                g.SetClip(clip, CombineMode.Intersect);
-                // cover-crop: fill the panel, keep the picture's middle
-                float sc = Math.Max(pr.Width / img.Width, pr.Height / img.Height);
-                float sw = pr.Width / sc, sh = pr.Height / sc;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.DrawImage(img, pr, new RectangleF((img.Width - sw) / 2, (img.Height - sh) / 2, sw, sh), GraphicsUnit.Pixel);
-                // shade top and bottom so the text stays readable on any photo
-                using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(90, 0, 0, 0), Color.FromArgb(130, 0, 0, 0)))
-                {
-                    lg.InterpolationColors = new ColorBlend { Colors = new[] { Color.FromArgb(95, 0, 0, 0), Color.FromArgb(25, 0, 0, 0), Color.FromArgb(140, 0, 0, 0) }, Positions = new[] { 0f, 0.5f, 1f } };
-                    g.FillRectangle(lg, pr);
-                }
-            }
-            g.Restore(st);
+                var c = SceneArt.Cover(img, pw, ph);
+                using (var cg = Graphics.FromImage(c))
+                using (var lg = new LinearGradientBrush(new Point(0, -1), new Point(0, ph / 2 + 1), Color.FromArgb(80, 0, 0, 0), Color.FromArgb(0, 0, 0, 0)))
+                    cg.FillRectangle(lg, 0, 0, pw, ph / 2);
+                return c;
+            }, 0.40f, 0.86f);
             return true;
         }
 
@@ -264,9 +255,10 @@ namespace GlassDesk
                     g.DrawString(extra.Trim(), sm, b, new PointF(r.X + ts.Width + T.Sf(6), y + ts.Height - T.Sf(32)), StringFormat.GenericTypographic);
             }
             string date = now.ToString("dddd, MMMM d", CultureInfo.CurrentCulture);
-            Txt(g, date, Gfx.F(T.FontName, T.Sf(14.5f), FontStyle.Bold), ink, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Left);
+            Color low = Cfg.ClockStyle == "photo" ? T.Text : ink, lowSub = Cfg.ClockStyle == "photo" ? T.SubText : sub;
+            Txt(g, date, Gfx.F(T.FontName, T.Sf(14.5f), FontStyle.Bold), low, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Left);
             Txt(g, "Week " + CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday),
-                Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), sub, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Right);
+                Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), lowSub, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Right);
         }
     }
 

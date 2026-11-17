@@ -49,6 +49,7 @@ namespace GlassDesk
         public void SetSample()
         {
             temp = 18.4; feels = 17; wind = 11; humidity = 64; code = 2; isDay = true; status = "";
+            int pc; if (int.TryParse(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WCODE"), out pc)) { code = pc; isDay = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_NIGHT") != "1"; }
             Cfg.WeatherPlace = "Tel Aviv, Israel";
             days.Clear();
             var d0 = App.Now.Date;
@@ -293,12 +294,28 @@ namespace GlassDesk
             }
             string unit = Cfg.WeatherF ? "°F" : "°C";
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            bool art = Cfg.WeatherScene;
+            Color ink = art ? Color.White : T.Text, sub = art ? Color.FromArgb(225, 255, 255, 255) : T.SubText;
+            if (art)
+            {
+                int tb = TabH;
+                var pr = new RectangleF(Panel.X + 1, Panel.Y + 1 + tb, Panel.Width - 2, Panel.Height - 2 - tb);
+                string kind = SceneArt.Kind(code, isDay);
+                SceneArt.DrawFaded(g, pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f), "weather:" + kind, (w, h) =>
+                {
+                    var bmp = SceneArt.Weather(kind, w, h);
+                    using (var cg = Graphics.FromImage(bmp))
+                    using (var lg = new LinearGradientBrush(new Point(0, -1), new Point(0, h / 2 + 1), Color.FromArgb(70, 0, 0, 0), Color.FromArgb(0, 0, 0, 0)))
+                        cg.FillRectangle(lg, 0, 0, w, h / 2);
+                    return bmp;
+                }, 0.30f, 0.62f);
+            }
 
             // ── header: place, today's high / low
             string city = string.IsNullOrEmpty(place) ? "Weather" : place.Split(',')[0];
-            Txt(g, city, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), T.Text, new RectangleF(r.X, r.Y - T.Sf(1), r.Width * .62f, T.Sf(20)), Gfx.Left);
+            Txt(g, city, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), ink, new RectangleF(r.X, r.Y - T.Sf(1), r.Width * .62f, T.Sf(20)), Gfx.Left);
             if (days.Count > 0)
-                Txt(g, "H " + Math.Round(days[0].Max) + "°  L " + Math.Round(days[0].Min) + "°", Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
+                Txt(g, "H " + Math.Round(days[0].Max) + "°  L " + Math.Round(days[0].Min) + "°", Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), sub, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
 
             // ── hero: glowing icon, big temperature, condition
             float hy = r.Y + T.Sf(26);
@@ -308,10 +325,10 @@ namespace GlassDesk
             var big = Gfx.F(T.DisplayFont, T.Sf(50), FontStyle.Regular);
             string ts = Math.Round(temp).ToString(CultureInfo.InvariantCulture) + "°";
             var tsz = g.MeasureString(ts, big);
-            Txt(g, ts, big, T.Text, new RectangleF(r.X + T.Sf(76), hy - T.Sf(4), tsz.Width + T.Sf(10), T.Sf(64)), Gfx.Left);
+            Txt(g, ts, big, ink, new RectangleF(r.X + T.Sf(76), hy - T.Sf(4), tsz.Width + T.Sf(10), T.Sf(64)), Gfx.Left);
             float x2 = r.X + T.Sf(80) + tsz.Width;
-            Txt(g, Describe(code), Gfx.F(T.FontName, T.Sf(14), FontStyle.Bold), T.Text, new RectangleF(x2, hy + T.Sf(12), r.Right - x2, T.Sf(20)), Gfx.Left);
-            Txt(g, "Feels " + Math.Round(feels) + unit, Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), T.SubText, new RectangleF(x2, hy + T.Sf(32), r.Right - x2, T.Sf(18)), Gfx.Left);
+            Txt(g, Describe(code), Gfx.F(T.FontName, T.Sf(14), FontStyle.Bold), ink, new RectangleF(x2, hy + T.Sf(12), r.Right - x2, T.Sf(20)), Gfx.Left);
+            Txt(g, "Feels " + Math.Round(feels) + unit, Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), sub, new RectangleF(x2, hy + T.Sf(32), r.Right - x2, T.Sf(18)), Gfx.Left);
 
             // ── three glass chips: humidity, wind, rain
             float cy = hy + T.Sf(78), ch = T.Sf(46), gap = T.Sf(8), cw = (r.Width - 2 * gap) / 3f;

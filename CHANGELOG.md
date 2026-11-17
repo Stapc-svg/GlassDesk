@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.8
+
+- **Weather pictures:** the weather widget shows a sky that matches the weather: sun, a few clouds, overcast, rain, thunderstorm, snow, fog, and a starry night with a crescent moon. Turn it off in Settings › Widgets › Weather picture.
+- **Half picture, half glass:** the weather picture and the clock photo cover the top of the widget and fade smoothly into the glass, so the lower part stays clear and easy to read.
+
 ## 1.9.7
 
 - **Photo backgrounds for the clock:** free public-domain (CC0) photos that change with the time of day: green hills in the morning, snowy mountains by day, a city sunset in the evening and city lights at night. Choose **Photos**, **Drawn sky** or **Off** in Settings › Widgets › Clock background. Photo credits: assets/scenes/CREDITS.md.

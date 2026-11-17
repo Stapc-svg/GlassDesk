@@ -40,7 +40,7 @@ namespace GlassDesk
         public string ClockStyle = "photo";   // photo, drawn or off
         public bool ShowSystem = true, ShowCalendar = true, ShowNotes = true;
         public string NotesText = "Double-click to write a note.\n\n- Tidy desktop\n- Try the settings (tray icon)";
-        public bool ShowWeather = true, WeatherF = false;
+        public bool ShowWeather = true, WeatherF = false, WeatherScene = true;
         public string WeatherCity = "", WeatherPlace = "";          // what you typed / what Open-Meteo found
         public double WeatherLat = double.NaN, WeatherLon = double.NaN;
         public bool ShowTodo = true;
@@ -178,6 +178,7 @@ namespace GlassDesk
                 case "PauseFullscreen": PauseFullscreen = B(v); return;
                 case "TrimMemory": TrimMemory = B(v); return;
                 case "ShowWeather": ShowWeather = B(v); return;
+                case "WeatherScene": WeatherScene = B(v); return;
                 case "WeatherF": WeatherF = B(v); return;
                 case "WeatherCity": WeatherCity = Unesc(v); return;
                 case "WeatherPlace": WeatherPlace = Unesc(v); return;
@@ -268,7 +269,7 @@ namespace GlassDesk
                 w("NotesText", Esc(NotesText));
                 w("ShowFences", b(ShowFences)); w("HideEmptyFences", b(HideEmptyFences)); w("HideDesktopIcons", b(HideDesktopIcons));
                 w("LowPower", b(LowPower)); w("PauseFullscreen", b(PauseFullscreen)); w("TrimMemory", b(TrimMemory));
-                w("ShowWeather", b(ShowWeather)); w("WeatherF", b(WeatherF)); w("WeatherCity", Esc(WeatherCity)); w("WeatherPlace", Esc(WeatherPlace));
+                w("ShowWeather", b(ShowWeather)); w("WeatherScene", b(WeatherScene)); w("WeatherF", b(WeatherF)); w("WeatherCity", Esc(WeatherCity)); w("WeatherPlace", Esc(WeatherPlace));
                 if (!double.IsNaN(WeatherLat)) { w("WeatherLat", WeatherLat.ToString("R", CultureInfo.InvariantCulture)); w("WeatherLon", WeatherLon.ToString("R", CultureInfo.InvariantCulture)); }
                 w("ShowTodo", b(ShowTodo)); w("TodoText", Esc(TodoText));
                 w("ShowPhotos", b(ShowPhotos)); w("PhotoFolder", Esc(PhotoFolder)); w("PhotoMinutes", PhotoMinutes.ToString(CultureInfo.InvariantCulture));
