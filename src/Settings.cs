@@ -18,6 +18,9 @@ namespace GlassDesk
         public bool SingleClickOpen = false;
         public bool Stacks = true;
         public bool WallAccent = false;            // take the accent color from the wallpaper
+        /// <summary>Each widget's look: "glass" (the default) or "mac" (solid cards like macOS widgets).</summary>
+        public Dictionary<string, string> WidgetStyles = new Dictionary<string, string>();
+        public string StyleOf(string id) { string v; return WidgetStyles.TryGetValue(id, out v) ? v : "glass"; }
         public bool ShowDay = true, ShowClip = true, AllDrives = true; public string CalendarIcs = ""; public List<string> CalendarFeeds { get { var l = new List<string>(); foreach (var x in (CalendarIcs ?? "").Split(' ')) if (x.Trim().Length > 0) l.Add(x.Trim()); return l; } }                // the "Today" progress rings widget                 // 4+ files of the same type in a fence become one stack
         public bool PerDisplayLayouts = true;      // remember a layout for each monitor setup
         public string DisplayKey = "";             // the monitor setup the current layout belongs to
@@ -216,6 +219,7 @@ namespace GlassDesk
                 case "AutoBackup": AutoBackup = B(v); return;
             }
             if (k.StartsWith("cat.")) Categories[k.Substring(4)] = B(v);
+            else if (k.StartsWith("wstyle.")) { if (v == "mac" || v == "glass") WidgetStyles[k.Substring(7)] = v; }
             else if (k.StartsWith("folder.")) { string p = Unesc(v); if (p.Length > 0 && !FolderFences.Contains(p)) FolderFences.Add(p); }
             else if (k.StartsWith("custom.")) { string id = v.Trim(); if (id.Length > 0 && !CustomFences.Contains(id)) CustomFences.Add(id); }
             else if (k.StartsWith("pin."))
@@ -291,6 +295,7 @@ namespace GlassDesk
                 foreach (string a in AutoHide) w("fauto." + a, "1");
                 foreach (var kv in Categories) w("cat." + kv.Key, b(kv.Value));
                 for (int i = 0; i < FolderFences.Count; i++) w("folder." + i, Esc(FolderFences[i]));
+                foreach (var kv in WidgetStyles) w("wstyle." + kv.Key, kv.Value);
                 for (int i = 0; i < CustomFences.Count; i++) w("custom." + i, CustomFences[i]);
                 int pn = 0;
                 foreach (var kv in Pins) w("pin." + (pn++), kv.Value + "|" + Esc(kv.Key));
@@ -375,6 +380,30 @@ namespace GlassDesk
             t.Tint = t.TintTop;
             t.FontName = Lang.Font(Pick("Segoe UI", "DejaVu Sans"));
             t.DisplayFont = Lang.Font(Pick("Segoe UI", "DejaVu Sans"));
+            return t;
+        }
+
+        /// <summary>The macOS widget look: solid rounded cards, SF-style type and system colors.</summary>
+        public Theme Mac()
+        {
+            var t = (Theme)MemberwiseClone();
+            t.Solid = true; t.Flat = true; t.Neon = false; t.Glow = Color.Empty; t.Glow2 = Color.Empty; t.LookId = "mac";
+            if (Dark)
+            {
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(250, 30, 30, 32);
+                t.Text = Color.FromArgb(255, 255, 255, 255); t.SubText = Color.FromArgb(255, 152, 152, 157);
+                t.Accent = Color.FromArgb(255, 10, 132, 255);
+                t.Border = Color.FromArgb(30, 255, 255, 255); t.Hover = Color.FromArgb(30, 255, 255, 255); t.Track = Color.FromArgb(46, 255, 255, 255);
+            }
+            else
+            {
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(250, 255, 255, 255);
+                t.Text = Color.FromArgb(255, 29, 29, 31); t.SubText = Color.FromArgb(255, 134, 134, 139);
+                t.Accent = Color.FromArgb(255, 0, 122, 255);
+                t.Border = Color.FromArgb(18, 0, 0, 0); t.Hover = Color.FromArgb(14, 0, 0, 0); t.Track = Color.FromArgb(22, 0, 0, 0);
+            }
+            t.FontName = Lang.Font(Pick("SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "DejaVu Sans"));
+            t.DisplayFont = Lang.Font(Pick("SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "DejaVu Sans"));
             return t;
         }
 

@@ -403,3 +403,9 @@ Game screenshots	Capturas de juegos
 Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders	Encontradas {0}: carpetas de Xbox Game Bar, NVIDIA o capturas de Windows
 Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found	Las carpetas de Xbox Game Bar, NVIDIA y Windows ya se muestran, o no se encontraron
 Add them	Añadirlas
+Style	Estilo
+macOS	macOS
+No picture	Sin imagen
+Widget style	Estilo de widgets
+Mixed — right-click a widget › Style to change just that one	Mixto — clic derecho en un widget › Estilo para cambiar solo ese
+For all widgets — or right-click one › Style to change just that one	Para todos los widgets — o clic derecho en uno › Estilo para cambiar solo ese

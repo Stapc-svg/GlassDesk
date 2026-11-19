@@ -81,6 +81,8 @@ namespace GlassDesk
     internal abstract class Widget : GlassWindow
     {
         protected Widget(App app, string id) : base(app, id) { Resizable = true; ZoomResize = true; }
+        protected override bool MacLook { get { return Cfg.StyleOf(Id) == "mac"; } }
+        public bool IsMac { get { return MacLook; } }
         protected abstract Size BaseSize { get; }
         public override Size PreferredPanelSize(Size saved)
         {
@@ -101,7 +103,7 @@ namespace GlassDesk
             if (TabH > 0)
             {
                 var strip = new RectangleF(Panel.X, Panel.Y, Panel.Width, TabH);
-                using (var path = Gfx.Round(new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height), T.S(Cfg.Radius)))
+                using (var path = Gfx.Round(new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height), T.S(PanelRadius)))
                 {
                     var st = g.Save(); g.SetClip(path, System.Drawing.Drawing2D.CombineMode.Intersect);
                     using (var b = new SolidBrush(Color.FromArgb(T.Dark ? 40 : 30, T.Dark ? Color.Black : Color.White))) g.FillRectangle(b, strip);
@@ -159,7 +161,7 @@ namespace GlassDesk
             var pr = new RectangleF(Panel.X + 1, Panel.Y + 1 + t, Panel.Width - 2, Panel.Height - 2 - t);
             if (pr.Width < 10 || pr.Height < 10) return true;
             // half picture, half glass: the photo fills the top and fades into the panel below
-            SceneArt.DrawFaded(g, pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f), "clock:" + name, (pw, ph) =>
+            SceneArt.DrawFaded(g, pr, Math.Max(2, T.S(PanelRadius) - 1.5f), "clock:" + name, (pw, ph) =>
             {
                 var c = SceneArt.Cover(img, pw, ph);
                 using (var cg = Graphics.FromImage(c))
@@ -197,7 +199,7 @@ namespace GlassDesk
             night = Math.Max(0, Math.Min(1, night));
             var st = g.Save();
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var clip = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+            using (var clip = Gfx.Round(pr, Math.Max(2, T.S(PanelRadius) - 1.5f)))
             {
                 g.SetClip(clip, CombineMode.Intersect);
                 using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(235, top), Color.FromArgb(235, bot))) g.FillRectangle(lg, pr);
@@ -255,9 +257,60 @@ namespace GlassDesk
             }
         }
 
+        /// <summary>macOS style: a round clock face with an orange second hand, the time and date beside it.</summary>
+        void PaintMac(Graphics g, DateTime now)
+        {
+            Rectangle r = Inner;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float d = Math.Min(r.Height + T.Sf(8), r.Width * 0.46f);
+            var face = new RectangleF(r.X - T.Sf(4), r.Y + (r.Height - d) / 2f, d, d);
+            float cx = face.X + d / 2, cy = face.Y + d / 2, rad = d / 2;
+            Color dial = T.Dark ? Color.FromArgb(255, 18, 18, 20) : Color.FromArgb(255, 246, 246, 248);
+            Color ink = T.Dark ? Color.White : Color.FromArgb(255, 29, 29, 31);
+            using (var b = new SolidBrush(dial)) g.FillEllipse(b, face);
+            using (var pen = new Pen(T.Dark ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(24, 0, 0, 0), T.Sf(1))) g.DrawEllipse(pen, face);
+            var nf = Gfx.F(T.DisplayFont, Math.Max(6f, rad * 0.2f), FontStyle.Bold);
+            for (int i = 1; i <= 12; i++)
+            {
+                double a = Math.PI * 2 * i / 12 - Math.PI / 2;
+                float nx = cx + (float)Math.Cos(a) * rad * 0.76f, ny = cy + (float)Math.Sin(a) * rad * 0.76f;
+                Txt(g, i.ToString(), nf, ink, new RectangleF(nx - rad * 0.2f, ny - rad * 0.16f, rad * 0.4f, rad * 0.32f), Gfx.Center);
+            }
+            for (int i = 0; i < 60; i++)
+            {
+                if (i % 5 == 0) continue;
+                double a = Math.PI * 2 * i / 60;
+                float x1 = cx + (float)Math.Cos(a) * rad * 0.93f, y1 = cy + (float)Math.Sin(a) * rad * 0.93f;
+                using (var b = new SolidBrush(Color.FromArgb(110, ink))) g.FillEllipse(b, x1 - T.Sf(0.7f), y1 - T.Sf(0.7f), T.Sf(1.4f), T.Sf(1.4f));
+            }
+            double sec = now.Second, min = now.Minute + sec / 60, hr = now.Hour % 12 + min / 60;
+            Action<double, float, float, Color> hand = (frac, len, w, c) =>
+            {
+                double a = Math.PI * 2 * frac - Math.PI / 2;
+                using (var pen = new Pen(c, w) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                    g.DrawLine(pen, cx - (float)Math.Cos(a) * rad * 0.1f, cy - (float)Math.Sin(a) * rad * 0.1f, cx + (float)Math.Cos(a) * rad * len, cy + (float)Math.Sin(a) * rad * len);
+            };
+            hand(hr / 12, 0.5f, Math.Max(2f, rad * 0.075f), ink);
+            hand(min / 60, 0.78f, Math.Max(1.6f, rad * 0.055f), ink);
+            Color orange = Color.FromArgb(255, 255, 149, 0);
+            if (Cfg.ShowSeconds) hand(sec / 60, 0.86f, Math.Max(1f, rad * 0.02f), orange);
+            using (var b = new SolidBrush(Cfg.ShowSeconds ? orange : ink)) g.FillEllipse(b, cx - rad * 0.06f, cy - rad * 0.06f, rad * 0.12f, rad * 0.12f);
+            using (var b = new SolidBrush(dial)) g.FillEllipse(b, cx - rad * 0.025f, cy - rad * 0.025f, rad * 0.05f, rad * 0.05f);
+
+            // right side: day, big time, date
+            float x = face.Right + T.Sf(16), tw = r.Right - x;
+            Txt(g, now.ToString("dddd", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Bold), orange,
+                new RectangleF(x, r.Y + T.Sf(4), tw, T.Sf(18)), Gfx.Left);
+            string time = Cfg.Clock24 ? now.ToString("HH:mm", CultureInfo.InvariantCulture) : now.ToString("h:mm", CultureInfo.InvariantCulture);
+            Txt(g, time, Gfx.F(T.DisplayFont, T.Sf(38), FontStyle.Regular), T.Text, new RectangleF(x - T.Sf(3), r.Y + T.Sf(20), tw + T.Sf(6), T.Sf(52)), Gfx.Left);
+            string date = now.ToString("d MMMM", CultureInfo.CurrentCulture) + (Cfg.Clock24 ? "" : "  " + now.ToString("tt", CultureInfo.InvariantCulture));
+            Txt(g, date, Gfx.F(T.FontName, T.Sf(13), FontStyle.Regular), T.SubText, new RectangleF(x, r.Y + T.Sf(74), tw, T.Sf(20)), Gfx.Left);
+        }
+
         protected override void PaintContent(Graphics g)
         {
             DateTime now = App.Now;
+            if (MacLook) { PaintMac(g, now); return; }
             Rectangle r = Inner;
             bool scene = Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "drawn";
             if (Cfg.ClockStyle == "photo") { if (!PaintPhoto(g, now)) PaintScene(g, now); }
@@ -436,7 +489,9 @@ namespace GlassDesk
             DateTime first = new DateTime(today.Year, today.Month, 1).AddMonths(monthOffset);
             Rectangle r = Inner;
             string head = first.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
-            Txt(g, head, Gfx.F(T.FontName, T.Sf(15), FontStyle.Bold), T.Text, new RectangleF(r.X, r.Y - T.Sf(2), r.Width - T.Sf(60), T.Sf(26)), Gfx.Left);
+            Color red = Color.FromArgb(255, 255, 59, 48);
+            if (MacLook) head = head.ToUpper(CultureInfo.CurrentCulture);
+            Txt(g, head, Gfx.F(T.FontName, T.Sf(MacLook ? 13 : 15), FontStyle.Bold), MacLook ? red : T.Text, new RectangleF(r.X, r.Y - T.Sf(2), r.Width - T.Sf(60), T.Sf(26)), Gfx.Left);
             Arrow(g, PrevBtn, true); Arrow(g, NextBtn, false);
 
             DayOfWeek fdow = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
@@ -464,7 +519,7 @@ namespace GlassDesk
                     if (isToday)
                     {
                         float s = Math.Min(cw, ch) - T.Sf(4);
-                        using (var b = new SolidBrush(T.Accent)) g.FillEllipse(b, cell.X + (cw - s) / 2, cell.Y + (ch - s) / 2, s, s);
+                        using (var b = new SolidBrush(MacLook ? red : T.Accent)) g.FillEllipse(b, cell.X + (cw - s) / 2, cell.Y + (ch - s) / 2, s, s);
                         Txt(g, d.Day.ToString(), dayB, Color.White, cell, Gfx.Center);
                     }
                     else

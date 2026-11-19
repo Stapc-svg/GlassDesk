@@ -378,6 +378,12 @@ namespace GlassDesk
             {
                 S.WidgetZoom.Clear(); S.Save(); app.ApplySettings();
             }));
+            Section(Lang.L("Style"));
+            int nMac = 0; foreach (var id in app.AllWidgetIds()) if (S.StyleOf(id) == "mac") nMac++;
+            int sel = nMac == 0 ? 0 : nMac == app.AllWidgetIds().Length ? 1 : -1;
+            var ws = new Segmented(P, k, new[] { Lang.L("Glass"), Lang.L("macOS") }, sel) { Font = fSmall };
+            ws.SelectionChanged += delegate { if (ws.SelectedIndex >= 0) app.SetWidgetStyle(null, ws.SelectedIndex == 1 ? "mac" : "glass"); };
+            Row(Lang.L("Widget style"), sel < 0 ? Lang.L("Mixed — right-click a widget › Style to change just that one") : Lang.L("For all widgets — or right-click one › Style to change just that one"), ws);
             Section(Lang.L("Clock"));
             Row(Lang.L("Clock"), "Time, date and a friendly greeting", Toggle(S.ShowClock, v => S.ShowClock = v));
             Row(Lang.L("Show seconds"), "Updates every second (otherwise once a minute)", Toggle(S.ShowSeconds, v => S.ShowSeconds = v));

@@ -403,3 +403,9 @@ Game screenshots	游戏截图
 Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders	找到 {0} 个：Xbox Game Bar、NVIDIA 或 Windows 截图文件夹
 Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found	Xbox Game Bar、NVIDIA 和 Windows 截图文件夹已显示，或没有找到
 Add them	添加
+Style	样式
+macOS	macOS
+No picture	无图片
+Widget style	小组件样式
+Mixed — right-click a widget › Style to change just that one	混合 — 右键单击小组件 › 样式，只更改那一个
+For all widgets — or right-click one › Style to change just that one	所有小组件 — 或右键单击某个 › 样式，只更改那一个

@@ -13,6 +13,9 @@ namespace GlassDesk
     {
         public Settings Settings;
         public Theme Theme;
+        Theme macTheme, macFrom;
+        /// <summary>The macOS widget look, made from the current theme (light or dark, size).</summary>
+        public Theme MacTheme { get { if (macTheme == null || !ReferenceEquals(macFrom, Theme)) { macTheme = Theme.Mac(); macFrom = Theme; } return macTheme; } }
         public float DpiScale = 1f;
         public readonly SysStats Stats = new SysStats();
         public readonly List<GlassWindow> Windows = new List<GlassWindow>();
@@ -652,6 +655,15 @@ namespace GlassDesk
             catch (Exception ex) { Program.Log(ex); }
         }
 
+        /// <summary>Glass or macOS look for one widget (null id = every widget).</summary>
+        public void SetWidgetStyle(string id, string style)
+        {
+            if (id == null) { foreach (var w in AllWidgetIds()) Settings.WidgetStyles[w] = style; }
+            else Settings.WidgetStyles[id] = style;
+            Settings.Save(); ApplySettings();
+        }
+        public string[] AllWidgetIds() { return new[] { "clock", "system", "calendar", "notes", "todo", "countdown", "quote", "github", "network", "focus", "music", "day", "clip", "weather", "photos" }; }
+
         public void ApplySettings()
         {
             PickWallpaperAccent();
@@ -1106,6 +1118,34 @@ namespace GlassDesk
                 m.Items.Add((Settings.ShowSeconds ? "Hide" : "Show") + " seconds", null, delegate { Settings.ShowSeconds = !Settings.ShowSeconds; Settings.Save(); ApplySettings(); });
                 m.Items.Add(Settings.Clock24 ? "Use 12-hour time" : "Use 24-hour time", null, delegate { Settings.Clock24 = !Settings.Clock24; Settings.Save(); ApplySettings(); });
             }
+            // each widget picks its own look
+            var style = new ToolStripMenuItem(Lang.L("Style"));
+            foreach (var opt in new[] { new[] { "glass", "Glass" }, new[] { "mac", "macOS" } })
+            {
+                string id = opt[0];
+                var it = new ToolStripMenuItem(Lang.L(opt[1])) { Checked = Settings.StyleOf(w.Id) == id };
+                it.Click += delegate { SetWidgetStyle(w.Id, id); };
+                style.DropDownItems.Add(it);
+            }
+            if (w == clock && Settings.StyleOf("clock") != "mac")
+            {
+                style.DropDownItems.Add(new ToolStripSeparator());
+                foreach (var opt in new[] { new[] { "photo", "Photos" }, new[] { "drawn", "Drawn sky" }, new[] { "off", "No picture" } })
+                {
+                    string id = opt[0];
+                    var it = new ToolStripMenuItem(Lang.L(opt[1])) { Checked = Settings.ClockStyle == id };
+                    it.Click += delegate { Settings.ClockStyle = id; Settings.Save(); ApplySettings(); };
+                    style.DropDownItems.Add(it);
+                }
+            }
+            if (w == weather && Settings.StyleOf("weather") != "mac")
+            {
+                style.DropDownItems.Add(new ToolStripSeparator());
+                var it = new ToolStripMenuItem(Lang.L("Weather picture")) { Checked = Settings.WeatherScene };
+                it.Click += delegate { Settings.WeatherScene = !Settings.WeatherScene; Settings.Save(); ApplySettings(); };
+                style.DropDownItems.Add(it);
+            }
+            m.Items.Add(style);
             if (Settings.WidgetZoom.ContainsKey(w.Id)) m.Items.Add(Lang.L("Reset size"), null, delegate { ResetZoom(w); });
             m.Items.Add(Lang.L("Hide this widget"), null, delegate
             {
@@ -1231,6 +1271,7 @@ namespace GlassDesk
             Settings.FenceIcons["cat.folders"] = "large";
             Settings.CountdownTitle = "Summer trip"; Settings.CountdownDate = "2026-11-29";
             Settings.ShowWeather = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WEATHER") == "1"; Settings.ShowPhotos = false;
+            if (Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_MAC") == "1") foreach (var wid in AllWidgetIds()) Settings.WidgetStyles[wid] = "mac";
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote

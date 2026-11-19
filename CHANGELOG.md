@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.0
+
+- **Choose a style for each widget.** Right-click any widget › Style and pick **Glass** (the GlassDesk look) or **macOS** (solid rounded cards like the widgets on a Mac). Settings › Widgets › Widget style switches all of them at once.
+- In the macOS style the clock becomes a round clock face with the day and time beside it, the weather card turns into the sky (blue by day, dark at night, grey when it rains), and the calendar marks today in red.
+- In the Glass style, the clock's Style menu also lets you pick Photos, Drawn sky or No picture, and the weather's Style menu turns its picture on or off.
+
 ## 1.11.0
 
 Ideas and bug reports from the XDA thread:

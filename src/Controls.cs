@@ -144,7 +144,7 @@ namespace GlassDesk
             using (var path = Gfx.Round(r, Height / 2f)) using (var pen = new Pen(P.Line)) g.DrawPath(pen, path);
             float w = r.Width / Options.Length;
             var pill = new RectangleF(r.X + sel * w + 3, r.Y + 3, w - 6, r.Height - 6);
-            using (var path = Gfx.Round(pill, pill.Height / 2f))
+            if (sel >= 0) using (var path = Gfx.Round(pill, pill.Height / 2f))
             using (var lg = new LinearGradientBrush(new PointF(pill.X - 1, pill.Y), new PointF(pill.Right + 1, pill.Bottom), P.Accent, P.Accent2)) g.FillPath(lg, path);
             for (int i = 0; i < Options.Length; i++)
                 using (var b = new SolidBrush(i == sel ? Color.White : P.Text))

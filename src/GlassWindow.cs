@@ -103,7 +103,7 @@ namespace GlassDesk
         {
             get
             {
-                Theme b = App.Theme;
+                Theme b = MacLook ? App.MacTheme : App.Theme;
                 if (Math.Abs(Zoom - 1f) < 0.001f) return b;
                 if (zoomed == null || !ReferenceEquals(zoomedFrom, b) || zoomedAt != Zoom) { zoomed = b.Zoomed(Zoom); zoomedFrom = b; zoomedAt = Zoom; }
                 return zoomed;
@@ -217,6 +217,14 @@ namespace GlassDesk
 
         // ---------------- painting ----------------
         protected abstract void PaintContent(Graphics g);
+        /// <summary>True when this panel uses the macOS widget look instead of glass.</summary>
+        protected virtual bool MacLook { get { return false; } }
+        protected float PanelRadius { get { return MacLook ? 22 : Cfg.Radius; } }
+        /// <summary>The card behind a macOS-style widget; the weather widget paints a sky instead.</summary>
+        protected virtual void PaintMacBack(Graphics g, GraphicsPath path, RectangleF pr)
+        {
+            using (var b = new SolidBrush(T.TintTop)) g.FillPath(b, path);
+        }
         public bool DropHint;   // another panel is being dragged onto this one
 
         // ---- stacks: a tab for every panel in the stack; click a tab to switch ----
@@ -263,7 +271,7 @@ namespace GlassDesk
             if (DropHint)
             {
                 var pr = new RectangleF(Panel.X + 1.5f, Panel.Y + 1.5f, Panel.Width - 3, Panel.Height - 3);
-                using (var path = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+                using (var path = Gfx.Round(pr, Math.Max(2, T.S(PanelRadius) - 1.5f)))
                 {
                     using (var b = new SolidBrush(Gfx.WithAlpha(T.Accent, 50))) g.FillPath(b, path);
                     using (var pen = new Pen(T.Accent, T.Sf(3))) g.DrawPath(pen, path);
@@ -330,7 +338,7 @@ namespace GlassDesk
         /// <summary>Two little curved lines in the corner, shown on hover, so you can see where to resize.</summary>
         void DrawGrip(Graphics g)
         {
-            float r = T.S(Cfg.Radius);
+            float r = T.S(PanelRadius);
             float x = Panel.Right, y = Panel.Bottom;
             int a = hoverGrip || resizing ? 230 : 120;
             using (var pen = new Pen(Color.FromArgb(a, hoverGrip || resizing ? T.Accent : T.Text), App.Theme.Sf(2.2f)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
@@ -345,9 +353,32 @@ namespace GlassDesk
             }
         }
 
+        void DrawMacChrome(Graphics g, float r)
+        {
+            // a soft drop shadow, then the solid card: no tint, light or rim, like macOS widgets
+            for (int i = pad; i >= 1; i--)
+            {
+                float f = 1f - (float)i / Math.Max(1, pad);
+                var rr = new RectangleF(Panel.X - i * 0.6f, Panel.Y - i * 0.6f + T.Sf(4), Panel.Width + i * 1.2f, Panel.Height + i * 1.2f);
+                using (var p = Gfx.Round(rr, r + i * 0.6f)) using (var pen = new Pen(Color.FromArgb((int)(f * f * (40 + 20 * hover)), 0, 0, 0), 1.4f))
+                    g.DrawPath(pen, p);
+            }
+            var pr = new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height);
+            if (pr.Width < 4 || pr.Height < 4) return;
+            using (var path = Gfx.Round(pr, r))
+            {
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                PaintMacBack(g, path, pr);
+                g.Restore(st);
+                using (var pen = new Pen(T.Border, 1f)) g.DrawPath(pen, path);
+            }
+        }
+
         void DrawChrome(Graphics g)
         {
-            float r = T.S(Cfg.Radius);
+            float r = T.S(PanelRadius);
+            if (MacLook) { DrawMacChrome(g, r); return; }
             if (pad > 0)
             {
                 for (int i = pad; i >= 1; i--)

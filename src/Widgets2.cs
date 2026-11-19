@@ -280,6 +280,19 @@ namespace GlassDesk
             return "—";
         }
 
+        /// <summary>macOS style: the whole card is the sky, like the Weather widget on a Mac.</summary>
+        protected override void PaintMacBack(Graphics g, GraphicsPath path, RectangleF pr)
+        {
+            Color top, bot;
+            bool wet = code >= 51 && code != 71 && code != 73 && code != 75 && code != 77 && code != 85 && code != 86;
+            if (!isDay) { top = Color.FromArgb(255, 14, 24, 56); bot = Color.FromArgb(255, 44, 58, 104); }
+            else if (code >= 95) { top = Color.FromArgb(255, 52, 60, 80); bot = Color.FromArgb(255, 96, 104, 128); }
+            else if (wet) { top = Color.FromArgb(255, 74, 96, 128); bot = Color.FromArgb(255, 122, 146, 176); }
+            else if (code >= 3) { top = Color.FromArgb(255, 92, 120, 160); bot = Color.FromArgb(255, 150, 176, 206); }
+            else { top = Color.FromArgb(255, 36, 116, 214); bot = Color.FromArgb(255, 100, 172, 240); }
+            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), top, bot)) g.FillPath(lg, path);
+        }
+
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
@@ -294,14 +307,14 @@ namespace GlassDesk
             }
             string unit = Cfg.WeatherF ? "°F" : "°C";
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            bool art = Cfg.WeatherScene;
-            Color ink = art ? Color.White : T.Text, sub = art ? Color.FromArgb(225, 255, 255, 255) : T.SubText;
+            bool art = Cfg.WeatherScene && !MacLook;
+            Color ink = art || MacLook ? Color.White : T.Text, sub = art || MacLook ? Color.FromArgb(225, 255, 255, 255) : T.SubText;
             if (art)
             {
                 int tb = TabH;
                 var pr = new RectangleF(Panel.X + 1, Panel.Y + 1 + tb, Panel.Width - 2, Panel.Height - 2 - tb);
                 string kind = SceneArt.Kind(code, isDay);
-                SceneArt.DrawFaded(g, pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f), "weather:" + kind, (w, h) =>
+                SceneArt.DrawFaded(g, pr, Math.Max(2, T.S(PanelRadius) - 1.5f), "weather:" + kind, (w, h) =>
                 {
                     var bmp = SceneArt.Weather(kind, w, h);
                     using (var cg = Graphics.FromImage(bmp))
@@ -344,7 +357,7 @@ namespace GlassDesk
                     using (var b2 = new SolidBrush(Gfx.WithAlpha(T.Text, T.Dark ? 16 : 22))) g.FillPath(b2, path);
                     using (var pen = new Pen(Gfx.WithAlpha(T.Text, 22))) g.DrawPath(pen, path);
                 }
-                Txt(g, chips[i][0], Gfx.F(T.FontName, T.Sf(10.5f), FontStyle.Regular), T.SubText, new RectangleF(cr.X, cr.Y + T.Sf(5), cr.Width, T.Sf(16)), Gfx.Center);
+                Txt(g, chips[i][0], Gfx.F(T.FontName, T.Sf(10.5f), FontStyle.Regular), MacLook ? sub : T.SubText, new RectangleF(cr.X, cr.Y + T.Sf(5), cr.Width, T.Sf(16)), Gfx.Center);
                 Txt(g, chips[i][1], Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), T.Text, new RectangleF(cr.X, cr.Y + T.Sf(21), cr.Width, T.Sf(20)), Gfx.Center);
             }
 
@@ -354,9 +367,9 @@ namespace GlassDesk
             {
                 var sf = Gfx.F(T.FontName, T.Sf(10.5f), FontStyle.Regular);
                 var sb = Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold);
-                Txt(g, Lang.L("Sunrise"), sf, T.SubText, new RectangleF(r.X, sy, T.Sf(60), T.Sf(15)), Gfx.Left);
+                Txt(g, Lang.L("Sunrise"), sf, MacLook ? sub : T.SubText, new RectangleF(r.X, sy, T.Sf(60), T.Sf(15)), Gfx.Left);
                 Txt(g, sunrise.ToString("HH:mm"), sb, T.Text, new RectangleF(r.X, sy + T.Sf(14), T.Sf(60), T.Sf(18)), Gfx.Left);
-                Txt(g, Lang.L("Sunset"), sf, T.SubText, new RectangleF(r.Right - T.Sf(60), sy, T.Sf(60), T.Sf(15)), Gfx.Right);
+                Txt(g, Lang.L("Sunset"), sf, MacLook ? sub : T.SubText, new RectangleF(r.Right - T.Sf(60), sy, T.Sf(60), T.Sf(15)), Gfx.Right);
                 Txt(g, sunset.ToString("HH:mm"), sb, T.Text, new RectangleF(r.Right - T.Sf(60), sy + T.Sf(14), T.Sf(60), T.Sf(18)), Gfx.Right);
                 var arc = new RectangleF(r.X + T.Sf(62), sy + T.Sf(4), r.Width - T.Sf(124), T.Sf(52));
                 using (var pen = new Pen(Gfx.WithAlpha(T.Text, 40), T.Sf(1.5f)) { DashStyle = DashStyle.Dash }) g.DrawArc(pen, arc, 180, 180);
@@ -388,7 +401,7 @@ namespace GlassDesk
                 if (i == 0)
                     using (var path = Gfx.Round(new RectangleF(x + T.Sf(3), hy2 - T.Sf(2), colw - T.Sf(6), T.Sf(66)), T.Sf(12)))
                     using (var b2 = new SolidBrush(Gfx.WithAlpha(T.Accent, 46))) g.FillPath(b2, path);
-                Txt(g, top, Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(x, hy2 + T.Sf(2), colw, T.Sf(16)), Gfx.Center);
+                Txt(g, top, Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), MacLook ? sub : T.SubText, new RectangleF(x, hy2 + T.Sf(2), colw, T.Sf(16)), Gfx.Center);
                 bool dayAt = hours.Count == 0 || sunrise == DateTime.MinValue || (hours[i].Time.TimeOfDay > sunrise.TimeOfDay && hours[i].Time.TimeOfDay < sunset.TimeOfDay);
                 WeatherIcon(g, new RectangleF(x + colw / 2 - T.Sf(12), hy2 + T.Sf(19), T.Sf(24), T.Sf(24)), c, dayAt);
                 Txt(g, tv, Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Bold), T.Text, new RectangleF(x, hy2 + T.Sf(44), colw, T.Sf(18)), Gfx.Center);
@@ -662,7 +675,7 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             var pr = new RectangleF(Panel.X + 1, Panel.Y + 1, Panel.Width - 2, Panel.Height - 2);
-            float rad = Math.Max(0, T.S(Cfg.Radius) - 1);
+            float rad = Math.Max(0, T.S(PanelRadius) - 1);
             if (shown == null)
             {
                 Rectangle r = Inner;
