@@ -98,13 +98,13 @@ namespace GlassDesk
         {
             Rectangle r = Inner;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            Title(g, "Clipboard", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Title(g, Lang.L("Clipboard"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             string right = paused ? "paused" : items.Count == 0 ? "" : items.Count + (items.Count == 1 ? " item" : " items");
             Txt(g, right, Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), paused ? Color.FromArgb(255, 255, 170, 70) : T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
             rows.Clear();
             if (items.Count == 0)
             {
-                Txt(g, "Copy some text anywhere and it shows up here.\nClick it later to copy it again.", Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Regular), T.SubText,
+                Txt(g, Lang.L("Copy some text anywhere and it shows up here.\nClick it later to copy it again."), Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Regular), T.SubText,
                     new RectangleF(r.X, r.Y + T.Sf(34), r.Width, T.Sf(60)), Gfx.TopLeftWrap);
                 return;
             }

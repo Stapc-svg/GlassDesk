@@ -235,7 +235,7 @@ namespace GlassDesk
             bool scene = Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "drawn";
             if (Cfg.ClockStyle == "photo") { if (!PaintPhoto(g, now)) PaintScene(g, now); }
             else if (scene) PaintScene(g, now);
-            string greet = now.Hour < 5 ? "Good night" : now.Hour < 12 ? "Good morning" : now.Hour < 18 ? "Good afternoon" : "Good evening";
+            string greet = Lang.L(now.Hour < 5 ? "Good night" : now.Hour < 12 ? "Good morning" : now.Hour < 18 ? "Good afternoon" : "Good evening");
             Color ink = scene ? Color.White : T.Text, sub = scene ? Color.FromArgb(225, 255, 255, 255) : T.SubText;
             Txt(g, greet, Gfx.F(T.FontName, T.Sf(13), FontStyle.Regular), sub, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Left);
 
@@ -257,7 +257,7 @@ namespace GlassDesk
             string date = now.ToString("dddd, MMMM d", CultureInfo.CurrentCulture);
             Color low = Cfg.ClockStyle == "photo" ? T.Text : ink, lowSub = Cfg.ClockStyle == "photo" ? T.SubText : sub;
             Txt(g, date, Gfx.F(T.FontName, T.Sf(14.5f), FontStyle.Bold), low, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Left);
-            Txt(g, "Week " + CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday),
+            Txt(g, string.Format(Lang.L("Week {0}"), CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday)),
                 Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), lowSub, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Right);
         }
     }
@@ -274,8 +274,8 @@ namespace GlassDesk
         {
             var st = App.Stats;
             Rectangle r = Inner;
-            Title(g, "System", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
-            Txt(g, "live", Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width - T.Sf(12), T.Sf(20)), Gfx.Right);
+            Title(g, Lang.L("System"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Txt(g, Lang.L("live"), Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width - T.Sf(12), T.Sf(20)), Gfx.Right);
             using (var b = new SolidBrush(Color.FromArgb(255, 70, 210, 130))) g.FillEllipse(b, r.Right - T.Sf(7), r.Y + T.Sf(7), T.Sf(6), T.Sf(6));
 
             float y = r.Y + T.Sf(30);
@@ -284,7 +284,7 @@ namespace GlassDesk
             float rowH = T.Sf(38);
 
             // CPU with sparkline
-            Txt(g, "CPU", label, T.Text, new RectangleF(r.X, y, r.Width, T.Sf(18)), Gfx.Left);
+            Txt(g, Lang.L("CPU"), label, T.Text, new RectangleF(r.X, y, r.Width, T.Sf(18)), Gfx.Left);
             Txt(g, (st.Cpu * 100).ToString("0") + "%", value, T.SubText, new RectangleF(r.X, y, r.Width, T.Sf(18)), Gfx.Right);
             var spark = new RectangleF(r.X, y + T.Sf(20), r.Width, T.Sf(16));
             DrawSpark(g, spark, st.CpuHistory);
@@ -413,8 +413,8 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
-            Title(g, "Notes", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
-            Txt(g, "double-click to edit", Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
+            Title(g, Lang.L("Notes"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Txt(g, Lang.L("double-click to edit"), Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
             var body = new RectangleF(r.X, r.Y + T.Sf(30), r.Width, r.Height - T.Sf(30));
             string text = string.IsNullOrEmpty(Cfg.NotesText) ? "Empty note" : Cfg.NotesText;
             Txt(g, text, Gfx.F(T.FontName, T.Sf(14), FontStyle.Regular), string.IsNullOrEmpty(Cfg.NotesText) ? T.SubText : T.Text, body, Gfx.TopLeftWrap);

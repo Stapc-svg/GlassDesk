@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.10.0
+
+- **GlassDesk speaks your language** (asked for in issue #24): 简体中文 (Chinese), Español and Русский, besides English. It follows your Windows language automatically, or pick one in Settings › General › Language. Menus, Settings, widgets, the welcome screen, search and theme descriptions are translated, and dates follow the language too. Chinese uses Microsoft YaHei so every character shows up.
+- Translations are plain text files in `assets/lang/` (English, a tab, the translation), so anyone can add or fix a language.
+
 ## 1.9.10
 
 - **New Clipboard widget:** shows the last things you copied (links, colors, file paths and text, each with a little colored mark). Click one to copy it again. It's kept in memory only, never saved to disk, and copies from password managers are skipped. Right-click to pause it or clear the history.

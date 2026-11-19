@@ -253,7 +253,7 @@ namespace GlassDesk
 
             float x = cr.Right + T.Sf(16), w = r.Right - x;
             // status line
-            string label = live ? (Playing ? "NOW PLAYING" : "PAUSED") : any ? "LAST PLAYED" : "MUSIC";
+            string label = Lang.L(live ? (Playing ? "NOW PLAYING" : "PAUSED") : any ? "LAST PLAYED" : "MUSIC");
             Color lc = live && Playing ? T.Accent : T.SubText;
             if (live && Playing) DrawBars(g, new RectangleF(x, r.Y + T.Sf(3), T.Sf(12), T.Sf(11)), lc);
             float lx = live && Playing ? x + T.Sf(17) : x;

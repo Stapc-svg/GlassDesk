@@ -37,7 +37,8 @@ namespace GlassDesk
 
         // Widgets
         public bool ShowClock = true, ShowSeconds = false, Clock24 = true;
-        public string ClockStyle = "photo";   // photo, drawn or off
+        public string ClockStyle = "photo";
+        public string Language = "auto";      // auto = the Windows display language   // photo, drawn or off
         public bool ShowSystem = true, ShowCalendar = true, ShowNotes = true;
         public string NotesText = "Double-click to write a note.\n\n- Tidy desktop\n- Try the settings (tray icon)";
         public bool ShowWeather = true, WeatherF = false, WeatherScene = true;
@@ -167,6 +168,7 @@ namespace GlassDesk
                 case "ShowClock": ShowClock = B(v); return;
                 case "ShowSeconds": ShowSeconds = B(v); return;
                 case "ClockStyle": ClockStyle = v.Trim(); return;
+                case "Language": Language = v.Trim(); return;
                 case "Clock24": Clock24 = B(v); return;
                 case "ShowSystem": ShowSystem = B(v); return;
                 case "ShowCalendar": ShowCalendar = B(v); return;
@@ -265,7 +267,7 @@ namespace GlassDesk
                 w("Look", Look); w("Theme", Theme); w("Accent", (Accent.ToArgb() & 0xFFFFFF).ToString("X6"));
                 w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
                 w("Radius", Radius.ToString(CultureInfo.InvariantCulture)); w("UiScale", UiScale.ToString(CultureInfo.InvariantCulture));
-                w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24)); w("ClockStyle", ClockStyle);
+                w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24)); w("ClockStyle", ClockStyle); w("Language", Language);
                 w("ShowSystem", b(ShowSystem)); w("ShowCalendar", b(ShowCalendar)); w("ShowNotes", b(ShowNotes));
                 w("NotesText", Esc(NotesText));
                 w("ShowFences", b(ShowFences)); w("HideEmptyFences", b(HideEmptyFences)); w("HideDesktopIcons", b(HideDesktopIcons));
@@ -369,8 +371,8 @@ namespace GlassDesk
             }
             if (look.Id == "paper") { t.Text = t.Dark ? Color.FromArgb(245, 238, 232, 220) : Color.FromArgb(245, 46, 40, 32); }
             t.Tint = t.TintTop;
-            t.FontName = Pick("Segoe UI", "DejaVu Sans");
-            t.DisplayFont = Pick("Segoe UI", "DejaVu Sans");
+            t.FontName = Lang.Font(Pick("Segoe UI", "DejaVu Sans"));
+            t.DisplayFont = Lang.Font(Pick("Segoe UI", "DejaVu Sans"));
             return t;
         }
 

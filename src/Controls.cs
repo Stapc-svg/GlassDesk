@@ -247,7 +247,7 @@ namespace GlassDesk
             using (var b = new SolidBrush(P.Text)) using (var f = new Font(Font.FontFamily, Font.Size, FontStyle.Bold, Font.Unit))
                 g.DrawString(L.Name, f, b, new RectangleF(2, stage.Bottom + 6 * k, Width - 4, 18 * k), Gfx.Left);
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString(L.Desc, Font, b, new RectangleF(2, stage.Bottom + 22 * k, Width - 4, 16 * k), new StringFormat(Gfx.Left) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
+                g.DrawString(Lang.L(L.Desc), Font, b, new RectangleF(2, stage.Bottom + 22 * k, Width - 4, 16 * k), new StringFormat(Gfx.Left) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
             // selection ring
             if (Selected || hover)
                 using (var path = Gfx.Round(new RectangleF(1, 1, Width - 2, stage.Height + 1), 12.5f * k))

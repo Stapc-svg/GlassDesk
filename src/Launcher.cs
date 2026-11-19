@@ -159,7 +159,7 @@ namespace GlassDesk
             if (Calc.TryEval(q, out v))
             {
                 string res = Math.Abs(v) >= 1e15 || (Math.Abs(v) < 1e-6 && v != 0) ? v.ToString("G6", System.Globalization.CultureInfo.InvariantCulture) : Math.Round(v, 8).ToString("#,0.########", System.Globalization.CultureInfo.InvariantCulture);
-                acts.Add(new Act { Glyph = "=", Title = "= " + res, Hint = "Enter to copy", Run = delegate { try { Clipboard.SetText(res.Replace(",", "")); } catch { } Finish(); } });
+                acts.Add(new Act { Glyph = "=", Title = "= " + res, Hint = Lang.L("Enter to copy"), Run = delegate { try { Clipboard.SetText(res.Replace(",", "")); } catch { } Finish(); } });
             }
             string ql = q.ToLowerInvariant();
             foreach (var list in new[] { Themes.All, Themes.Windows })
@@ -167,18 +167,18 @@ namespace GlassDesk
                     if (acts.Count < 3 && ql.Length >= 3 && (l.Name.ToLowerInvariant().StartsWith(ql) || ("theme " + l.Name.ToLowerInvariant()).StartsWith(ql)))
                     {
                         var look = l;
-                        acts.Add(new Act { Glyph = "◐", Title = "Switch to the " + l.Name + " theme", Hint = l.Desc, Run = delegate { Finish(); Themes.Apply(app.Settings, look); app.Settings.Save(); app.ApplySettings(); } });
+                        acts.Add(new Act { Glyph = "◐", Title = string.Format(Lang.L("Switch to the {0} theme"), l.Name), Hint = l.Desc, Run = delegate { Finish(); Themes.Apply(app.Settings, look); app.Settings.Save(); app.ApplySettings(); } });
                     }
             string[][] cmds =
             {
-                new[] { "settings", "Open Settings" }, new[] { "organize", "Organize desktop" }, new[] { "hide", "Hide or show all panels" },
-                new[] { "new fence", "Make a new fence" }, new[] { "dark", "Dark mode" }, new[] { "light", "Light mode" },
+                new[] { "settings", Lang.L("Open Settings") }, new[] { "organize", Lang.L("Organize desktop") }, new[] { "hide", Lang.L("Hide or show all panels") },
+                new[] { "new fence", Lang.L("Make a new fence") }, new[] { "dark", Lang.L("Dark mode") }, new[] { "light", Lang.L("Light mode") },
             };
             foreach (var c in cmds)
                 if (acts.Count < 3 && ql.Length >= 3 && c[0].StartsWith(ql))
                 {
                     string id = c[0];
-                    acts.Add(new Act { Glyph = "›", Title = c[1], Hint = "GlassDesk command", Run = delegate
+                    acts.Add(new Act { Glyph = "›", Title = c[1], Hint = Lang.L("GlassDesk command"), Run = delegate
                     {
                         Finish();
                         if (id == "settings") app.ShowSettings();
@@ -189,7 +189,7 @@ namespace GlassDesk
                     } });
                 }
             if (acts.Count < 3)
-                acts.Add(new Act { Glyph = "⌕", Title = "Search the web for \"" + q + "\"", Hint = shown.Count == 0 ? "Enter" : "Ctrl + Enter", Run = delegate
+                acts.Add(new Act { Glyph = "⌕", Title = string.Format(Lang.L("Search the web for \"{0}\""), q), Hint = shown.Count == 0 ? "Enter" : "Ctrl + Enter", Run = delegate
                 {
                     Finish();
                     try { Process.Start(new ProcessStartInfo("https://www.google.com/search?q=" + Uri.EscapeDataString(q)) { UseShellExecute = true }); } catch { }
@@ -266,7 +266,7 @@ namespace GlassDesk
             using (var b = new SolidBrush(P.Text)) g.DrawString(kbd, fSmall, b, kr, Gfx.Center);
             var textR = new RectangleF(tx, s.Y, kr.X - tx - 10 * k, s.Height);
             if (query.Length == 0)
-                using (var b = new SolidBrush(Gfx.WithAlpha(P.Sub, 200))) g.DrawString("Search your desktop and apps…", fBig, b, textR, Gfx.Left);
+                using (var b = new SolidBrush(Gfx.WithAlpha(P.Sub, 200))) g.DrawString(Lang.L("Search your desktop and apps…"), fBig, b, textR, Gfx.Left);
             else
                 using (var b = new SolidBrush(P.Text)) g.DrawString(query, fBig, b, textR, Gfx.Left);
             if (caretOn)
@@ -303,7 +303,7 @@ namespace GlassDesk
             var st = g.Save();
             g.SetClip(gr);
             if (shown.Count == 0 && acts.Count == 0)
-                using (var b = new SolidBrush(P.Sub)) g.DrawString(query.Length == 0 ? "Your desktop is empty" : "Nothing on your desktop matches \"" + query + "\"", fBig, b, gr, Gfx.Center);
+                using (var b = new SolidBrush(P.Sub)) g.DrawString(query.Length == 0 ? Lang.L("Your desktop is empty") : string.Format(Lang.L("Nothing on your desktop matches \"{0}\""), query), fBig, b, gr, Gfx.Center);
             int first = Math.Max(0, scroll / CellH * Cols), last = Math.Min(shown.Count, ((scroll + gr.Height) / CellH + 1) * Cols);
             for (int i = first; i < last; i++)
             {
@@ -352,15 +352,15 @@ namespace GlassDesk
                     g.DrawString(ChipLabel(c), fSmall, b, cr, Gfx.Center);
             }
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString("Drag an app onto a fence to add it", fSmall, b,
+                g.DrawString(Lang.L("Drag an app onto a fence to add it"), fSmall, b,
                     new RectangleF(ChipRect(2).Right + 12 * k, FooterTop, SettingsRect.X - ChipRect(2).Right - 16 * k, Height - FooterTop), Gfx.Left);
             var sr = SettingsRect;
             Chip(g, sr, 9 * k, hotSettings);
             DrawGear(g, new PointF(sr.X + 20 * k, sr.Y + sr.Height / 2f), 6.5f * k);
-            using (var b = new SolidBrush(P.Text)) g.DrawString("Open Settings", fSmall, b, new RectangleF(sr.X + 32 * k, sr.Y, sr.Width - 36 * k, sr.Height), Gfx.Left);
+            using (var b = new SolidBrush(P.Text)) g.DrawString(Lang.L("Open Settings"), fSmall, b, new RectangleF(sr.X + 32 * k, sr.Y, sr.Width - 36 * k, sr.Height), Gfx.Left);
         }
 
-        string ChipLabel(int c) { return (c == 0 ? "All" : c == 1 ? "Desktop" : "Apps") + "  " + chipCount[c]; }
+        string ChipLabel(int c) { return Lang.L(c == 0 ? "All" : c == 1 ? "Desktop" : "Apps") + "  " + chipCount[c]; }
         RectangleF ChipRect(int c)
         {
             float x = Pad;
@@ -535,10 +535,10 @@ namespace GlassDesk
         Point dragFrom; bool dragging;
         static readonly string[][] Tips =
         {
-            new[] { "Fences", "Your files sorted into glass boxes. Drag a fence's edge to resize it." },
-            new[] { "Widgets", "Clock, weather, music, to-dos and more. Right-click one for options." },
-            new[] { "Quick search", "Press Ctrl + Alt + F to find and open anything on your desktop." },
-            new[] { "Themes", "26 looks, from GlassDesk glass to Mica and Acrylic. Settings → Appearance." },
+            new[] { Lang.L("Fences"), Lang.L("Your files sorted into glass boxes. Drag a fence's edge to resize it.") },
+            new[] { Lang.L("Widgets"), Lang.L("Clock, weather, music, to-dos and more. Right-click one for options.") },
+            new[] { Lang.L("Quick search"), Lang.L("Press Ctrl + Alt + F to find and open anything on your desktop.") },
+            new[] { Lang.L("Themes"), Lang.L("26 looks, from GlassDesk glass to Mica and Acrylic. Settings → Appearance.") },
         };
 
         public WelcomeForm(App app) : base(app)
@@ -570,9 +570,9 @@ namespace GlassDesk
             using (var logo = App.LogoBitmap(256, P.Accent)) { g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(logo, lr); }
             float tx = lr.Right + 18 * k;
             using (var b = new SolidBrush(P.Text))
-                g.DrawString("Welcome to GlassDesk", Gfx.F(T.DisplayFont, 28 * k, FontStyle.Bold), b, new RectangleF(tx, lr.Y - 2 * k, Width - tx - 60 * k, 40 * k), Gfx.Left);
+                g.DrawString(Lang.L("Welcome to GlassDesk"), Gfx.F(T.DisplayFont, 28 * k, FontStyle.Bold), b, new RectangleF(tx, lr.Y - 2 * k, Width - tx - 60 * k, 40 * k), Gfx.Left);
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString("Your desktop, organized in beautiful glass.", Gfx.F(T.FontName, 14.5f * k, FontStyle.Regular), b, new RectangleF(tx, lr.Y + 38 * k, Width - tx - 40 * k, 24 * k), Gfx.Left);
+                g.DrawString(Lang.L("Your desktop, organized in beautiful glass."), Gfx.F(T.FontName, 14.5f * k, FontStyle.Regular), b, new RectangleF(tx, lr.Y + 38 * k, Width - tx - 40 * k, 24 * k), Gfx.Left);
             Close(g, CloseRect, hotBtn == 0);
 
             // four tips in a 2 x 2 grid
@@ -598,8 +598,8 @@ namespace GlassDesk
                 g.DrawString("GlassDesk " + App.Version, Gfx.F(T.FontName, 12 * k, FontStyle.Regular), b, new RectangleF(Pad, StartRect.Y, SettingsRect.X - Pad, StartRect.Height), Gfx.Left);
             var sr = SettingsRect;
             Chip(g, sr, sr.Height / 2f, hotBtn == 1);
-            using (var b = new SolidBrush(P.Text)) g.DrawString("Open Settings", fB, b, sr, Gfx.Center);
-            AccentButton(g, StartRect, "Get started", fB, hotBtn == 2);
+            using (var b = new SolidBrush(P.Text)) g.DrawString(Lang.L("Open Settings"), fB, b, sr, Gfx.Center);
+            AccentButton(g, StartRect, Lang.L("Get started"), fB, hotBtn == 2);
         }
 
         void DrawTipIcon(Graphics g, int i, RectangleF r)

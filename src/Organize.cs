@@ -45,9 +45,9 @@ namespace GlassDesk
             hits.Clear();
             PaintGlass(g);
             // header
-            using (var b = new SolidBrush(P.Text)) g.DrawString("Organize desktop", Gfx.F(T.DisplayFont, 24 * k, FontStyle.Bold), b, new RectangleF(Pad, 22 * k, Width - 2 * Pad, 34 * k), Gfx.Left);
+            using (var b = new SolidBrush(P.Text)) g.DrawString(Lang.L("Organize desktop"), Gfx.F(T.DisplayFont, 24 * k, FontStyle.Bold), b, new RectangleF(Pad, 22 * k, Width - 2 * Pad, 34 * k), Gfx.Left);
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString("Ticked files go into their fence. Unticked files go to an \"Unsorted\" fence.", Gfx.F(T.FontName, 13.5f * k, FontStyle.Regular), b, new RectangleF(Pad, 56 * k, Width - 2 * Pad - 60 * k, 22 * k), Gfx.Left);
+                g.DrawString(Lang.L("Ticked files go into their fence. Unticked files go to an \"Unsorted\" fence."), Gfx.F(T.FontName, 13.5f * k, FontStyle.Regular), b, new RectangleF(Pad, 56 * k, Width - 2 * Pad - 60 * k, 22 * k), Gfx.Left);
             var cr = new RectangleF(Width - 50 * k, 16 * k, 36 * k, 36 * k);
             Close(g, cr, cr.Contains(mouse)); Hit(cr, delegate { Close(); });
 
@@ -134,8 +134,8 @@ namespace GlassDesk
             var go = new RectangleF(Width - Pad - 210 * k, by, 210 * k, bh);
             var cancel = new RectangleF(go.X - 12 * k - 110 * k, by, 110 * k, bh);
             Chip(g, cancel, bh / 2, cancel.Contains(mouse));
-            using (var b = new SolidBrush(P.Text)) g.DrawString("Cancel", fB, b, cancel, Gfx.Center);
-            AccentButton(g, go, "Start organizing · " + on.Count, fB, go.Contains(mouse));
+            using (var b = new SolidBrush(P.Text)) g.DrawString(Lang.L("Cancel"), fB, b, cancel, Gfx.Center);
+            AccentButton(g, go, Lang.L("Start organizing · ") + on.Count, fB, go.Contains(mouse));
             Hit(cancel, delegate { Close(); });
             Hit(go, delegate
             {

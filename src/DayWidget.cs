@@ -25,7 +25,7 @@ namespace GlassDesk
         {
             Rectangle r = Inner;
             DateTime now = App.Now;
-            Title(g, "Today", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Title(g, Lang.L("Today"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             Txt(g, now.ToString("dddd", CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
 
             int dow = ((int)now.DayOfWeek + 6) % 7;   // Monday first

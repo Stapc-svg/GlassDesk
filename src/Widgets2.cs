@@ -269,14 +269,14 @@ namespace GlassDesk
 
         public static string Describe(int c)
         {
-            if (c == 0) return "Clear";
-            if (c <= 2) return "Partly cloudy";
-            if (c == 3) return "Cloudy";
-            if (c == 45 || c == 48) return "Fog";
-            if (c >= 51 && c <= 57) return "Drizzle";
-            if ((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) return "Rain";
-            if ((c >= 71 && c <= 77) || c == 85 || c == 86) return "Snow";
-            if (c >= 95) return "Thunderstorm";
+            if (c == 0) return Lang.L("Clear");
+            if (c <= 2) return Lang.L("Partly cloudy");
+            if (c == 3) return Lang.L("Cloudy");
+            if (c == 45 || c == 48) return Lang.L("Fog");
+            if (c >= 51 && c <= 57) return Lang.L("Drizzle");
+            if ((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) return Lang.L("Rain");
+            if ((c >= 71 && c <= 77) || c == 85 || c == 86) return Lang.L("Snow");
+            if (c >= 95) return Lang.L("Thunderstorm");
             return "—";
         }
 
@@ -286,8 +286,8 @@ namespace GlassDesk
             string place = string.IsNullOrEmpty(Cfg.WeatherPlace) ? Cfg.WeatherCity : Cfg.WeatherPlace;
             if (status.Length > 0 || double.IsNaN(temp))
             {
-                Title(g, "Weather", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
-                string msg = status.Length > 0 ? status : busy ? "Loading…" : "Double-click to choose your city";
+                Title(g, Lang.L("Weather"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+                string msg = status.Length > 0 ? Lang.L(status) : busy ? Lang.L("Loading…") : Lang.L("Double-click to choose your city");
                 WeatherIcon(g, new RectangleF(r.X, r.Y + T.Sf(34), T.Sf(54), T.Sf(54)), 2, true);
                 Txt(g, msg, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.Text, new RectangleF(r.X + T.Sf(70), r.Y + T.Sf(36), r.Width - T.Sf(70), T.Sf(70)), Gfx.TopLeftWrap);
                 return;
@@ -312,10 +312,10 @@ namespace GlassDesk
             }
 
             // ── header: place, today's high / low
-            string city = string.IsNullOrEmpty(place) ? "Weather" : place.Split(',')[0];
+            string city = string.IsNullOrEmpty(place) ? Lang.L("Weather") : place.Split(',')[0];
             Txt(g, city, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), ink, new RectangleF(r.X, r.Y - T.Sf(1), r.Width * .62f, T.Sf(20)), Gfx.Left);
             if (days.Count > 0)
-                Txt(g, "H " + Math.Round(days[0].Max) + "°  L " + Math.Round(days[0].Min) + "°", Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), sub, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
+                Txt(g, string.Format(Lang.L("H {0}°  L {1}°"), Math.Round(days[0].Max), Math.Round(days[0].Min)), Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), sub, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
 
             // ── hero: glowing icon, big temperature, condition
             float hy = r.Y + T.Sf(26);
@@ -328,14 +328,14 @@ namespace GlassDesk
             Txt(g, ts, big, ink, new RectangleF(r.X + T.Sf(76), hy - T.Sf(4), tsz.Width + T.Sf(10), T.Sf(64)), Gfx.Left);
             float x2 = r.X + T.Sf(80) + tsz.Width;
             Txt(g, Describe(code), Gfx.F(T.FontName, T.Sf(14), FontStyle.Bold), ink, new RectangleF(x2, hy + T.Sf(12), r.Right - x2, T.Sf(20)), Gfx.Left);
-            Txt(g, "Feels " + Math.Round(feels) + unit, Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), sub, new RectangleF(x2, hy + T.Sf(32), r.Right - x2, T.Sf(18)), Gfx.Left);
+            Txt(g, Lang.L("Feels") + " " + Math.Round(feels) + unit, Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), sub, new RectangleF(x2, hy + T.Sf(32), r.Right - x2, T.Sf(18)), Gfx.Left);
 
             // ── three glass chips: humidity, wind, rain
             float cy = hy + T.Sf(78), ch = T.Sf(46), gap = T.Sf(8), cw = (r.Width - 2 * gap) / 3f;
             string[][] chips = {
-                new[] { "Humidity", Math.Round(humidity) + "%" },
-                new[] { "Wind", Math.Round(wind) + (Cfg.WeatherF ? " mph" : " km/h") },
-                new[] { "Rain", double.IsNaN(rainChance) ? "—" : Math.Round(rainChance) + "%" } };
+                new[] { Lang.L("Humidity"), Math.Round(humidity) + "%" },
+                new[] { Lang.L("Wind"), Math.Round(wind) + (Cfg.WeatherF ? " mph" : " km/h") },
+                new[] { Lang.L("Rain"), double.IsNaN(rainChance) ? "—" : Math.Round(rainChance) + "%" } };
             for (int i = 0; i < 3; i++)
             {
                 var cr = new RectangleF(r.X + i * (cw + gap), cy, cw, ch);
@@ -354,9 +354,9 @@ namespace GlassDesk
             {
                 var sf = Gfx.F(T.FontName, T.Sf(10.5f), FontStyle.Regular);
                 var sb = Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold);
-                Txt(g, "Sunrise", sf, T.SubText, new RectangleF(r.X, sy, T.Sf(60), T.Sf(15)), Gfx.Left);
+                Txt(g, Lang.L("Sunrise"), sf, T.SubText, new RectangleF(r.X, sy, T.Sf(60), T.Sf(15)), Gfx.Left);
                 Txt(g, sunrise.ToString("HH:mm"), sb, T.Text, new RectangleF(r.X, sy + T.Sf(14), T.Sf(60), T.Sf(18)), Gfx.Left);
-                Txt(g, "Sunset", sf, T.SubText, new RectangleF(r.Right - T.Sf(60), sy, T.Sf(60), T.Sf(15)), Gfx.Right);
+                Txt(g, Lang.L("Sunset"), sf, T.SubText, new RectangleF(r.Right - T.Sf(60), sy, T.Sf(60), T.Sf(15)), Gfx.Right);
                 Txt(g, sunset.ToString("HH:mm"), sb, T.Text, new RectangleF(r.Right - T.Sf(60), sy + T.Sf(14), T.Sf(60), T.Sf(18)), Gfx.Right);
                 var arc = new RectangleF(r.X + T.Sf(62), sy + T.Sf(4), r.Width - T.Sf(124), T.Sf(52));
                 using (var pen = new Pen(Gfx.WithAlpha(T.Text, 40), T.Sf(1.5f)) { DashStyle = DashStyle.Dash }) g.DrawArc(pen, arc, 180, 180);
@@ -384,7 +384,7 @@ namespace GlassDesk
                 float x = r.X + i * colw;
                 string top; int c; string tv;
                 if (hours.Count > 0) { var h = hours[i]; top = h.Time.ToString("HH:mm"); c = h.Code; tv = Math.Round(h.Temp) + "°"; }
-                else { var d = days[i]; top = i == 0 ? "Today" : d.Date.ToString("ddd", CultureInfo.CurrentCulture); c = d.Code; tv = Math.Round(d.Max) + "° " + Math.Round(d.Min) + "°"; }
+                else { var d = days[i]; top = i == 0 ? Lang.L("Today") : d.Date.ToString("ddd", CultureInfo.CurrentCulture); c = d.Code; tv = Math.Round(d.Max) + "° " + Math.Round(d.Min) + "°"; }
                 if (i == 0)
                     using (var path = Gfx.Round(new RectangleF(x + T.Sf(3), hy2 - T.Sf(2), colw - T.Sf(6), T.Sf(66)), T.Sf(12)))
                     using (var b2 = new SolidBrush(Gfx.WithAlpha(T.Accent, 46))) g.FillPath(b2, path);
@@ -481,11 +481,11 @@ namespace GlassDesk
             Rectangle r = Inner;
             var list = Read();
             int left = list.FindAll(t => !t.Done).Count;
-            Title(g, "To-do", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Title(g, Lang.L("To-do"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             Txt(g, list.Count == 0 ? "double-click to add" : left == 0 ? "all done" : left + " left", Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
             if (list.Count == 0)
             {
-                Txt(g, "Nothing to do. Double-click to add tasks.", Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, RowTop(0), r.Width, T.Sf(24)), Gfx.Left);
+                Txt(g, Lang.L("Nothing to do. Double-click to add tasks."), Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, RowTop(0), r.Width, T.Sf(24)), Gfx.Left);
                 return;
             }
             var f = Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular);
@@ -666,8 +666,8 @@ namespace GlassDesk
             if (shown == null)
             {
                 Rectangle r = Inner;
-                Title(g, "Photos", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
-                Txt(g, "Double-click to choose a folder of photos", Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y + T.Sf(36), r.Width, T.Sf(60)), Gfx.TopLeftWrap);
+                Title(g, Lang.L("Photos"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+                Txt(g, Lang.L("Double-click to choose a folder of photos"), Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y + T.Sf(36), r.Width, T.Sf(60)), Gfx.TopLeftWrap);
                 return;
             }
             using (var path = Gfx.Round(pr, rad))
@@ -729,11 +729,11 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
-            Title(g, "Countdown", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Title(g, Lang.L("Countdown"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             DateTime target;
             if (!TryTarget(out target) || string.IsNullOrEmpty(Cfg.CountdownTitle))
             {
-                Txt(g, "Double-click to count down to a birthday, a trip or the holidays", Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y + T.Sf(30), r.Width, T.Sf(50)), Gfx.TopLeftWrap);
+                Txt(g, Lang.L("Double-click to count down to a birthday, a trip or the holidays"), Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y + T.Sf(30), r.Width, T.Sf(50)), Gfx.TopLeftWrap);
                 return;
             }
             int days = (int)(target.Date - App.Now.Date).TotalDays;
@@ -803,7 +803,7 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
-            Title(g, "Quote of the day", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Title(g, Lang.L("Quote of the day"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             var q = Current;
             using (var b = new SolidBrush(Gfx.WithAlpha(T.Accent, 200)))
                 g.DrawString("“", Gfx.F(T.DisplayFont, T.Sf(40), FontStyle.Bold), b, new PointF(r.X - T.Sf(4), r.Y + T.Sf(14)));
