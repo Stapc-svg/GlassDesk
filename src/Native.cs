@@ -1,5 +1,6 @@
 // GlassDesk - Native Windows API calls (kept small; everything is optional and guarded)
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
@@ -389,9 +390,32 @@ namespace GlassDesk
                     }
                     catch { }
                 }
+                // Last resort: look in the bin folders themselves. Windows keeps a "$I…" file for every
+                // deleted item in X:\$Recycle.Bin\<your account id>.
+                foreach (string dir in RecycleBinFolders())
+                    try { if (System.IO.Directory.GetFiles(dir, "$I*").Length > 0) return true; } catch { }
                 return false;
             }
             catch { return false; }
+        }
+
+        /// <summary>This account's Recycle Bin folder on every local drive that has one.</summary>
+        public static List<string> RecycleBinFolders()
+        {
+            var list = new List<string>();
+            if (!IsWindows) return list;
+            string sid = null;
+            try { sid = System.Security.Principal.WindowsIdentity.GetCurrent().User.Value; } catch { }
+            if (sid == null) return list;
+            foreach (var d in System.IO.DriveInfo.GetDrives())
+                try
+                {
+                    if ((d.DriveType != System.IO.DriveType.Fixed && d.DriveType != System.IO.DriveType.Removable) || !d.IsReady) continue;
+                    string dir = System.IO.Path.Combine(d.RootDirectory.FullName, "$Recycle.Bin", sid);
+                    if (System.IO.Directory.Exists(dir)) list.Add(dir);
+                }
+                catch { }
+            return list;
         }
 
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)] static extern int SHEmptyRecycleBin(IntPtr hwnd, string root, uint flags);

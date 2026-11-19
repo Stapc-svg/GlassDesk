@@ -383,3 +383,23 @@ Black glass with a glowing edge	黑色玻璃配发光边缘
 Quiet gray, no color	安静的灰色，无彩色
 Warm, solid and easy to read	温暖、不透明、易读
 The original GlassDesk 1.7 look	GlassDesk 1.7 的原始外观
+Disk	磁盘
+free	可用
+Tomorrow	明天
+Nothing coming up	近期没有日程
+That link isn't a calendar (.ics) link	这个链接不是日历 (.ics) 链接
+Can't reach your calendar – trying again soon	无法连接你的日历 – 稍后重试
+Paste your calendar's iCal (.ics) link — several links can be separated by spaces	粘贴日历的 iCal (.ics) 链接 — 多个链接用空格分隔
+Change calendar link…	更改日历链接…
+Connect a calendar…	连接日历…
+Disconnect calendar	断开日历
+System drives	系统磁盘
+Show every internal and USB drive, not just the Windows drive	显示所有内置和 USB 磁盘，而不只是 Windows 所在磁盘
+Online calendar	在线日历
+Connected — your events show as dots and the next ones below	已连接 — 有日程的日期显示圆点，下方显示接下来的日程
+Google, Outlook or iCloud: paste the calendar's private iCal (.ics) link	Google、Outlook 或 iCloud：粘贴日历的私密 iCal (.ics) 链接
+Connect…	连接…
+Game screenshots	游戏截图
+Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders	找到 {0} 个：Xbox Game Bar、NVIDIA 或 Windows 截图文件夹
+Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found	Xbox Game Bar、NVIDIA 和 Windows 截图文件夹已显示，或没有找到
+Add them	添加

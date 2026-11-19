@@ -18,7 +18,7 @@ namespace GlassDesk
         public bool SingleClickOpen = false;
         public bool Stacks = true;
         public bool WallAccent = false;            // take the accent color from the wallpaper
-        public bool ShowDay = true, ShowClip = true;                // the "Today" progress rings widget                 // 4+ files of the same type in a fence become one stack
+        public bool ShowDay = true, ShowClip = true, AllDrives = true; public string CalendarIcs = ""; public List<string> CalendarFeeds { get { var l = new List<string>(); foreach (var x in (CalendarIcs ?? "").Split(' ')) if (x.Trim().Length > 0) l.Add(x.Trim()); return l; } }                // the "Today" progress rings widget                 // 4+ files of the same type in a fence become one stack
         public bool PerDisplayLayouts = true;      // remember a layout for each monitor setup
         public string DisplayKey = "";             // the monitor setup the current layout belongs to
         public Dictionary<string, Dictionary<string, Rectangle>> Layouts = new Dictionary<string, Dictionary<string, Rectangle>>();
@@ -156,6 +156,8 @@ namespace GlassDesk
                 case "WallAccent": WallAccent = B(v); return;
                 case "ShowDay": ShowDay = B(v); return;
                 case "ShowClip": ShowClip = B(v); return;
+                case "AllDrives": AllDrives = B(v); return;
+                case "CalendarIcs": CalendarIcs = v; return;
                 case "PerDisplayLayouts": PerDisplayLayouts = B(v); return;
                 case "DisplayKey": DisplayKey = v.Trim(); return;
                 case "Theme": Theme = v.Trim(); return;
@@ -295,7 +297,7 @@ namespace GlassDesk
                 foreach (string c in Collapsed) w("col." + c, "1");
                 foreach (var kv in Titles) w("title." + kv.Key, Esc(kv.Value));
                 foreach (var kv in WidgetZoom) if (kv.Value != 100) w("zoom." + kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
-                w("Stacks", b(Stacks)); w("WallAccent", b(WallAccent)); w("ShowDay", b(ShowDay)); w("ShowClip", b(ShowClip)); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
+                w("Stacks", b(Stacks)); w("WallAccent", b(WallAccent)); w("ShowDay", b(ShowDay)); w("ShowClip", b(ShowClip)); w("AllDrives", b(AllDrives)); w("CalendarIcs", CalendarIcs ?? ""); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
                 for (int i = 0; i < Groups.Count; i++) w("group." + i, string.Join(",", Groups[i].ToArray()));
                 if (PerDisplayLayouts && !string.IsNullOrEmpty(DisplayKey)) Layouts[DisplayKey] = new Dictionary<string, Rectangle>(Positions);
                 foreach (var lay in Layouts)

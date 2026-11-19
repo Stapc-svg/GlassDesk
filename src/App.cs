@@ -30,6 +30,7 @@ namespace GlassDesk
         public PhotoWidget PhotosW { get { return photos; } }
         public TodoWidget TodoW { get { return todo; } }
         public CountdownWidget CountdownW { get { return countdown; } }
+        public CalendarWidget CalendarW { get { return calendar; } }
 
         readonly bool preview;
         public DateTime? FixedNow;
@@ -79,6 +80,7 @@ namespace GlassDesk
 
             clockTimer = new Timer(); clockTimer.Tick += delegate { ClockTick(); }; ScheduleClock(); clockTimer.Start();
             statsTimer = new Timer(); statsTimer.Tick += delegate { StatsTick(); }; statsTimer.Interval = Settings.LowPower ? 5000 : 2000; statsTimer.Start();
+            if (!Preview) WatchRecycleBin();
             trimTimer = new Timer { Interval = 15000 }; trimTimer.Tick += delegate { trimTimer.Interval = 300000; if (Settings.TrimMemory && !hiddenByUser) Native.TrimMemory(); }; trimTimer.Start();
             rescanTimer = new Timer { Interval = 700 }; rescanTimer.Tick += delegate { rescanTimer.Stop(); Rebuild(); };
             lastDay = Now.Date;
@@ -744,9 +746,29 @@ namespace GlassDesk
         int binTick;
         /// <summary>The Recycle Bin can fill or empty without the desktop changing (deleting from Explorer,
         /// emptying it), so check it every few seconds and swap the full/empty icon when it changes.</summary>
-        void CheckRecycleBin()
+        readonly List<System.IO.FileSystemWatcher> binWatchers = new List<System.IO.FileSystemWatcher>();
+        /// <summary>Watch the bin folders too, so the icon changes right away instead of on the next check.</summary>
+        void WatchRecycleBin()
         {
-            if (++binTick % 2 != 0 && binFull.HasValue) return;
+            foreach (string dir in Native.RecycleBinFolders())
+                try
+                {
+                    var w = new System.IO.FileSystemWatcher(dir) { IncludeSubdirectories = false, NotifyFilter = System.IO.NotifyFilters.FileName | System.IO.NotifyFilters.DirectoryName };
+                    System.IO.FileSystemEventHandler h = delegate { try { BeginInvokeUi(delegate { CheckRecycleBin(true); }); } catch { } };
+                    w.Created += h; w.Deleted += h; w.Renamed += delegate { try { BeginInvokeUi(delegate { CheckRecycleBin(true); }); } catch { } };
+                    w.EnableRaisingEvents = true;
+                    binWatchers.Add(w);
+                }
+                catch { }
+        }
+        void BeginInvokeUi(Action a)
+        {
+            foreach (var f in fences.Values) if (f.IsHandleCreated) { f.BeginInvoke(a); return; }
+        }
+
+        void CheckRecycleBin(bool force = false)
+        {
+            if (!force && ++binTick % 2 != 0 && binFull.HasValue) return;
             bool full = Native.RecycleBinFull();
             if (binFull.HasValue && binFull.Value == full) return;
             binFull = full;
@@ -1060,6 +1082,11 @@ namespace GlassDesk
             var m = NewMenu();
             if (w == notes) m.Items.Add(Lang.L("Edit note"), null, delegate { notes.Edit(); });
             if (w == countdown) m.Items.Add(Lang.L("Change event…"), null, delegate { countdown.Edit(); });
+            if (w == calendar)
+            {
+                m.Items.Add(Lang.L(calendar.Connected ? "Change calendar link…" : "Connect a calendar…"), null, delegate { calendar.ChooseFeed(); });
+                if (calendar.Connected) { m.Items.Add(Lang.L("Refresh now"), null, delegate { calendar.Fetch(); }); m.Items.Add(Lang.L("Disconnect calendar"), null, delegate { calendar.Disconnect(); }); }
+            }
             if (w == quote) m.Items.Add(Lang.L("Another quote"), null, delegate { quote.Next(); });
             if (w == github) { m.Items.Add(Lang.L("Open profile"), null, delegate { github.OpenProfile(); }); m.Items.Add(Lang.L("Change username…"), null, delegate { github.ChooseUser(); }); m.Items.Add(Lang.L("Refresh now"), null, delegate { github.Fetch(); }); }
             AddGroupItems(m, w);
@@ -1209,7 +1236,7 @@ namespace GlassDesk
             string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote
             if (!string.IsNullOrEmpty(grp)) Settings.Groups.Add(new List<string>(grp.Split(',')));
             CreateWidgets();
-            weather.SetSample(); clip.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
+            weather.SetSample(); clip.SetSample(); calendar.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
             Rebuild();
             string sample = Environment.GetEnvironmentVariable("GLASSDESK_SAMPLE_PHOTO");
             if (!string.IsNullOrEmpty(sample) && File.Exists(sample)) photos.SetSampleFile(sample);
@@ -1244,7 +1271,7 @@ namespace GlassDesk
                 s.CpuHistory[i] = (float)(0.16 + 0.09 * Math.Sin(i * 0.55) + 0.06 * Math.Sin(i * 1.7 + 1) + (i > 28 && i < 33 ? 0.18 : 0));
             s.Cpu = s.CpuHistory[s.CpuHistory.Length - 1];
             s.RamTotal = 16UL * 1073741824; s.RamUsed = (ulong)(9.4 * 1073741824);
-            s.DiskTotal = 476L * 1073741824; s.DiskFree = 212L * 1073741824; s.DiskName = "C:";
+            s.DiskTotal = 476L * 1073741824; s.DiskFree = 212L * 1073741824; s.DiskName = "C:"; s.Drives = new List<Tuple<string, long, long>> { Tuple.Create("C:", s.DiskTotal, s.DiskFree), Tuple.Create("D: Games", 1863L * 1073741824, 640L * 1073741824), Tuple.Create("E: USB", 58L * 1073741824, 41L * 1073741824) };
             s.Battery = 82; s.Charging = true;
         }
     }

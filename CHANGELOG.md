@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.0
+
+Ideas and bug reports from the XDA thread:
+
+- **Recycle Bin icon stays right.** It could show empty while it was full until GlassDesk was restarted. GlassDesk now watches the Recycle Bin folders on every drive and changes the icon the moment something is deleted or the bin is emptied, and it also checks the bin folders directly when Windows gives the wrong answer.
+- **Every drive in the System monitor.** Internal drives and USB drives each get their own bar with free space, and the widget grows or shrinks when you plug a drive in or out. Settings › Widgets › System drives turns this off.
+- **Online calendar.** Connect Google Calendar, Outlook or iCloud with the calendar's private iCal (.ics) link (right-click the calendar › Connect a calendar…). Days with events get a dot, and the next two events show under the month. It refreshes every 15 minutes, and repeating events are included.
+- **Game screenshots as fences.** Settings › Organizer › Game screenshots finds the Xbox Game Bar, NVIDIA, AMD and Windows screenshot folders and adds them as folder fences in one click.
+
 ## 1.10.0
 
 - **GlassDesk speaks your language** (asked for in issue #24): 简体中文 (Chinese), Español and Русский, besides English. It follows your Windows language automatically, or pick one in Settings › General › Language. Menus, Settings, widgets, the welcome screen, search and theme descriptions are translated, and dates follow the language too. Chinese uses Microsoft YaHei so every character shows up.

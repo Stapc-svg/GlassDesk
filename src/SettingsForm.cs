@@ -388,7 +388,10 @@ namespace GlassDesk
             Row(Lang.L("24-hour time"), "Turn off for 12-hour time with AM / PM", Toggle(S.Clock24, v => S.Clock24 = v));
             Section(Lang.L("More widgets"));
             Row(Lang.L("System monitor"), "CPU, memory, disk and battery", Toggle(S.ShowSystem, v => S.ShowSystem = v));
+            Row(Lang.L("System drives"), "Show every internal and USB drive, not just the Windows drive", Toggle(S.AllDrives, v => S.AllDrives = v));
             Row(Lang.L("Calendar"), "Month view — click the arrows to change month", Toggle(S.ShowCalendar, v => S.ShowCalendar = v));
+            Row(Lang.L("Online calendar"), S.CalendarFeeds.Count > 0 ? Lang.L("Connected — your events show as dots and the next ones below") : Lang.L("Google, Outlook or iCloud: paste the calendar's private iCal (.ics) link"),
+                Button(Lang.L(S.CalendarFeeds.Count > 0 ? "Change…" : "Connect…"), false, delegate { if (app.CalendarW != null) app.CalendarW.ChooseFeed(); Refresh(0); }));
             Row(Lang.L("Notes"), "A sticky note — double-click it to write", Toggle(S.ShowNotes, v => S.ShowNotes = v));
             Row(Lang.L("To-do list"), "Tick tasks off right on the desktop — double-click to edit the list", Toggle(S.ShowTodo, v => S.ShowTodo = v));
             Row(Lang.L("Today"), "Rings for how much of the day, week, month and year has passed", Toggle(S.ShowDay, v => S.ShowDay = v));
@@ -500,6 +503,15 @@ namespace GlassDesk
                         S.FolderFences.Add(fb.SelectedPath); S.Save(); app.Rebuild(); Refresh(0);
                     }
             }));
+
+            var caps = GameCaptures.Find();
+            caps.RemoveAll(c => S.FolderFences.Contains(c));
+            Row(Lang.L("Game screenshots"), caps.Count > 0 ? string.Format(Lang.L("Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders"), caps.Count) : Lang.L("Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found"),
+                Button(Lang.L("Add them"), caps.Count > 0, delegate
+                {
+                    foreach (var c in caps) if (!S.FolderFences.Contains(c)) S.FolderFences.Add(c);
+                    S.Save(); app.Rebuild(); Refresh(0);
+                }));
 
             Section(Lang.L("Layout"));
             Row(Lang.L("Rescan desktop"), "GlassDesk watches for changes, but you can refresh now", Button(Lang.L("Rescan"), false, delegate { app.Rebuild(); }));

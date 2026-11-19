@@ -16,6 +16,9 @@ namespace GlassDesk
         public float[] CpuHistory = new float[40];
         public ulong RamTotal, RamUsed;
         public long DiskTotal, DiskFree; public string DiskName = "C:";
+        /// <summary>Every drive to show: the Windows drive first, then other internal and USB drives.</summary>
+        public System.Collections.Generic.List<Tuple<string, long, long>> Drives = new System.Collections.Generic.List<Tuple<string, long, long>>();
+        int driveTick;
         public int Battery = -1; public bool Charging;
         long lastIdle, lastTotal;
 
@@ -41,6 +44,30 @@ namespace GlassDesk
                 DiskTotal = d.TotalSize; DiskFree = d.AvailableFreeSpace; DiskName = d.Name.TrimEnd('\\');
             }
             catch { }
+            // other drives change rarely, so look at them every 5th sample
+            if (driveTick++ % 5 == 0 || Drives.Count == 0)
+            {
+                var list = new System.Collections.Generic.List<Tuple<string, long, long>>();
+                list.Add(Tuple.Create(DiskName, DiskTotal, DiskFree));
+                try
+                {
+                    foreach (var d in DriveInfo.GetDrives())
+                        try
+                        {
+                            if (d.DriveType != DriveType.Fixed && d.DriveType != DriveType.Removable) continue;
+                            if (!d.IsReady || d.TotalSize <= 0) continue;
+                            string n = d.Name.TrimEnd('\\');
+                            if (n == DiskName || n == "/" && DiskName == "/") continue;
+                            string label = n;
+                            try { if (!string.IsNullOrEmpty(d.VolumeLabel) && d.VolumeLabel.Length <= 14) label = n + " " + d.VolumeLabel; } catch { }
+                            list.Add(Tuple.Create(label, d.TotalSize, d.AvailableFreeSpace));
+                        }
+                        catch { }
+                }
+                catch { }
+                if (list.Count > 6) list.RemoveRange(6, list.Count - 6);
+                Drives = list;
+            }
             try
             {
                 var ps = SystemInformation.PowerStatus;
@@ -266,7 +293,9 @@ namespace GlassDesk
     internal class SystemWidget : Widget
     {
         public SystemWidget(App app) : base(app, "system") { }
-        protected override Size BaseSize { get { return new Size(320, App.Stats.Battery >= 0 ? 226 : 188); } }
+        int ExtraDrives { get { return App.Settings.AllDrives ? Math.Max(0, App.Stats.Drives.Count - 1) : 0; } }
+        protected override Size BaseSize { get { return new Size(320, (App.Stats.Battery >= 0 ? 226 : 188) + 38 * ExtraDrives); } }
+        int shownExtra = -1;
 
         static string GB(double bytes) { return (bytes / 1073741824.0).ToString(bytes >= 107374182400.0 ? "0" : "0.0", CultureInfo.InvariantCulture) + " GB"; }
 
@@ -291,7 +320,13 @@ namespace GlassDesk
             y += rowH + T.Sf(4);
 
             Row(g, "Memory", st.RamTotal > 0 ? GB(st.RamUsed) + " / " + GB(st.RamTotal) : "—", st.RamTotal > 0 ? (float)st.RamUsed / st.RamTotal : 0, ref y, label, value, r);
-            Row(g, "Disk " + st.DiskName, st.DiskTotal > 0 ? GB(st.DiskFree) + " free" : "—", st.DiskTotal > 0 ? 1f - (float)st.DiskFree / st.DiskTotal : 0, ref y, label, value, r);
+            if (!App.Settings.AllDrives || st.Drives.Count == 0)
+                Row(g, Lang.L("Disk") + " " + st.DiskName, st.DiskTotal > 0 ? GB(st.DiskFree) + " " + Lang.L("free") : "—", st.DiskTotal > 0 ? 1f - (float)st.DiskFree / st.DiskTotal : 0, ref y, label, value, r);
+            else
+                foreach (var d in st.Drives)
+                    Row(g, Lang.L("Disk") + " " + d.Item1, GB(d.Item3) + " " + Lang.L("free"), d.Item2 > 0 ? 1f - (float)d.Item3 / d.Item2 : 0, ref y, label, value, r);
+            // a drive was plugged in or taken out: grow or shrink to fit
+            if (shownExtra != ExtraDrives) { bool first = shownExtra < 0; shownExtra = ExtraDrives; if (!first) BeginInvoke(new Action(delegate { App.PlaceWindow(this); })); }
             if (st.Battery >= 0)
                 Row(g, "Battery", st.Battery + "%" + (st.Charging ? " · charging" : ""), st.Battery / 100f, ref y, label, value, r);
         }
@@ -327,8 +362,68 @@ namespace GlassDesk
     internal class CalendarWidget : Widget
     {
         int monthOffset;
+        List<CalEvent> events = new List<CalEvent>();
+        string feedStatus = "";
+        System.Windows.Forms.Timer feedTimer;
         public CalendarWidget(App app) : base(app, "calendar") { }
-        protected override Size BaseSize { get { return new Size(320, 288); } }
+        bool HasFeed { get { return Cfg.CalendarFeeds.Count > 0 || App.Preview && events.Count > 0; } }
+        protected override Size BaseSize { get { return new Size(320, HasFeed ? 356 : 288); } }
+
+        public void SetSample()
+        {
+            var t = App.Now.Date;
+            events = new List<CalEvent> {
+                new CalEvent { Start = t.AddHours(15).AddMinutes(30), Title = "Team call" },
+                new CalEvent { Start = t.AddDays(2), AllDay = true, Title = "Mom's birthday" },
+                new CalEvent { Start = t.AddDays(6).AddHours(10), Title = "Dentist" } };
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            if (App.Preview) return;
+            feedTimer = new System.Windows.Forms.Timer { Interval = 15 * 60 * 1000 };
+            feedTimer.Tick += delegate { Fetch(); };
+            feedTimer.Start();
+            Fetch();
+        }
+        protected override void Dispose(bool disposing) { if (disposing && feedTimer != null) feedTimer.Dispose(); base.Dispose(disposing); }
+
+        /// <summary>Download the connected calendars in the background.</summary>
+        public void Fetch()
+        {
+            var urls = Cfg.CalendarFeeds;
+            if (urls.Count == 0) { events = new List<CalEvent>(); feedStatus = ""; return; }
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            {
+                List<CalEvent> got = null; string err = "";
+                try { got = CalFeed.Load(urls); }
+                catch (FormatException) { err = Lang.L("That link isn't a calendar (.ics) link"); }
+                catch { err = Lang.L("Can't reach your calendar – trying again soon"); }
+                try
+                {
+                    BeginInvoke(new Action(delegate
+                    {
+                        if (got != null) events = got;
+                        feedStatus = err;
+                        App.PlaceWindow(this); Redraw();
+                    }));
+                }
+                catch { }
+            });
+        }
+
+        public void ChooseFeed()
+        {
+            string u = InputBox.Ask(Lang.L("Paste your calendar's iCal (.ics) link — several links can be separated by spaces"), Cfg.CalendarIcs, App.Theme);
+            if (u == null) return;
+            Cfg.CalendarIcs = u.Trim(); Cfg.Save();
+            Fetch(); App.PlaceWindow(this); Redraw();
+        }
+        public void Disconnect() { Cfg.CalendarIcs = ""; Cfg.Save(); events = new List<CalEvent>(); feedStatus = ""; App.PlaceWindow(this); Redraw(); }
+        public bool Connected { get { return Cfg.CalendarFeeds.Count > 0; } }
+
+        bool HasEvent(DateTime day) { foreach (var e in events) if (e.Start.Date == day) return true; return false; }
 
         Rectangle PrevBtn { get { Rectangle r = Inner; return new Rectangle(r.Right - T.S(56), r.Y - T.S(2), T.S(26), T.S(26)); } }
         Rectangle NextBtn { get { Rectangle r = Inner; return new Rectangle(r.Right - T.S(26), r.Y - T.S(2), T.S(26), T.S(26)); } }
@@ -378,7 +473,35 @@ namespace GlassDesk
                         Color c = !inMonth ? Gfx.WithAlpha(T.SubText, 70) : weekend ? T.SubText : T.Text;
                         Txt(g, d.Day.ToString(), dayF, c, cell, Gfx.Center);
                     }
+                    if (events.Count > 0 && HasEvent(d))
+                    {
+                        float ds = T.Sf(4);
+                        using (var b = new SolidBrush(isToday ? Color.White : Gfx.WithAlpha(T.Accent, inMonth ? 255 : 90)))
+                            g.FillEllipse(b, cell.X + cw / 2 - ds / 2, cell.Bottom - T.Sf(6.5f), ds, ds);
+                    }
                 }
+            if (!HasFeed) return;
+            // the next two events from the connected calendars
+            float ey = top + 6 * ch + T.Sf(8);
+            Gfx.FillRound(g, T.Track, new RectangleF(r.X, ey - T.Sf(4), r.Width, T.Sf(1)), 0);
+            var ef = Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular);
+            var eb = Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold);
+            int shown = 0;
+            DateTime now = App.Now;
+            foreach (var e in events)
+            {
+                if (shown == 2) break;
+                if (e.AllDay ? e.Start.Date < now.Date : e.Start < now.AddMinutes(-30)) continue;
+                string when = e.Start.Date == now.Date ? Lang.L("Today") : e.Start.Date == now.Date.AddDays(1) ? Lang.L("Tomorrow") : e.Start.ToString("ddd d MMM", CultureInfo.CurrentCulture);
+                if (!e.AllDay) when += " " + e.Start.ToString(Cfg.Clock24 ? "HH:mm" : "h:mm tt", CultureInfo.CurrentCulture);
+                var row = new RectangleF(r.X, ey + shown * T.Sf(24), r.Width, T.Sf(22));
+                using (var b = new SolidBrush(T.Accent)) g.FillEllipse(b, row.X, row.Y + row.Height / 2 - T.Sf(3), T.Sf(6), T.Sf(6));
+                Txt(g, e.Title.Length == 0 ? "(no title)" : e.Title, eb, T.Text, new RectangleF(row.X + T.Sf(14), row.Y, row.Width * 0.58f, row.Height), Gfx.Left);
+                Txt(g, when, ef, T.SubText, new RectangleF(row.X + row.Width * 0.5f, row.Y, row.Width * 0.5f, row.Height), Gfx.Right);
+                shown++;
+            }
+            if (shown == 0)
+                Txt(g, feedStatus.Length > 0 ? feedStatus : events.Count == 0 ? Lang.L("Loading…") : Lang.L("Nothing coming up"), ef, T.SubText, new RectangleF(r.X, ey, r.Width, T.Sf(22)), Gfx.Left);
         }
 
         void Arrow(Graphics g, Rectangle b, bool left)

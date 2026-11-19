@@ -383,3 +383,23 @@ Black glass with a glowing edge	Чёрное стекло со светящим�
 Quiet gray, no color	Спокойный серый, без цвета
 Warm, solid and easy to read	Тёплый, непрозрачный и читаемый
 The original GlassDesk 1.7 look	Оригинальный вид GlassDesk 1.7
+Disk	Диск
+free	свободно
+Tomorrow	Завтра
+Nothing coming up	Ближайших событий нет
+That link isn't a calendar (.ics) link	Это не ссылка на календарь (.ics)
+Can't reach your calendar – trying again soon	Не удаётся связаться с календарём – повтор позже
+Paste your calendar's iCal (.ics) link — several links can be separated by spaces	Вставьте ссылку iCal (.ics) на календарь — несколько ссылок через пробел
+Change calendar link…	Изменить ссылку на календарь…
+Connect a calendar…	Подключить календарь…
+Disconnect calendar	Отключить календарь
+System drives	Диски системы
+Show every internal and USB drive, not just the Windows drive	Показывать все внутренние и USB-диски, а не только диск Windows
+Online calendar	Онлайн-календарь
+Connected — your events show as dots and the next ones below	Подключён — события отмечены точками, ближайшие показаны ниже
+Google, Outlook or iCloud: paste the calendar's private iCal (.ics) link	Google, Outlook или iCloud: вставьте личную ссылку iCal (.ics)
+Connect…	Подключить…
+Game screenshots	Скриншоты игр
+Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders	Найдено {0}: папки Xbox Game Bar, NVIDIA или снимков Windows
+Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found	Папки Xbox Game Bar, NVIDIA и Windows уже показаны или не найдены
+Add them	Добавить
