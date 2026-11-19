@@ -196,20 +196,36 @@ namespace GlassDesk
             card.Dividers.Add(rowY);
         }
 
+        /// <summary>When set, the next Row shows a live picture of that widget on its left.</summary>
+        string thumbFor;
         Label Row(string title, string sub, Control right)
         {
             title = Lang.L(title); sub = Lang.L(sub);
             int h = (int)((string.IsNullOrEmpty(sub) ? 56 : 68) * k);
             int pad = (int)(18 * k);
+            string tid = thumbFor; thumbFor = null;
+            if (tid != null)
+            {
+                var wv = app.Windows.Find(x => x.Id == tid);
+                if (wv != null)
+                {
+                    h = Math.Max(h, (int)(84 * k));
+                    var th = new WidgetThumb(app, wv, (int)(104 * k), (int)(64 * k)) { BackColor = Color.Transparent };
+                    th.Location = new Point(pad, rowY + (h - th.Height) / 2);
+                    card.Controls.Add(th);
+                    pad += th.Width + (int)(14 * k);
+                }
+            }
+            int lpad = pad; pad = (int)(18 * k);
             int rw = right == null ? 0 : right.Width;
             var t = new Label { UseMnemonic = false, Text = title, Font = fBody, ForeColor = P.Text, BackColor = Color.Transparent, AutoSize = false, AutoEllipsis = true,
-                Location = new Point(pad, rowY + (string.IsNullOrEmpty(sub) ? (h - (int)(20 * k)) / 2 : (int)(14 * k))), Size = new Size(card.Width - rw - 3 * pad, (int)(20 * k)) };
+                Location = new Point(lpad, rowY + (string.IsNullOrEmpty(sub) ? (h - (int)(20 * k)) / 2 : h / 2 - (int)(20 * k))), Size = new Size(card.Width - rw - 2 * pad - lpad, (int)(20 * k)) };
             card.Controls.Add(t);
             Label s = null;
             if (!string.IsNullOrEmpty(sub))
             {
                 s = new Label { UseMnemonic = false, Text = sub, Font = fSmall, ForeColor = P.Sub, BackColor = Color.Transparent, AutoSize = false, AutoEllipsis = true,
-                    Location = new Point(pad, rowY + (int)(36 * k)), Size = new Size(card.Width - rw - 3 * pad, (int)(20 * k)) };
+                    Location = new Point(lpad, rowY + h / 2 + (int)(2 * k)), Size = new Size(card.Width - rw - 2 * pad - lpad, (int)(20 * k)) };
                 card.Controls.Add(s);
             }
             if (right != null)
@@ -396,7 +412,7 @@ namespace GlassDesk
             ws.SelectionChanged += delegate { if (ws.SelectedIndex >= 0) app.SetWidgetStyle(null, ws.SelectedIndex == 1 ? "mac" : "glass"); };
             Row(Lang.L("Widget style"), sel < 0 ? Lang.L("Mixed — right-click a widget › Style to change just that one") : Lang.L("For all widgets — or right-click one › Style to change just that one"), ws);
             Section(Lang.L("Clock"));
-            Row(Lang.L("Clock"), "Time, date and a friendly greeting", Toggle(S.ShowClock, v => S.ShowClock = v));
+            thumbFor = "clock"; Row(Lang.L("Clock"), "Time, date and a friendly greeting", Toggle(S.ShowClock, v => S.ShowClock = v));
             Row(Lang.L("Show seconds"), "Updates every second (otherwise once a minute)", Toggle(S.ShowSeconds, v => S.ShowSeconds = v));
             string[] cstyles = { "photo", "drawn", "off" };
             var cs = new Segmented(P, k, new[] { Lang.L("Photos"), Lang.L("Drawn sky"), Lang.L("Off") }, Math.Max(0, Array.IndexOf(cstyles, S.ClockStyle))) { Font = fSmall };
@@ -404,36 +420,36 @@ namespace GlassDesk
             Row(Lang.L("Clock background"), "Changes with the time of day: morning, day, sunset and night", cs);
             Row(Lang.L("24-hour time"), "Turn off for 12-hour time with AM / PM", Toggle(S.Clock24, v => S.Clock24 = v));
             Section(Lang.L("More widgets"));
-            Row(Lang.L("System monitor"), "CPU, memory, disk and battery", Toggle(S.ShowSystem, v => S.ShowSystem = v));
+            thumbFor = "system"; Row(Lang.L("System monitor"), "CPU, memory, disk and battery", Toggle(S.ShowSystem, v => S.ShowSystem = v));
             Row(Lang.L("System drives"), "Show every internal and USB drive, not just the Windows drive", Toggle(S.AllDrives, v => S.AllDrives = v));
-            Row(Lang.L("Calendar"), "Month view — click the arrows to change month", Toggle(S.ShowCalendar, v => S.ShowCalendar = v));
+            thumbFor = "calendar"; Row(Lang.L("Calendar"), "Month view — click the arrows to change month", Toggle(S.ShowCalendar, v => S.ShowCalendar = v));
             Row(Lang.L("Online calendar"), S.CalendarFeeds.Count > 0 ? Lang.L("Connected — your events show as dots and the next ones below") : Lang.L("Google, Outlook or iCloud: paste the calendar's private iCal (.ics) link"),
                 Button(Lang.L(S.CalendarFeeds.Count > 0 ? "Change…" : "Connect…"), false, delegate { if (app.CalendarW != null) app.CalendarW.ChooseFeed(); Refresh(0); }));
-            Row(Lang.L("Notes"), "A sticky note — double-click it to write", Toggle(S.ShowNotes, v => S.ShowNotes = v));
-            Row(Lang.L("To-do list"), "Tick tasks off right on the desktop — double-click to edit the list", Toggle(S.ShowTodo, v => S.ShowTodo = v));
-            Row(Lang.L("Today"), "Rings for how much of the day, week, month and year has passed", Toggle(S.ShowDay, v => S.ShowDay = v));
-            Row(Lang.L("Clipboard"), "The last things you copied; click one to copy it again. Kept in memory only, never saved", Toggle(S.ShowClip, v => S.ShowClip = v));
-            Row(Lang.L("Music"), "The song that's playing — or the last one you listened to", Toggle(S.ShowMusic, v => S.ShowMusic = v));
-            Row(Lang.L("Quote of the day"), "A new quote every morning — double-click for another", Toggle(S.ShowQuote, v => S.ShowQuote = v));
-            Row(Lang.L("GitHub stats"), "Stars, followers, repos and your last 14 days" + (string.IsNullOrEmpty(S.GitHubUser) ? "" : " — @" + S.GitHubUser), Toggle(S.ShowGitHub, v => S.ShowGitHub = v));
+            thumbFor = "notes"; Row(Lang.L("Notes"), "A sticky note — double-click it to write", Toggle(S.ShowNotes, v => S.ShowNotes = v));
+            thumbFor = "todo"; Row(Lang.L("To-do list"), "Tick tasks off right on the desktop — double-click to edit the list", Toggle(S.ShowTodo, v => S.ShowTodo = v));
+            thumbFor = "day"; Row(Lang.L("Today"), "Rings for how much of the day, week, month and year has passed", Toggle(S.ShowDay, v => S.ShowDay = v));
+            thumbFor = "clip"; Row(Lang.L("Clipboard"), "The last things you copied; click one to copy it again. Kept in memory only, never saved", Toggle(S.ShowClip, v => S.ShowClip = v));
+            thumbFor = "music"; Row(Lang.L("Music"), "The song that's playing — or the last one you listened to", Toggle(S.ShowMusic, v => S.ShowMusic = v));
+            thumbFor = "quote"; Row(Lang.L("Quote of the day"), "A new quote every morning — double-click for another", Toggle(S.ShowQuote, v => S.ShowQuote = v));
+            thumbFor = "github"; Row(Lang.L("GitHub stats"), "Stars, followers, repos and your last 14 days" + (string.IsNullOrEmpty(S.GitHubUser) ? "" : " — @" + S.GitHubUser), Toggle(S.ShowGitHub, v => S.ShowGitHub = v));
             Row(Lang.L("GitHub username"), "Public data only, no sign-in needed", Button(Lang.L("Change…"), false, delegate { if (app.GitHubW != null) app.GitHubW.ChooseUser(); }));
-            Row(Lang.L("Network meter"), "Live download and upload speed", Toggle(S.ShowNetwork, v => S.ShowNetwork = v));
-            Row(Lang.L("Focus timer"), "Pomodoro: " + S.FocusMinutes + " min focus, " + S.BreakMinutes + " min break — click the widget to start", Toggle(S.ShowFocus, v => S.ShowFocus = v));
+            thumbFor = "network"; Row(Lang.L("Network meter"), "Live download and upload speed", Toggle(S.ShowNetwork, v => S.ShowNetwork = v));
+            thumbFor = "focus"; Row(Lang.L("Focus timer"), "Pomodoro: " + S.FocusMinutes + " min focus, " + S.BreakMinutes + " min break — click the widget to start", Toggle(S.ShowFocus, v => S.ShowFocus = v));
 
             Section(Lang.L("Countdown"));
-            Row(Lang.L("Countdown"), "Days left until a birthday, a trip or the holidays", Toggle(S.ShowCountdown, v => S.ShowCountdown = v));
+            thumbFor = "countdown"; Row(Lang.L("Countdown"), "Days left until a birthday, a trip or the holidays", Toggle(S.ShowCountdown, v => S.ShowCountdown = v));
             Row(string.IsNullOrEmpty(S.CountdownTitle) ? "Event" : S.CountdownTitle, string.IsNullOrEmpty(S.CountdownDate) ? "Not set yet" : S.CountdownDate,
                 Button(Lang.L("Change…"), false, delegate { app.CountdownW.Edit(); Refresh(0); }));
 
             Section(Lang.L("Weather"));
-            Row(Lang.L("Weather"), "Today and the next days, from Open-Meteo or wttr.in (free, no account)", Toggle(S.ShowWeather, v => S.ShowWeather = v));
+            thumbFor = "weather"; Row(Lang.L("Weather"), "Today and the next days, from Open-Meteo or wttr.in (free, no account)", Toggle(S.ShowWeather, v => S.ShowWeather = v));
             Row(Lang.L("Weather picture"), "A sky that matches the weather (sun, clouds, rain, storm, snow, fog, night) fading into the glass", Toggle(S.WeatherScene, v => S.WeatherScene = v));
             Row(Lang.L("City"), string.IsNullOrEmpty(S.WeatherCity) ? "Not set yet" : (string.IsNullOrEmpty(S.WeatherPlace) ? S.WeatherCity : S.WeatherPlace),
                 Button(Lang.L("Change…"), false, delegate { app.WeatherW.ChooseCity(); Refresh(0); }));
             Row(Lang.L("Use °F and mph"), "Turn off for °C and km/h", Toggle(S.WeatherF, v => { S.WeatherF = v; app.WeatherW.UnitsChanged(); }));
 
             Section(Lang.L("Photo frame"));
-            Row(Lang.L("Photo frame"), "Shows your pictures one at a time — click the arrow for the next one", Toggle(S.ShowPhotos, v => S.ShowPhotos = v));
+            thumbFor = "photos"; Row(Lang.L("Photo frame"), "Shows your pictures one at a time — click the arrow for the next one", Toggle(S.ShowPhotos, v => S.ShowPhotos = v));
             Row(Lang.L("Folder"), app.PhotosW.Folder, Button(Lang.L("Choose…"), false, delegate { app.PhotosW.ChooseFolder(); Refresh(0); }));
             SliderRow(Lang.L("Change photo every"), "{0} minutes", 1, 60, 1, S.PhotoMinutes, v => S.PhotoMinutes = v);
 

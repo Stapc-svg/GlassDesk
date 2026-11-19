@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.16.0
+
+- **See each widget in Settings, not just its name.** On the Widgets page, every widget's row has a small live picture of it next to its switch, in the style you picked (Glass or macOS). Widgets that are off are shown faded, so you can see what turning one on will add.
+
 ## 1.15.0
 
 - **Smooth scrolling in quick search (Ctrl + Alt + F).** Scrolling used to stutter and jump a whole row at a time. Now the list glides, the glass background is drawn once instead of on every step, and icons load in the background while the window is open, so scrolling never waits for one. You can also drag the scroll bar or click its track to jump.

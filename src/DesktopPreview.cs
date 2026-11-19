@@ -109,3 +109,58 @@ namespace GlassDesk
         protected override void OnMouseLeave(EventArgs e) { hoverName = ""; Invalidate(); base.OnMouseLeave(e); }
     }
 }
+
+namespace GlassDesk
+{
+    /// <summary>A small live picture of one widget, shown next to its switch in Settings.
+    /// Faded while the widget is off, so you can see what turning it on adds.</summary>
+    internal class WidgetThumb : Control
+    {
+        readonly App app; readonly GlassWindow w;
+        readonly Timer timer;
+        Bitmap shot;
+
+        public WidgetThumb(App app, GlassWindow w, int width, int height)
+        {
+            this.app = app; this.w = w;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
+            Size = new Size(width, height);
+            timer = new Timer { Interval = 2000 };
+            timer.Tick += delegate { if (Visible) Snap(); };
+            timer.Start();
+            Snap();
+        }
+        protected override void Dispose(bool disposing) { if (disposing) { timer.Dispose(); if (shot != null) shot.Dispose(); } base.Dispose(disposing); }
+
+        void Snap()
+        {
+            Bitmap b = null;
+            try { if (!w.IsDisposed && w.Width > 4) b = w.RenderBitmap(); } catch { }
+            var old = shot; shot = b; if (old != null) old.Dispose();
+            Invalidate();
+        }
+
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias; g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
+            bool on = app.WantsShown(w);
+            using (var p = Gfx.Round(r, 10))
+            {
+                using (var b = new LinearGradientBrush(r, Color.FromArgb(70, 60, 80, 130), Color.FromArgb(70, 140, 100, 160), 45f)) g.FillPath(b, p);
+                if (shot != null)
+                {
+                    float sc = Math.Min((Width - 8f) / shot.Width, (Height - 8f) / shot.Height);
+                    var dst = new RectangleF((Width - shot.Width * sc) / 2, (Height - shot.Height * sc) / 2, shot.Width * sc, shot.Height * sc);
+                    using (var ia = new System.Drawing.Imaging.ImageAttributes())
+                    {
+                        ia.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix { Matrix33 = on ? 1f : 0.4f });
+                        g.DrawImage(shot, Rectangle.Round(dst), 0, 0, shot.Width, shot.Height, GraphicsUnit.Pixel, ia);
+                    }
+                }
+                using (var pen = new Pen(Color.FromArgb(on ? 60 : 30, 255, 255, 255), 1f)) g.DrawPath(pen, p);
+            }
+        }
+    }
+}
