@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.0
+
+- **See your desktop in Settings.** The Appearance, Widgets and Organizer pages start with a live picture of your desktop: your wallpaper with every fence and widget exactly where it is and how it looks. Turn a widget on, switch it to the macOS style or change the glass, and the picture changes within a second. Point at a panel in the picture to see its name.
+
 ## 1.13.0
 
 - **The macOS style is now see-through glass**, like the new "liquid glass" look on a Mac: the blurred desktop shows through, light catches the top edge, and a soft shadow lifts it off the wallpaper.

@@ -921,6 +921,17 @@ namespace GlassDesk
             index = g.IndexOf(id); count = g.Count; return true;
         }
 
+        /// <summary>Whether this panel is switched on in Settings (used by the preview in Settings).</summary>
+        public bool WantsShown(GlassWindow w)
+        {
+            if (!(w is Widget)) return w.Visible || preview;
+            var S = Settings;
+            if (w == clock) return S.ShowClock; if (w == system) return S.ShowSystem; if (w == calendar) return S.ShowCalendar; if (w == notes) return S.ShowNotes;
+            if (w == countdown) return S.ShowCountdown; if (w == quote) return S.ShowQuote; if (w == github) return S.ShowGitHub; if (w == network) return S.ShowNetwork;
+            if (w == focus) return S.ShowFocus; if (w == music) return S.ShowMusic; if (w == day) return S.ShowDay; if (w == clip) return S.ShowClip;
+            if (w == weather) return S.ShowWeather; if (w == todo) return S.ShowTodo; if (w == photos) return S.ShowPhotos;
+            return w.Visible;
+        }
         public string PanelName(GlassWindow w) { var f = w as FenceWindow; return Lang.L(f != null ? f.Caption : WidgetName(w.Id)); }
 
         public void AddGroupItems(ContextMenuStrip m, GlassWindow w)

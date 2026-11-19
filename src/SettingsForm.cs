@@ -276,6 +276,7 @@ namespace GlassDesk
         void PageAppearance()
         {
             H1(Lang.L("Appearance"), "Glass, colors and size of everything on your desktop.");
+            DesktopPreviewCard();
             Section(Lang.L("Themes"));
             Block(ThemeGallery(Themes.All));
 
@@ -370,9 +371,19 @@ namespace GlassDesk
             sl.Disposed += delegate { t.Dispose(); };
         }
 
+        /// <summary>A live picture of the desktop, so you see what each setting adds or changes.</summary>
+        void DesktopPreviewCard()
+        {
+            Section(Lang.L("Your desktop"));
+            var pv = new DesktopPreview(app, k, card.Width - (int)(32 * k)) { Font = fSmall };
+            Block(pv);
+            Row(Lang.L("Live preview"), "Updates as you change things — point at a panel to see its name", null);
+        }
+
         void PageWidgets()
         {
             H1(Lang.L("Widgets"), "Small glass widgets that live on your desktop.");
+            DesktopPreviewCard();
             Section(Lang.L("Size"));
             Row(Lang.L("Resize any widget"), "Drag its bottom-right corner. Everything inside grows with it.", Button(Lang.L("Reset all sizes"), false, delegate
             {
@@ -436,6 +447,7 @@ namespace GlassDesk
         void PageOrganizer()
         {
             H1(Lang.L("Organizer"), "Your desktop files, sorted into glass fences automatically.");
+            DesktopPreviewCard();
             Section(Lang.L("Desktop fences"));
             Row(Lang.L("Show desktop fences"), "Group desktop items by type", Toggle(S.ShowFences, v => S.ShowFences = v));
             Row(Lang.L("Hide empty fences"), "Only show a fence when it has something in it", Toggle(S.HideEmptyFences, v => S.HideEmptyFences = v));

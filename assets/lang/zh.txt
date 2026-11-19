@@ -409,3 +409,6 @@ No picture	无图片
 Widget style	小组件样式
 Mixed — right-click a widget › Style to change just that one	混合 — 右键单击小组件 › 样式，只更改那一个
 For all widgets — or right-click one › Style to change just that one	所有小组件 — 或右键单击某个 › 样式，只更改那一个
+Your desktop	你的桌面
+Live preview	实时预览
+Updates as you change things — point at a panel to see its name	更改设置时即时更新 — 鼠标指向面板可查看名称
