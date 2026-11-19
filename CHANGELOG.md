@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.13.0
+
+- **The macOS style is now see-through glass**, like the new "liquid glass" look on a Mac: the blurred desktop shows through, light catches the top edge, and a soft shadow lifts it off the wallpaper.
+- **Every widget has its own macOS design and color**, like the Mac app it stands for:
+  - **Notes** is a yellow paper note with ruled lines and a folded corner. The first line is the title.
+  - **To-do** looks like Reminders: a big count of what's left and blue circles.
+  - **Today** uses Activity-style rings inside each other (day, week, month, year).
+  - **System** shows round gauges like the Batteries widget, one for each drive.
+  - Clock in orange, calendar and countdown in red, music in pink, focus in orange, quote in purple, network in light blue, GitHub in indigo, all with titles in that color.
+
 ## 1.12.0
 
 - **Choose a style for each widget.** Right-click any widget › Style and pick **Glass** (the GlassDesk look) or **macOS** (solid rounded cards like the widgets on a Mac). Settings › Widgets › Widget style switches all of them at once.

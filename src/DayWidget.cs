@@ -9,6 +9,7 @@ namespace GlassDesk
     internal class DayWidget : Widget
     {
         System.Windows.Forms.Timer timer;
+        protected override Color MacColor { get { return Color.FromArgb(255, 250, 17, 79); } }
         public DayWidget(App app) : base(app, "day") { }
         protected override Size BaseSize { get { return new Size(340, 150); } }
 
@@ -21,10 +22,41 @@ namespace GlassDesk
         }
         protected override void Dispose(bool disposing) { if (disposing && timer != null) timer.Dispose(); base.Dispose(disposing); }
 
+        /// <summary>macOS style: four rings inside each other, like the Activity rings.</summary>
+        void PaintMac(Graphics g, double[] v, string[] names)
+        {
+            Rectangle r = Inner;
+            Color[] cs = { Color.FromArgb(255, 250, 17, 79), Color.FromArgb(255, 166, 255, 0), Color.FromArgb(255, 0, 230, 255), Color.FromArgb(255, 191, 90, 242) };
+            float d = Math.Min(r.Height + T.Sf(4), T.Sf(124)), pw = T.Sf(10), gap = T.Sf(1.5f);
+            var outer = new RectangleF(r.X - T.Sf(2), r.Y + (r.Height - d) / 2, d, d);
+            for (int i = 0; i < 4; i++)
+            {
+                float inset = pw / 2 + i * (pw + gap);
+                var rr = RectangleF.Inflate(outer, -inset, -inset);
+                if (rr.Width < 4) break;
+                using (var pen = new Pen(Color.FromArgb(T.Dark ? 60 : 44, cs[i]), pw)) g.DrawEllipse(pen, rr);
+                float sweep = (float)(360 * Math.Max(0, Math.Min(1, v[i])));
+                if (sweep > 1) using (var pen = new Pen(cs[i], pw) { StartCap = LineCap.Round, EndCap = LineCap.Round }) g.DrawArc(pen, rr, -90, sweep);
+            }
+            float x = outer.Right + T.Sf(18), w = r.Right - x, rowH = Math.Min(T.Sf(28), r.Height / 4f);
+            float y = r.Y + (r.Height - rowH * 4) / 2;
+            for (int i = 0; i < 4; i++)
+            {
+                Txt(g, Lang.L(names[i]), Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold), T.Text, new RectangleF(x, y + i * rowH, w, rowH), Gfx.Left);
+                Txt(g, ((int)Math.Floor(v[i] * 100)) + "%", Gfx.F(T.DisplayFont, T.Sf(15), FontStyle.Bold), cs[i], new RectangleF(x, y + i * rowH, w, rowH), Gfx.Right);
+            }
+        }
+
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
             DateTime now = App.Now;
+            if (MacLook)
+            {
+                int dw = ((int)now.DayOfWeek + 6) % 7; double dd = now.TimeOfDay.TotalHours / 24;
+                PaintMac(g, new[] { dd, (dw + dd) / 7, (now.Day - 1 + dd) / DateTime.DaysInMonth(now.Year, now.Month), (now.DayOfYear - 1 + dd) / (DateTime.IsLeapYear(now.Year) ? 366 : 365) }, new[] { "Day", "Week", "Month", "Year" });
+                return;
+            }
             Title(g, Lang.L("Today"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             Txt(g, now.ToString("dddd", CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
 

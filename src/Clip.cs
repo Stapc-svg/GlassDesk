@@ -22,6 +22,8 @@ namespace GlassDesk
         readonly List<RectangleF> rows = new List<RectangleF>();
         int hot = -1, flash = -1; int flashAt;
 
+        protected override Color MacColor { get { return Color.FromArgb(255, 142, 142, 147); } }
+
         public ClipWidget(App app) : base(app, "clip") { }
         protected override Size BaseSize { get { return new Size(320, 252); } }
 

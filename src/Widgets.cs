@@ -82,6 +82,16 @@ namespace GlassDesk
     {
         protected Widget(App app, string id) : base(app, id) { Resizable = true; ZoomResize = true; }
         protected override bool MacLook { get { return Cfg.StyleOf(Id) == "mac"; } }
+        /// <summary>Each widget's color in the macOS style, like the app it stands for (Reminders blue, Notes yellow...).</summary>
+        protected virtual Color MacColor { get { return Color.Empty; } }
+        Theme macMine, macFrom;
+        protected override Theme MacBase()
+        {
+            Theme b = App.MacTheme;
+            if (MacColor.IsEmpty) return b;
+            if (macMine == null || !ReferenceEquals(macFrom, b)) { macMine = b.WithAccent(MacColor); macFrom = b; }
+            return macMine;
+        }
         public bool IsMac { get { return MacLook; } }
         protected abstract Size BaseSize { get; }
         public override Size PreferredPanelSize(Size saved)
@@ -132,6 +142,7 @@ namespace GlassDesk
     // ---------------------------------------------------------------- Clock
     internal class ClockWidget : Widget
     {
+        protected override Color MacColor { get { return Color.FromArgb(255, 255, 149, 0); } }
         public ClockWidget(App app) : base(app, "clock") { }
         protected override Size BaseSize { get { return new Size(320, 150); } }
 
@@ -345,15 +356,52 @@ namespace GlassDesk
     // ---------------------------------------------------------------- System
     internal class SystemWidget : Widget
     {
+        protected override Color MacColor { get { return Color.FromArgb(255, 48, 209, 88); } }
         public SystemWidget(App app) : base(app, "system") { }
         int ExtraDrives { get { return App.Settings.AllDrives ? Math.Max(0, App.Stats.Drives.Count - 1) : 0; } }
-        protected override Size BaseSize { get { return new Size(320, (App.Stats.Battery >= 0 ? 226 : 188) + 38 * ExtraDrives); } }
+        int MacCount { get { return 2 + (App.Settings.AllDrives ? Math.Max(1, App.Stats.Drives.Count) : 1) + (App.Stats.Battery >= 0 ? 1 : 0); } }
+        protected override Size BaseSize { get { return MacLook ? new Size(320, 52 + 98 * ((MacCount + 3) / 4)) : new Size(320, (App.Stats.Battery >= 0 ? 226 : 188) + 38 * ExtraDrives); } }
+
+        /// <summary>macOS style: round gauges like the Batteries widget on a Mac.</summary>
+        void PaintMac(Graphics g)
+        {
+            var st = App.Stats;
+            Rectangle r = Inner;
+            Title(g, Lang.L("System"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            var items = new List<Tuple<string, string, float, Color>>();
+            items.Add(Tuple.Create(Lang.L("CPU"), (st.Cpu * 100).ToString("0") + "%", st.Cpu, Color.FromArgb(255, 48, 209, 88)));
+            items.Add(Tuple.Create(Lang.L("Memory"), st.RamTotal > 0 ? ((float)st.RamUsed / st.RamTotal * 100).ToString("0") + "%" : "—", st.RamTotal > 0 ? (float)st.RamUsed / st.RamTotal : 0, Color.FromArgb(255, 10, 132, 255)));
+            var drives = App.Settings.AllDrives && st.Drives.Count > 0 ? st.Drives : new List<Tuple<string, long, long>> { Tuple.Create(st.DiskName, st.DiskTotal, st.DiskFree) };
+            foreach (var d in drives)
+            {
+                float used = d.Item2 > 0 ? 1f - (float)d.Item3 / d.Item2 : 0;
+                items.Add(Tuple.Create(d.Item1.Split(' ')[0], GB(d.Item3), used, Color.FromArgb(255, 255, 159, 10)));
+            }
+            if (st.Battery >= 0) items.Add(Tuple.Create(st.Charging ? "⚡" : Lang.L("Battery"), st.Battery + "%", st.Battery / 100f, st.Battery <= 20 ? Color.FromArgb(255, 255, 69, 58) : Color.FromArgb(255, 48, 209, 88)));
+            float cw = r.Width / 4f, d0 = Math.Min(T.Sf(58), cw - T.Sf(12));
+            for (int i = 0; i < items.Count; i++)
+            {
+                int row = i / 4, col = i % 4;
+                float cx = r.X + cw * col + cw / 2, top = r.Y + T.Sf(32) + row * T.Sf(98);
+                var ring = new RectangleF(cx - d0 / 2, top, d0, d0);
+                float pw = T.Sf(5.5f);
+                var inner = RectangleF.Inflate(ring, -pw / 2, -pw / 2);
+                var it = items[i];
+                using (var pen = new Pen(Color.FromArgb(T.Dark ? 50 : 34, it.Item4), pw)) g.DrawEllipse(pen, inner);
+                float sweep = 360 * Math.Max(0, Math.Min(1, it.Item3));
+                Color c = it.Item3 > 0.9f && i > 0 && i < items.Count - (st.Battery >= 0 ? 1 : 0) ? Color.FromArgb(255, 255, 69, 58) : it.Item4;
+                if (sweep > 1) using (var pen = new Pen(c, pw) { StartCap = LineCap.Round, EndCap = LineCap.Round }) g.DrawArc(pen, inner, -90, sweep);
+                Txt(g, it.Item2, Gfx.F(T.FontName, T.Sf(it.Item2.Length > 5 ? 9.5f : 12), FontStyle.Bold), T.Text, ring, Gfx.Center);
+                Txt(g, it.Item1, Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(cx - cw / 2, ring.Bottom + T.Sf(4), cw, T.Sf(18)), Gfx.Center);
+            }
+        }
         int shownExtra = -1;
 
         static string GB(double bytes) { return (bytes / 1073741824.0).ToString(bytes >= 107374182400.0 ? "0" : "0.0", CultureInfo.InvariantCulture) + " GB"; }
 
         protected override void PaintContent(Graphics g)
         {
+            if (MacLook) { PaintMac(g); if (shownExtra != MacCount + 100) { bool first = shownExtra < 0; shownExtra = MacCount + 100; if (!first) BeginInvoke(new Action(delegate { App.PlaceWindow(this); })); } return; }
             var st = App.Stats;
             Rectangle r = Inner;
             Title(g, Lang.L("System"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
@@ -418,6 +466,7 @@ namespace GlassDesk
         List<CalEvent> events = new List<CalEvent>();
         string feedStatus = "";
         System.Windows.Forms.Timer feedTimer;
+        protected override Color MacColor { get { return Color.FromArgb(255, 255, 59, 48); } }
         public CalendarWidget(App app) : base(app, "calendar") { }
         bool HasFeed { get { return Cfg.CalendarFeeds.Count > 0 || App.Preview && events.Count > 0; } }
         protected override Size BaseSize { get { return new Size(320, HasFeed ? 356 : 288); } }
@@ -585,11 +634,43 @@ namespace GlassDesk
     // ---------------------------------------------------------------- Notes
     internal class NotesWidget : Widget
     {
+        protected override Color MacColor { get { return Color.FromArgb(255, 255, 204, 0); } }
         public NotesWidget(App app) : base(app, "notes") { }
         protected override Size BaseSize { get { return new Size(320, 220); } }
 
+        /// <summary>macOS style: a yellow paper note with faint lines and a folded corner.</summary>
+        protected override void PaintMacBack(Graphics g, GraphicsPath path, RectangleF pr)
+        {
+            DrawBackdrop(g, path, true);
+            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(232, 255, 236, 140), Color.FromArgb(232, 255, 214, 90))) g.FillPath(lg, path);
+            // ruled lines, like a notepad
+            float lh = T.Sf(24), y0 = pr.Y + T.Sf(58);
+            using (var pen = new Pen(Color.FromArgb(46, 150, 110, 20), 1f))
+                for (float y = y0; y < pr.Bottom - T.Sf(10); y += lh) g.DrawLine(pen, pr.X + T.Sf(14), y, pr.Right - T.Sf(14), y);
+            // the folded bottom-right corner
+            float c = T.Sf(26);
+            var fold = new[] { new PointF(pr.Right - c, pr.Bottom), new PointF(pr.Right, pr.Bottom - c), new PointF(pr.Right - c, pr.Bottom - c) };
+            using (var b = new SolidBrush(Color.FromArgb(255, 236, 190, 60))) g.FillPolygon(b, fold);
+            using (var b = new SolidBrush(Color.FromArgb(40, 0, 0, 0))) g.FillPolygon(b, new[] { fold[0], fold[2], new PointF(pr.Right - c + T.Sf(3), pr.Bottom) });
+            MacSheen(g, path, pr);
+        }
+        void PaintMac(Graphics g)
+        {
+            Rectangle r = Inner;
+            Color ink = Color.FromArgb(255, 74, 56, 16), soft = Color.FromArgb(170, 110, 84, 24);
+            string text = (Cfg.NotesText ?? "").Replace("\r", "");
+            string first = text, rest = "";
+            int nl = text.IndexOf('\n'); if (nl >= 0) { first = text.Substring(0, nl); rest = text.Substring(nl + 1).TrimStart('\n'); }
+            if (text.Trim().Length == 0) { first = Lang.L("Notes"); rest = Lang.L("double-click to edit"); }
+            Txt(g, first, Gfx.F(T.DisplayFont, T.Sf(17), FontStyle.Bold), ink, new RectangleF(r.X, r.Y - T.Sf(2), r.Width, T.Sf(26)), Gfx.Left);
+            Txt(g, App.Now.ToString("d MMM", CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), soft, new RectangleF(r.X, r.Y + T.Sf(22), r.Width, T.Sf(16)), Gfx.Left);
+            var body = new RectangleF(r.X, r.Y + T.Sf(44), r.Width - T.Sf(10), r.Height - T.Sf(44));
+            Txt(g, rest, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Regular), ink, body, Gfx.TopLeftWrap);
+        }
+
         protected override void PaintContent(Graphics g)
         {
+            if (MacLook) { PaintMac(g); return; }
             Rectangle r = Inner;
             Title(g, Lang.L("Notes"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             Txt(g, Lang.L("double-click to edit"), Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);

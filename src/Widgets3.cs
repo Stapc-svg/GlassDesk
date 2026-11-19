@@ -24,6 +24,8 @@ namespace GlassDesk
         Stats st; string status = ""; bool busy;
         System.Windows.Forms.Timer refresh;
 
+        protected override Color MacColor { get { return Color.FromArgb(255, 94, 92, 230); } }
+
         public GitHubWidget(App app) : base(app, "github") { }
         protected override Size BaseSize { get { return new Size(320, 236); } }
 
@@ -180,6 +182,8 @@ namespace GlassDesk
         System.Windows.Forms.Timer timer;
         string adapter = "";
 
+        protected override Color MacColor { get { return Color.FromArgb(255, 50, 173, 230); } }
+
         public NetworkWidget(App app) : base(app, "network") { }
         protected override Size BaseSize { get { return new Size(320, 168); } }
 
@@ -272,6 +276,8 @@ namespace GlassDesk
         int left;                                // seconds left
         int sessions;                            // focus blocks finished today
         System.Windows.Forms.Timer timer;
+
+        protected override Color MacColor { get { return Color.FromArgb(255, 255, 159, 10); } }
 
         public FocusWidget(App app) : base(app, "focus") { left = Math.Max(1, app.Settings.FocusMinutes) * 60; }
         protected override Size BaseSize { get { return new Size(320, 150); } }

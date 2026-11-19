@@ -103,7 +103,7 @@ namespace GlassDesk
         {
             get
             {
-                Theme b = MacLook ? App.MacTheme : App.Theme;
+                Theme b = MacLook ? MacBase() : App.Theme;
                 if (Math.Abs(Zoom - 1f) < 0.001f) return b;
                 if (zoomed == null || !ReferenceEquals(zoomedFrom, b) || zoomedAt != Zoom) { zoomed = b.Zoomed(Zoom); zoomedFrom = b; zoomedAt = Zoom; }
                 return zoomed;
@@ -195,13 +195,16 @@ namespace GlassDesk
         bool UsesBackdrop { get { return !T.Solid && (Cfg.GlassStyle == "frosted" || Cfg.GlassStyle == "blur"); } }
 
         /// <summary>Paints the matching piece of the blurred wallpaper inside the panel: the actual glass blur.</summary>
-        void DrawBackdrop(Graphics g, GraphicsPath path)
+        void DrawBackdrop(Graphics g, GraphicsPath path) { DrawBackdrop(g, path, false); }
+        /// <summary>The blurred wallpaper behind the panel; <paramref name="always"/> draws it even when the glass style has no blur.</summary>
+        protected void DrawBackdrop(Graphics g, GraphicsPath path, bool always)
         {
-            if (!UsesBackdrop) return;
+            if (!always && !UsesBackdrop) return;
+            if (always && T.Solid && !MacLook) return;
             try
             {
                 Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
-                Bitmap blur = Backdrop.For(scr, T.LookId == "acrylic" ? 3 : Cfg.GlassStyle == "frosted" ? 2 : 1);
+                Bitmap blur = Backdrop.For(scr, MacLook ? 3 : T.LookId == "acrylic" ? 3 : Cfg.GlassStyle == "frosted" ? 2 : 1);
                 var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
                 var st = g.Save();
                 g.SetClip(path, CombineMode.Intersect);
@@ -223,8 +226,24 @@ namespace GlassDesk
         /// <summary>The card behind a macOS-style widget; the weather widget paints a sky instead.</summary>
         protected virtual void PaintMacBack(Graphics g, GraphicsPath path, RectangleF pr)
         {
+            // see-through glass like macOS: the blurred desktop, a light tint, and light catching the top edge
+            DrawBackdrop(g, path, true);
             using (var b = new SolidBrush(T.TintTop)) g.FillPath(b, path);
+            MacSheen(g, path, pr);
         }
+        /// <summary>The bright edge and soft shine of macOS "liquid glass".</summary>
+        protected void MacSheen(Graphics g, GraphicsPath path, RectangleF pr)
+        {
+            using (var lg = new LinearGradientBrush(new PointF(0, pr.Y - 1), new PointF(0, pr.Y + pr.Height * 0.5f), Color.FromArgb(T.Dark ? 26 : 60, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+                g.FillRectangle(lg, pr.X, pr.Y, pr.Width, pr.Height * 0.5f);
+            float r = T.S(PanelRadius);
+            var br = new RectangleF(pr.X + 0.8f, pr.Y + 0.8f, pr.Width - 1.6f, pr.Height - 1.6f);
+            using (var p = Gfx.Round(br, Math.Max(0, r - 0.8f)))
+            using (var lg = new LinearGradientBrush(new PointF(br.X, br.Y - 1), new PointF(br.X + br.Width * 0.35f, br.Bottom + 1), Color.FromArgb(T.Dark ? 120 : 200, 255, 255, 255), Color.FromArgb(T.Dark ? 18 : 50, 255, 255, 255)))
+            using (var pen = new Pen(lg, T.Sf(1.3f))) g.DrawPath(pen, p);
+        }
+        /// <summary>The theme a macOS-style panel draws with (widgets give it their own color).</summary>
+        protected virtual Theme MacBase() { return App.MacTheme; }
         public bool DropHint;   // another panel is being dragged onto this one
 
         // ---- stacks: a tab for every panel in the stack; click a tab to switch ----
@@ -793,6 +812,12 @@ namespace GlassDesk
         // ------------- small drawing helpers for subclasses -------------
         protected void Title(Graphics g, string text, Rectangle r)
         {
+            if (MacLook)
+            {
+                // macOS widgets name themselves in their app's color, in normal case
+                using (var b = new SolidBrush(T.Accent)) g.DrawString(text, Gfx.F(T.DisplayFont, T.Sf(13.5f), FontStyle.Bold), b, new RectangleF(r.X, r.Y - T.Sf(2), r.Width, r.Height + T.Sf(4)), Gfx.Left);
+                return;
+            }
             var f = Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold);
             if (Cfg.GlassStyle == "transparent")
                 using (var sh = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))

@@ -384,20 +384,22 @@ namespace GlassDesk
         }
 
         /// <summary>The macOS widget look: solid rounded cards, SF-style type and system colors.</summary>
+        /// <summary>The same theme with another highlight color.</summary>
+        public Theme WithAccent(Color c) { var t = (Theme)MemberwiseClone(); t.Accent = c; return t; }
         public Theme Mac()
         {
             var t = (Theme)MemberwiseClone();
             t.Solid = true; t.Flat = true; t.Neon = false; t.Glow = Color.Empty; t.Glow2 = Color.Empty; t.LookId = "mac";
             if (Dark)
             {
-                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(250, 30, 30, 32);
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(150, 28, 28, 34);
                 t.Text = Color.FromArgb(255, 255, 255, 255); t.SubText = Color.FromArgb(255, 152, 152, 157);
                 t.Accent = Color.FromArgb(255, 10, 132, 255);
                 t.Border = Color.FromArgb(30, 255, 255, 255); t.Hover = Color.FromArgb(30, 255, 255, 255); t.Track = Color.FromArgb(46, 255, 255, 255);
             }
             else
             {
-                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(250, 255, 255, 255);
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(165, 250, 250, 252);
                 t.Text = Color.FromArgb(255, 29, 29, 31); t.SubText = Color.FromArgb(255, 134, 134, 139);
                 t.Accent = Color.FromArgb(255, 0, 122, 255);
                 t.Border = Color.FromArgb(18, 0, 0, 0); t.Hover = Color.FromArgb(14, 0, 0, 0); t.Track = Color.FromArgb(22, 0, 0, 0);

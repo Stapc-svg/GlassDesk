@@ -290,7 +290,9 @@ namespace GlassDesk
             else if (wet) { top = Color.FromArgb(255, 74, 96, 128); bot = Color.FromArgb(255, 122, 146, 176); }
             else if (code >= 3) { top = Color.FromArgb(255, 92, 120, 160); bot = Color.FromArgb(255, 150, 176, 206); }
             else { top = Color.FromArgb(255, 36, 116, 214); bot = Color.FromArgb(255, 100, 172, 240); }
-            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), top, bot)) g.FillPath(lg, path);
+            DrawBackdrop(g, path, true);
+            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(205, top), Color.FromArgb(205, bot))) g.FillPath(lg, path);
+            MacSheen(g, path, pr);
         }
 
         protected override void PaintContent(Graphics g)
@@ -462,6 +464,7 @@ namespace GlassDesk
     // ================================================================ To-do
     internal class TodoWidget : Widget
     {
+        protected override Color MacColor { get { return Color.FromArgb(255, 10, 132, 255); } }
         public TodoWidget(App app) : base(app, "todo") { }
         const int MaxRows = 8;
 
@@ -495,6 +498,12 @@ namespace GlassDesk
             var list = Read();
             int left = list.FindAll(t => !t.Done).Count;
             Title(g, Lang.L("To-do"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            if (MacLook)
+            {
+                // like Reminders: a big count of what's left in the corner
+                Txt(g, left.ToString(CultureInfo.InvariantCulture), Gfx.F(T.DisplayFont, T.Sf(24), FontStyle.Bold), T.Text, new RectangleF(r.X, r.Y - T.Sf(8), r.Width, T.Sf(32)), Gfx.Right);
+            }
+            else
             Txt(g, list.Count == 0 ? "double-click to add" : left == 0 ? "all done" : left + " left", Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
             if (list.Count == 0)
             {
@@ -513,7 +522,9 @@ namespace GlassDesk
                     using (var pen = new Pen(Color.White, T.Sf(1.8f)) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
                         g.DrawLines(pen, new[] { new PointF(box.X + cb * .27f, box.Y + cb * .52f), new PointF(box.X + cb * .44f, box.Y + cb * .69f), new PointF(box.X + cb * .74f, box.Y + cb * .34f) });
                 }
-                else using (var pen = new Pen(Gfx.WithAlpha(T.Text, 150), T.Sf(1.5f))) g.DrawEllipse(pen, box);
+                else using (var pen = new Pen(MacLook ? T.Accent : Gfx.WithAlpha(T.Text, 150), T.Sf(1.5f))) g.DrawEllipse(pen, box);
+                if (MacLook && i < list.Count - 1 && i < MaxRows - 1)
+                    using (var pen = new Pen(T.Track, 1f)) g.DrawLine(pen, r.X + cb + T.Sf(10), y + T.Sf(26), r.Right, y + T.Sf(26));
                 string text = i == MaxRows - 1 && list.Count > MaxRows ? "+" + (list.Count - MaxRows + 1) + " more…" : t.Text;
                 Txt(g, text, t.Done ? fd : f, t.Done ? T.SubText : T.Text, new RectangleF(r.X + cb + T.Sf(10), y, r.Width - cb - T.Sf(10), T.Sf(24)), Gfx.Left);
             }
@@ -568,6 +579,8 @@ namespace GlassDesk
         int index = -1;
         System.Windows.Forms.Timer next;
         readonly Random rng = new Random();
+
+        protected override Color MacColor { get { return Color.FromArgb(255, 191, 90, 242); } }
 
         public PhotoWidget(App app) : base(app, "photos") { }
         protected override Size BaseSize { get { return new Size(320, 214); } }
@@ -731,6 +744,7 @@ namespace GlassDesk
     // ================================================================ Countdown
     internal class CountdownWidget : Widget
     {
+        protected override Color MacColor { get { return Color.FromArgb(255, 255, 69, 58); } }
         public CountdownWidget(App app) : base(app, "countdown") { }
         protected override Size BaseSize { get { return new Size(320, 132); } }
 
@@ -779,6 +793,7 @@ namespace GlassDesk
     // ================================================================ Quote of the day
     internal class QuoteWidget : Widget
     {
+        protected override Color MacColor { get { return Color.FromArgb(255, 175, 82, 222); } }
         public QuoteWidget(App app) : base(app, "quote") { }
         protected override Size BaseSize { get { return new Size(320, 150); } }
         int extra;   // "next quote" clicks today

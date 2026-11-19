@@ -28,6 +28,8 @@ namespace GlassDesk
         Bitmap toneOf;
         RectangleF rPrev, rPlay, rNext, rVol;
 
+        protected override Color MacColor { get { return Color.FromArgb(255, 250, 45, 72); } }
+
         public MusicWidget(App app) : base(app, "music")
         {
             try { string f = CoverFile; if (File.Exists(f)) cover = Load(f); } catch { }
