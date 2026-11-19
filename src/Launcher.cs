@@ -40,7 +40,22 @@ namespace GlassDesk
         }
 
         /// <summary>Blurred wallpaper, the theme's tint, its glow and a soft light from the top.</summary>
+        Bitmap glassCache; Size glassFor;
+        /// <summary>The glass background never changes while the window is open, so it is drawn once and reused:
+        /// repainting the blur on every scroll step is what made scrolling stutter.</summary>
         protected void PaintGlass(Graphics g)
+        {
+            if (glassCache == null || glassFor != Size)
+            {
+                if (glassCache != null) glassCache.Dispose();
+                glassCache = new Bitmap(Math.Max(1, Width), Math.Max(1, Height), System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                using (var cg = Graphics.FromImage(glassCache)) { Gfx.Setup(cg); PaintGlassNow(cg); }
+                glassFor = Size;
+            }
+            g.DrawImageUnscaled(glassCache, 0, 0);
+        }
+        protected override void OnFormClosed(FormClosedEventArgs e) { if (glassCache != null) { glassCache.Dispose(); glassCache = null; } base.OnFormClosed(e); }
+        void PaintGlassNow(Graphics g)
         {
             var r = new Rectangle(0, 0, Width, Height);
             using (var b = new SolidBrush(P.Bg)) g.FillRectangle(b, r);
@@ -113,11 +128,18 @@ namespace GlassDesk
         readonly List<KeyValuePair<DesktopItem, string>> all;
         readonly List<DesktopItem> shown = new List<DesktopItem>();
         readonly HashSet<DesktopItem> appSet = new HashSet<DesktopItem>();
-        int filter;                       // 0 everything, 1 desktop, 2 apps
+        int filter;                       // 0 everything, 1 desktop, 2 apps, 3 widgets
         int pressIndex = -1; Point pressAt; bool dragging, hotChip;
-        int[] chipCount = new int[3];
+        int[] chipCount = new int[4];
         string query = "";
         int sel, hot = -1, scroll;
+        float scrollTarget, scrollPos;                    // smooth scrolling: the grid glides to scrollTarget
+        readonly Timer glide, preload;
+        int preloadAt;
+        bool draggingThumb; int thumbGrab;
+        readonly List<GlassWindow> wshown = new List<GlassWindow>();   // the Widgets tab
+        readonly Dictionary<GlassWindow, Bitmap> thumbs = new Dictionary<GlassWindow, Bitmap>();
+        int Count { get { return filter == 3 ? wshown.Count : shown.Count; } }
         bool caretOn = true, closing, hotClose, hotSettings;
         readonly Timer caret;
         const int Cols = 7;
@@ -131,12 +153,28 @@ namespace GlassDesk
             int w = (int)(700 * k), h = (int)(500 * k);
             Rectangle wa = Screen.FromPoint(Cursor.Position).WorkingArea;
             Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + Math.Max(0, (wa.Height - h) / 3), w, h);
+            glide = new Timer { Interval = 15 };
+            glide.Tick += delegate
+            {
+                float d = scrollTarget - scrollPos;
+                if (Math.Abs(d) < 0.6f) { scrollPos = scrollTarget; glide.Stop(); }
+                else scrollPos += d * 0.28f;
+                int ns = (int)Math.Round(scrollPos);
+                if (ns != scroll) { scroll = ns; InvalidateGrid(); }
+            };
+            // fetch icons a few at a time in the background, so scrolling never waits for Windows to hand one over
+            preload = new Timer { Interval = 20 };
+            preload.Tick += delegate
+            {
+                for (int n = 0; n < 6 && preloadAt < all.Count; n++, preloadAt++) { try { var ic = all[preloadAt].Key.Icon; } catch { } }
+                if (preloadAt >= all.Count) preload.Stop();
+            };
             caret = new Timer { Interval = 530 };
             caret.Tick += delegate { caretOn = !caretOn; Invalidate(SearchRect); };
             Filter();
-            Load += delegate { caret.Start(); };
+            Load += delegate { caret.Start(); preload.Start(); };
             Deactivate += delegate { if (!dragging) Finish(); };
-            FormClosed += delegate { caret.Dispose(); };
+            FormClosed += delegate { caret.Dispose(); glide.Dispose(); preload.Dispose(); foreach (var b in thumbs.Values) if (b != null) b.Dispose(); thumbs.Clear(); };
         }
 
         // ---------- layout ----------
@@ -203,7 +241,15 @@ namespace GlassDesk
         Rectangle SettingsRect { get { int bw = (int)(140 * k), bh = (int)(34 * k); return new Rectangle(Width - Pad - bw, FooterTop + ((Height - FooterTop) - bh) / 2, bw, bh); } }
         int CellW { get { return (GridRect.Width - (int)(10 * k)) / Cols; } }
         int CellH { get { return (int)(96 * k); } }
-        int Rows { get { return (shown.Count + Cols - 1) / Cols; } }
+        int Rows { get { return (Count + Cols - 1) / Cols; } }
+        int CellHFor { get { return CellH; } }
+        void InvalidateGrid() { var gr = GridRect; Invalidate(new Rectangle(gr.X, gr.Y, Width - gr.X, gr.Height)); }
+        void ScrollTo(float target, bool smooth)
+        {
+            scrollTarget = Math.Max(0, Math.Min(MaxScroll, target));
+            if (!smooth) { scrollPos = scrollTarget; scroll = (int)scrollTarget; glide.Stop(); InvalidateGrid(); }
+            else if (!glide.Enabled) glide.Start();
+        }
         int MaxScroll { get { return Math.Max(0, Rows * CellH - GridRect.Height); } }
         Rectangle Cell(int i)
         {
@@ -226,8 +272,12 @@ namespace GlassDesk
                 else if (Loose(q, n)) loose.Add(kv.Key);
             }
             shown.Clear(); shown.AddRange(starts); shown.AddRange(has); shown.AddRange(loose);
+            wshown.Clear();
+            foreach (var w in app.Windows)
+                if (w is Widget && (q.Length == 0 || app.PanelName(w).IndexOf(q, StringComparison.CurrentCultureIgnoreCase) >= 0)) wshown.Add(w);
+            chipCount[3] = 0; foreach (var w in app.Windows) if (w is Widget) chipCount[3]++;
             BuildActs();
-            sel = 0; hot = -1; scroll = 0;
+            sel = 0; hot = -1; scroll = 0; scrollPos = scrollTarget = 0; if (glide != null) glide.Stop();
             Invalidate();
         }
 
@@ -240,6 +290,7 @@ namespace GlassDesk
         }
 
         public void SetQuery(string q) { query = q; Filter(); }
+        public void SetFilter(int f) { filter = f; Filter(); }
 
         // ---------- painting ----------
         protected override void PaintAll(Graphics g)
@@ -302,6 +353,7 @@ namespace GlassDesk
             var gr = GridRect;
             var st = g.Save();
             g.SetClip(gr);
+            if (filter == 3) { PaintWidgets(g, gr, fName, fSmall); goto bar; }
             if (shown.Count == 0 && acts.Count == 0)
                 using (var b = new SolidBrush(P.Sub)) g.DrawString(query.Length == 0 ? Lang.L("Your desktop is empty") : string.Format(Lang.L("Nothing on your desktop matches \"{0}\""), query), fBig, b, gr, Gfx.Center);
             int first = Math.Max(0, scroll / CellH * Cols), last = Math.Min(shown.Count, ((scroll + gr.Height) / CellH + 1) * Cols);
@@ -330,19 +382,21 @@ namespace GlassDesk
                 using (var b = new SolidBrush(P.Text))
                     g.DrawString(it.Name, fName, b, new RectangleF(c.X + 6 * k, ir.Bottom + 6 * k, c.Width - 12 * k, 20 * k), new StringFormat(Gfx.Center) { Trimming = StringTrimming.EllipsisCharacter });
             }
+            bar:
             g.Restore(st);
-            // scroll bar
+            // scroll bar (drag it, or click the track to jump)
             if (MaxScroll > 0)
             {
-                float trackH = gr.Height, thumbH = Math.Max(30 * k, trackH * gr.Height / (Rows * CellH));
-                float y = gr.Y + (trackH - thumbH) * scroll / MaxScroll;
-                Gfx.FillRound(g, Gfx.WithAlpha(P.Text, 60), new RectangleF(Width - Pad / 2f - 3 * k, y, 4 * k, thumbH), 2 * k);
+                var th = ThumbRect;
+                bool big = draggingThumb || new RectangleF(th.X - 8 * k, gr.Y, th.Width + 16 * k, gr.Height).Contains(PointToClient(Cursor.Position));
+                float w0 = big ? 6 * k : 4 * k;
+                Gfx.FillRound(g, Gfx.WithAlpha(P.Text, big ? 120 : 60), new RectangleF(th.Right - w0, th.Y, w0, th.Height), w0 / 2);
             }
 
             // footer
             using (var pen = new Pen(T.Dark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(18, 0, 0, 0))) g.DrawLine(pen, Pad, FooterTop, Width - Pad, FooterTop);
             // filter chips: everything / desktop / installed apps
-            for (int c = 0; c < 3; c++)
+            for (int c = 0; c < 4; c++)
             {
                 var cr = ChipRect(c);
                 if (c == filter)
@@ -352,16 +406,23 @@ namespace GlassDesk
                     g.DrawString(ChipLabel(c), fSmall, b, cr, Gfx.Center);
             }
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString(Lang.L("Drag an app onto a fence to add it"), fSmall, b,
-                    new RectangleF(ChipRect(2).Right + 12 * k, FooterTop, SettingsRect.X - ChipRect(2).Right - 16 * k, Height - FooterTop), Gfx.Left);
+                g.DrawString(Lang.L(filter == 3 ? "Click a widget to add or remove it" : "Drag an app onto a fence to add it"), fSmall, b,
+                    new RectangleF(ChipRect(3).Right + 12 * k, FooterTop, SettingsRect.X - ChipRect(3).Right - 16 * k, Height - FooterTop), new StringFormat(Gfx.Left) { Trimming = StringTrimming.EllipsisCharacter });
             var sr = SettingsRect;
             Chip(g, sr, 9 * k, hotSettings);
             DrawGear(g, new PointF(sr.X + 20 * k, sr.Y + sr.Height / 2f), 6.5f * k);
             using (var b = new SolidBrush(P.Text)) g.DrawString(Lang.L("Open Settings"), fSmall, b, new RectangleF(sr.X + 32 * k, sr.Y, sr.Width - 36 * k, sr.Height), Gfx.Left);
         }
 
-        string ChipLabel(int c) { return Lang.L(c == 0 ? "All" : c == 1 ? "Desktop" : "Apps") + "  " + chipCount[c]; }
+        string ChipLabel(int c) { return Lang.L(c == 0 ? "All" : c == 1 ? "Desktop" : c == 2 ? "Apps" : "Widgets") + "  " + chipCount[c]; }
+        RectangleF[] chipRects;
+        /// <summary>Measured once: measuring text on every paint made the window slow.</summary>
         RectangleF ChipRect(int c)
+        {
+            if (chipRects == null) { chipRects = new RectangleF[4]; for (int i = 0; i < 4; i++) chipRects[i] = MeasureChip(i); }
+            return chipRects[c];
+        }
+        RectangleF MeasureChip(int c)
         {
             float x = Pad;
             using (var g = CreateGraphics())
@@ -370,6 +431,81 @@ namespace GlassDesk
             using (var g = CreateGraphics()) w = g.MeasureString(ChipLabel(c), Gfx.F(T.FontName, 11.5f * k, FontStyle.Regular)).Width + 26 * k;
             float h = 30 * k;
             return new RectangleF(x, FooterTop + ((Height - FooterTop) - h) / 2, w, h);
+        }
+
+        RectangleF ThumbRect
+        {
+            get
+            {
+                var gr = GridRect;
+                float trackH = gr.Height, thumbH = Math.Max(30 * k, trackH * gr.Height / Math.Max(1, Rows * CellH));
+                float y = gr.Y + (trackH - thumbH) * scroll / Math.Max(1, MaxScroll);
+                return new RectangleF(Width - Pad / 2f - 7 * k, y, 8 * k, thumbH);
+            }
+        }
+
+        // ---------- the Widgets tab: a live picture of every widget; click to put it on the desktop or take it off ----------
+        void PaintWidgets(Graphics g, Rectangle gr, Font fName, Font fSmall)
+        {
+            if (wshown.Count == 0) { using (var b = new SolidBrush(P.Sub)) g.DrawString(Lang.L("No widget matches"), fName, b, gr, Gfx.Center); return; }
+            int first = Math.Max(0, scroll / CellH * Cols), last = Math.Min(wshown.Count, ((scroll + gr.Height) / CellH + 1) * Cols);
+            for (int i = first; i < last; i++)
+            {
+                var c = Cell(i);
+                var box = new RectangleF(c.X + 3 * k, c.Y + 3 * k, c.Width - 6 * k, c.Height - 6 * k);
+                var w = wshown[i];
+                bool on = app.WantsShown(w);
+                if (i == sel || i == hot) Chip(g, box, 12 * k, i == sel);
+                // a small live picture of the widget
+                Bitmap th;
+                if (!thumbs.TryGetValue(w, out th))
+                {
+                    th = null;
+                    try { if (w.Width > 4) th = w.RenderBitmap(); } catch { }
+                    thumbs[w] = th;
+                }
+                var ir = new RectangleF(c.X + 8 * k, c.Y + 8 * k, c.Width - 16 * k, c.Height - 36 * k);
+                if (th != null)
+                {
+                    float sc = Math.Min(ir.Width / th.Width, ir.Height / th.Height);
+                    var dst = new RectangleF(ir.X + (ir.Width - th.Width * sc) / 2, ir.Y + (ir.Height - th.Height * sc) / 2, th.Width * sc, th.Height * sc);
+                    var cm = new System.Drawing.Imaging.ColorMatrix { Matrix33 = on ? 1f : 0.45f };
+                    using (var ia = new System.Drawing.Imaging.ImageAttributes())
+                    {
+                        ia.SetColorMatrix(cm);
+                        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                        g.DrawImage(th, Rectangle.Round(dst), 0, 0, th.Width, th.Height, GraphicsUnit.Pixel, ia);
+                    }
+                }
+                else
+                {
+                    var tile = new RectangleF(ir.X + ir.Width * 0.2f, ir.Y + 4 * k, ir.Width * 0.6f, ir.Height - 8 * k);
+                    using (var pp = Gfx.Round(tile, 12 * k)) using (var b = new LinearGradientBrush(tile, Gfx.WithAlpha(P.Accent, on ? 230 : 110), Gfx.WithAlpha(P.Accent2, on ? 230 : 110), 45f)) g.FillPath(b, pp);
+                    string nm = app.PanelName(w);
+                    using (var b = new SolidBrush(Color.White)) g.DrawString(nm.Substring(0, Math.Min(1, nm.Length)), Gfx.F(T.FontName, 20 * k, FontStyle.Bold), b, tile, Gfx.Center);
+                }
+                // on / off badge
+                float bs = 18 * k; var badge = new RectangleF(box.Right - bs - 4 * k, box.Y + 4 * k, bs, bs);
+                using (var b = new SolidBrush(on ? P.Accent : Color.FromArgb(150, 90, 90, 100))) g.FillEllipse(b, badge);
+                using (var pen = new Pen(Color.White, 1.8f * k) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                {
+                    float cx = badge.X + bs / 2, cy = badge.Y + bs / 2, q = bs * 0.24f;
+                    if (on) g.DrawLines(pen, new[] { new PointF(cx - q, cy), new PointF(cx - q * 0.2f, cy + q * 0.8f), new PointF(cx + q * 1.1f, cy - q * 0.8f) });
+                    else { g.DrawLine(pen, cx - q, cy, cx + q, cy); g.DrawLine(pen, cx, cy - q, cx, cy + q); }
+                }
+                using (var b = new SolidBrush(on ? P.Text : P.Sub))
+                    g.DrawString(app.PanelName(w), fName, b, new RectangleF(c.X + 4 * k, c.Bottom - 28 * k, c.Width - 8 * k, 20 * k), new StringFormat(Gfx.Center) { Trimming = StringTrimming.EllipsisCharacter });
+            }
+        }
+
+        void ToggleWidget(int i)
+        {
+            if (i < 0 || i >= wshown.Count) return;
+            var w = wshown[i];
+            app.SetWidgetShown(w, !app.WantsShown(w));
+            Bitmap old; if (thumbs.TryGetValue(w, out old) && old != null) old.Dispose();
+            thumbs.Remove(w);
+            Invalidate();
         }
 
         void DrawGear(Graphics g, PointF c, float r)
@@ -393,7 +529,7 @@ namespace GlassDesk
 
         protected override void OnKeyDown(KeyEventArgs e)
         {
-            int n = shown.Count;
+            int n = Count;
             switch (e.KeyCode)
             {
                 case Keys.Escape: if (query.Length > 0) SetQuery(""); else Finish(); break;
@@ -412,6 +548,7 @@ namespace GlassDesk
                 case Keys.Up: Move(-Cols); break;
                 case Keys.Enter:
                     if (e.Control || (acts.Count > 0 && (shown.Count == 0 || acts[0].Glyph == "="))) RunFirstAct();
+                    else if (filter == 3) ToggleWidget(sel);
                     else Open(sel, e.Shift);
                     break;
                 default: return;
@@ -421,12 +558,13 @@ namespace GlassDesk
 
         void Move(int d)
         {
-            if (shown.Count == 0) return;
-            sel = Math.Max(0, Math.Min(shown.Count - 1, sel + d));
-            var c = Cell(sel); var gr = GridRect;
-            if (c.Y < gr.Y) scroll -= gr.Y - c.Y;
-            else if (c.Bottom > gr.Bottom) scroll += c.Bottom - gr.Bottom;
-            scroll = Math.Max(0, Math.Min(MaxScroll, scroll));
+            if (Count == 0) return;
+            sel = Math.Max(0, Math.Min(Count - 1, sel + d));
+            int top = (sel / Cols) * CellH, gh = GridRect.Height;
+            float t = scrollTarget;
+            if (top < t) t = top;
+            else if (top + CellH > t + gh) t = top + CellH - gh;
+            ScrollTo(t, true);
             Invalidate();
         }
 
@@ -437,13 +575,25 @@ namespace GlassDesk
             int col = (p.X - gr.X) / CellW, row = (p.Y - gr.Y + scroll) / CellH;
             if (col < 0 || col >= Cols) return -1;
             int i = row * Cols + col;
-            return i < shown.Count ? i : -1;
+            return i < Count ? i : -1;
         }
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            if (e.Button == MouseButtons.Left) { pressIndex = HitItem(e.Location); pressAt = e.Location; }
+            if (e.Button != MouseButtons.Left) return;
+            if (MaxScroll > 0)
+            {
+                var th = ThumbRect; var gr = GridRect;
+                var track = new RectangleF(th.X - 6 * k, gr.Y, th.Width + 12 * k, gr.Height);
+                if (track.Contains(e.Location))
+                {
+                    if (!th.Contains(e.Location))   // clicked the track: jump so the thumb centers there
+                        ScrollTo((e.Y - gr.Y - th.Height / 2) / Math.Max(1f, gr.Height - th.Height) * MaxScroll, false);
+                    draggingThumb = true; thumbGrab = e.Y - (int)ThumbRect.Y; Capture = true; pressIndex = -1; return;
+                }
+            }
+            pressIndex = filter == 3 ? -1 : HitItem(e.Location); pressAt = e.Location;
         }
 
         [System.Runtime.InteropServices.DllImport("user32.dll")] static extern int GetWindowLong(IntPtr h, int i);
@@ -481,6 +631,12 @@ namespace GlassDesk
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            if (draggingThumb)
+            {
+                var gr = GridRect; float thH = ThumbRect.Height;
+                ScrollTo((e.Y - thumbGrab - gr.Y) / Math.Max(1f, gr.Height - thH) * MaxScroll, false);
+                return;
+            }
             if (pressIndex >= 0 && e.Button == MouseButtons.Left && !dragging &&
                 (Math.Abs(e.X - pressAt.X) > 6 || Math.Abs(e.Y - pressAt.Y) > 6)) { StartDrag(pressIndex); return; }
             int ha = -1; for (int a = 0; a < acts.Count; a++) if (ActRect(a).Contains(e.Location)) ha = a;
@@ -491,10 +647,16 @@ namespace GlassDesk
             Cursor = h >= 0 || hc || hs || ha >= 0 ? Cursors.Hand : Cursors.Default;
         }
         protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); hot = -1; hotClose = hotSettings = false; Invalidate(); }
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            if (draggingThumb) { draggingThumb = false; Capture = false; InvalidateGrid(); pressIndex = -1; return; }
+            base.OnMouseUp(e);
+        }
         protected override void OnMouseWheel(MouseEventArgs e)
         {
-            scroll = Math.Max(0, Math.Min(MaxScroll, scroll - e.Delta * CellH / 120));
-            OnMouseMove(e); Invalidate();
+            // one notch moves about a row, gliding there; touchpads send small steps and move smoothly too
+            ScrollTo(scrollTarget - e.Delta * CellH * 0.9f / 120f, true);
+            hot = -1;
         }
         protected override void OnMouseClick(MouseEventArgs e)
         {
@@ -503,10 +665,11 @@ namespace GlassDesk
             bool wasPress = pressIndex >= 0 || HitItem(e.Location) < 0; pressIndex = -1;
             if (!wasPress) return;   // the mouse went down somewhere else (or a drag just ended)
             if (CloseRect.Contains(e.Location)) { Finish(); return; }
-            for (int c = 0; c < 3; c++) if (ChipRect(c).Contains(e.Location)) { filter = c; Filter(); return; }
+            for (int c = 0; c < 4; c++) if (ChipRect(c).Contains(e.Location)) { filter = c; Filter(); return; }
             for (int a = 0; a < acts.Count; a++) if (ActRect(a).Contains(e.Location)) { acts[a].Run(); return; }
             if (SettingsRect.Contains(e.Location)) { Finish(); app.ShowSettings(); return; }
             int i = HitItem(e.Location);
+            if (i >= 0 && filter == 3) { ToggleWidget(i); return; }
             if (i >= 0) Open(i, ModifierKeys == Keys.Shift);
         }
 

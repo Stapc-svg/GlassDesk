@@ -925,12 +925,24 @@ namespace GlassDesk
         public bool WantsShown(GlassWindow w)
         {
             if (!(w is Widget)) return w.Visible || preview;
+            if (w == null) return false;
             var S = Settings;
             if (w == clock) return S.ShowClock; if (w == system) return S.ShowSystem; if (w == calendar) return S.ShowCalendar; if (w == notes) return S.ShowNotes;
             if (w == countdown) return S.ShowCountdown; if (w == quote) return S.ShowQuote; if (w == github) return S.ShowGitHub; if (w == network) return S.ShowNetwork;
             if (w == focus) return S.ShowFocus; if (w == music) return S.ShowMusic; if (w == day) return S.ShowDay; if (w == clip) return S.ShowClip;
             if (w == weather) return S.ShowWeather; if (w == todo) return S.ShowTodo; if (w == photos) return S.ShowPhotos;
             return w.Visible;
+        }
+        /// <summary>Puts a widget on the desktop or takes it off (from the search window's Widgets tab).</summary>
+        public void SetWidgetShown(GlassWindow w, bool on)
+        {
+            var S = Settings;
+            if (w == clock) S.ShowClock = on; else if (w == system) S.ShowSystem = on; else if (w == calendar) S.ShowCalendar = on; else if (w == notes) S.ShowNotes = on;
+            else if (w == countdown) S.ShowCountdown = on; else if (w == quote) S.ShowQuote = on; else if (w == github) S.ShowGitHub = on; else if (w == network) S.ShowNetwork = on;
+            else if (w == focus) S.ShowFocus = on; else if (w == music) S.ShowMusic = on; else if (w == day) S.ShowDay = on; else if (w == clip) S.ShowClip = on;
+            else if (w == weather) S.ShowWeather = on; else if (w == todo) S.ShowTodo = on; else if (w == photos) S.ShowPhotos = on;
+            else return;
+            S.Save(); ApplySettings();
         }
         public string PanelName(GlassWindow w) { var f = w as FenceWindow; return Lang.L(f != null ? f.Caption : WidgetName(w.Id)); }
 

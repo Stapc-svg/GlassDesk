@@ -412,3 +412,5 @@ For all widgets — or right-click one › Style to change just that one	Для 
 Your desktop	Ваш рабочий стол
 Live preview	Живой предпросмотр
 Updates as you change things — point at a panel to see its name	Обновляется при изменениях — наведите на панель, чтобы увидеть её название
+Click a widget to add or remove it	Щёлкните виджет, чтобы добавить или убрать его
+No widget matches	Нет подходящих виджетов

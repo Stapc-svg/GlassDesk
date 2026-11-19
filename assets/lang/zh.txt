@@ -412,3 +412,5 @@ For all widgets — or right-click one › Style to change just that one	所有�
 Your desktop	你的桌面
 Live preview	实时预览
 Updates as you change things — point at a panel to see its name	更改设置时即时更新 — 鼠标指向面板可查看名称
+Click a widget to add or remove it	点击小组件即可添加或移除
+No widget matches	没有匹配的小组件

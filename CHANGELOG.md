@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.0
+
+- **Smooth scrolling in quick search (Ctrl + Alt + F).** Scrolling used to stutter and jump a whole row at a time. Now the list glides, the glass background is drawn once instead of on every step, and icons load in the background while the window is open, so scrolling never waits for one. You can also drag the scroll bar or click its track to jump.
+- **A Widgets tab in quick search.** It shows a small live picture of every widget. Click one (or press Enter) to put it on your desktop or take it off: a check means it's on, a plus means it's off. Typing filters the widgets too.
+
 ## 1.14.0
 
 - **See your desktop in Settings.** The Appearance, Widgets and Organizer pages start with a live picture of your desktop: your wallpaper with every fence and widget exactly where it is and how it looks. Turn a widget on, switch it to the macOS style or change the glass, and the picture changes within a second. Point at a panel in the picture to see its name.
