@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.18.0
+
+Four ideas taken from Apple's Liquid Glass, rebuilt for Windows:
+
+- **Regular and Clear liquid glass.** Settings › Appearance (or Widgets) › Liquid glass type. **Regular** bends a softly blurred picture and is a little frosted, so it's easier to read. **Clear** shows the most of your wallpaper.
+- **The light follows your mouse.** As the mouse gets near a liquid glass panel, a bright light slides along the rim toward it, with a softer glint on the opposite side, like tilting an iPhone.
+- **Press bounce and shimmer.** Clicking a liquid glass panel squishes it slightly, it springs back, and a band of light sweeps across it.
+- **Panels melt together.** Liquid glass panels close to each other join with a liquid bridge: thin when they're a little apart, wide when they're almost touching. It follows live while you drag. Turn it off with "Melt nearby panels together".
+
 ## 1.17.3
 
 - **Settings scrolls smoothly again.** The desktop preview and the widget pictures were redrawing every panel over and over, even while you scrolled. Now:

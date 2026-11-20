@@ -83,7 +83,7 @@ namespace GlassDesk
 
             clockTimer = new Timer(); clockTimer.Tick += delegate { ClockTick(); }; ScheduleClock(); clockTimer.Start();
             statsTimer = new Timer(); statsTimer.Tick += delegate { StatsTick(); }; statsTimer.Interval = Settings.LowPower ? 5000 : 2000; statsTimer.Start();
-            if (!Preview) WatchRecycleBin();
+            if (!Preview) { WatchRecycleBin(); StartMouseLight(); }
             trimTimer = new Timer { Interval = 15000 }; trimTimer.Tick += delegate { trimTimer.Interval = 300000; if (Settings.TrimMemory && !hiddenByUser) Native.TrimMemory(); }; trimTimer.Start();
             rescanTimer = new Timer { Interval = 700 }; rescanTimer.Tick += delegate { rescanTimer.Stop(); Rebuild(); };
             lastDay = Now.Date;
@@ -966,6 +966,69 @@ namespace GlassDesk
                 if (o != w && o.Visible && (o is Widget) == (w is Widget) && o.PanelBounds.Contains(c)) return o;
             return null;
         }
+        // ---- liquid glass: panels close together melt into each other ----
+        int mergeAt;
+        /// <summary>Works out which liquid-glass panels are close enough to join, and redraws the ones that changed.</summary>
+        public void UpdateMerges(bool now)
+        {
+            if (!now && Environment.TickCount - mergeAt < 40) return;
+            mergeAt = Environment.TickCount;
+            var list = new List<GlassWindow>();
+            foreach (var w in Windows) if ((w.Visible || preview && w.Wanted) && w.LiquidOn && !w.IsDisposed) list.Add(w);
+            var necks = new Dictionary<GlassWindow, List<float[]>>();
+            foreach (var w in Windows) necks[w] = new List<float[]>();
+            float thr = Settings.LiquidMerge ? Theme.Sf(24) : -1;
+            for (int i = 0; i < list.Count; i++)
+                for (int j = i + 1; j < list.Count; j++)
+                {
+                    GlassWindow a = list[i], b = list[j];
+                    Rectangle A = a.PanelBounds, B = b.PanelBounds;
+                    float r = Theme.S(22);
+                    // side by side (a left of b, or b left of a)
+                    float y0 = Math.Max(A.Top, B.Top) + r, y1 = Math.Min(A.Bottom, B.Bottom) - r;
+                    if (y1 - y0 > 10)
+                    {
+                        if (B.Left - A.Right >= 0 && B.Left - A.Right < thr) { float gp = B.Left - A.Right; necks[a].Add(new[] { 0f, y0, y1, gp }); necks[b].Add(new[] { 2f, y0, y1, gp }); }
+                        else if (A.Left - B.Right >= 0 && A.Left - B.Right < thr) { float gp = A.Left - B.Right; necks[b].Add(new[] { 0f, y0, y1, gp }); necks[a].Add(new[] { 2f, y0, y1, gp }); }
+                    }
+                    // one above the other
+                    float x0 = Math.Max(A.Left, B.Left) + r, x1 = Math.Min(A.Right, B.Right) - r;
+                    if (x1 - x0 > 10)
+                    {
+                        if (B.Top - A.Bottom >= 0 && B.Top - A.Bottom < thr) { float gp = B.Top - A.Bottom; necks[a].Add(new[] { 1f, x0, x1, gp }); necks[b].Add(new[] { 3f, x0, x1, gp }); }
+                        else if (A.Top - B.Bottom >= 0 && A.Top - B.Bottom < thr) { float gp = A.Top - B.Bottom; necks[b].Add(new[] { 1f, x0, x1, gp }); necks[a].Add(new[] { 3f, x0, x1, gp }); }
+                    }
+                }
+            foreach (var kv in necks)
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var n in kv.Value) sb.Append(string.Join(",", n)).Append(';');
+                string key = sb.ToString();
+                if (key == kv.Key.NeckKey) continue;
+                kv.Key.NeckKey = key;
+                kv.Key.Necks.Clear(); kv.Key.Necks.AddRange(kv.Value);
+                kv.Key.Redraw();
+            }
+        }
+
+        // ---- liquid glass: the light on each panel's rim follows the mouse ----
+        Timer lightTimer; Point lastCursor = new Point(-1, -1); int lightTicks;
+        void StartMouseLight()
+        {
+            lightTimer = new Timer { Interval = 40 };
+            lightTimer.Tick += delegate
+            {
+                if (Paused) return;
+                if (++lightTicks % 12 == 0) UpdateMerges(true);   // panels moved, appeared or changed style
+                if (Settings.LowPower) return;
+                Point c = Cursor.Position;
+                if (c == lastCursor) return;
+                lastCursor = c;
+                foreach (var w in Windows.ToArray()) if (!w.IsDisposed) w.MouseLight(c);
+            };
+            lightTimer.Start();
+        }
+
         public void DragOver(GlassWindow w)
         {
             var t = TargetUnder(w);
@@ -976,6 +1039,7 @@ namespace GlassDesk
         }
         public void DragEnded(GlassWindow w)
         {
+            UpdateMerges(true);
             var t = dropTarget; dropTarget = null;
             if (t == null) return;
             t.DropHint = false; t.Redraw();
@@ -1295,6 +1359,7 @@ namespace GlassDesk
             Settings.CountdownTitle = "Summer trip"; Settings.CountdownDate = "2026-11-29";
             Settings.ShowWeather = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WEATHER") == "1"; Settings.ShowPhotos = false;
             if (Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_MAC") == "1") foreach (var wid in AllWidgetIds()) Settings.WidgetStyles[wid] = "mac";
+            Settings.LiquidKind = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LIQUID") ?? Settings.LiquidKind;
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote
@@ -1304,6 +1369,9 @@ namespace GlassDesk
             Rebuild();
             string sample = Environment.GetEnvironmentVariable("GLASSDESK_SAMPLE_PHOTO");
             if (!string.IsNullOrEmpty(sample) && File.Exists(sample)) photos.SetSampleFile(sample);
+            UpdateMerges(true);
+            string mp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_MOUSE");   // e.g. 1400,300
+            if (!string.IsNullOrEmpty(mp)) { var q = mp.Split(','); var pt = new Point(int.Parse(q[0]), int.Parse(q[1])); foreach (var w in Windows) w.MouseLight(pt); }
         }
     }
 

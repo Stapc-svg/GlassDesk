@@ -417,3 +417,8 @@ No widget matches	没有匹配的小组件
 Liquid glass	液态玻璃
 Liquid	液态
 Liquid: clear glass that bends the wallpaper at its edges	液态：透明玻璃，边缘会弯曲壁纸
+Regular	常规
+Liquid glass type	液态玻璃类型
+Regular is a little frosted and easy to read; Clear shows the most of your wallpaper	常规略带磨砂、易于阅读；清透能看到最多的壁纸
+Melt nearby panels together	让相邻面板融合在一起
+Liquid glass panels close to each other join with a liquid bridge, like drops of water	彼此靠近的液态玻璃面板会像水滴一样以液体桥相连

@@ -417,3 +417,8 @@ No widget matches	Ningún widget coincide
 Liquid glass	Vidrio líquido
 Liquid	Líquido
 Liquid: clear glass that bends the wallpaper at its edges	Líquido: vidrio transparente que curva el fondo en los bordes
+Regular	Normal
+Liquid glass type	Tipo de vidrio líquido
+Regular is a little frosted and easy to read; Clear shows the most of your wallpaper	Normal es algo esmerilado y fácil de leer; Transparente muestra más de tu fondo
+Melt nearby panels together	Fundir paneles cercanos
+Liquid glass panels close to each other join with a liquid bridge, like drops of water	Los paneles de vidrio líquido cercanos se unen con un puente líquido, como gotas de agua

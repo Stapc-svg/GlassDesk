@@ -32,6 +32,8 @@ namespace GlassDesk
         public string Theme = "Auto";            // Auto | Dark | Light
         public Color Accent = Color.FromArgb(124, 156, 255);
         public bool Blur = true;                 // kept for older settings files; GlassStyle decides
+        public string LiquidKind = "clear";
+        public bool LiquidMerge = true;         // liquid glass panels close together melt into each other      // liquid glass: "regular" (a little frosted, easier to read) or "clear"
         public string GlassStyle = "frosted";    // frosted | blur | clear
         public bool GlassOn { get { return GlassStyle != "clear" && GlassStyle != "transparent" && GlassStyle != "liquid"; } }
         public int Opacity = 30;                 // 5..95 (%) tint over the glass
@@ -168,6 +170,8 @@ namespace GlassDesk
                 case "Blur": Blur = B(v); return;
                 case "Opacity": Opacity = Math.Max(5, Math.Min(95, I(v))); return;
                 case "GlassStyle": GlassStyle = v.Trim(); glassV2 = true; return;
+                case "LiquidMerge": LiquidMerge = B(v); return;
+                case "LiquidKind": LiquidKind = v.Trim() == "regular" ? "regular" : "clear"; return;
                 case "Radius": Radius = Math.Max(0, Math.Min(28, I(v))); return;
                 case "UiScale": UiScale = Math.Max(80, Math.Min(150, I(v))); return;
                 case "ShowClock": ShowClock = B(v); return;
@@ -271,7 +275,7 @@ namespace GlassDesk
                 w("StartWithWindows", b(StartWithWindows)); w("StartupV2", "1"); w("IconsV2", "1"); w("Hotkey", b(Hotkey)); w("LockPositions", b(LockPositions));
                 w("KeepBehindWindows", b(KeepBehindWindows)); w("SingleClickOpen", b(SingleClickOpen));
                 w("Look", Look); w("Theme", Theme); w("Accent", (Accent.ToArgb() & 0xFFFFFF).ToString("X6"));
-                w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
+                w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("LiquidKind", LiquidKind); w("LiquidMerge", b(LiquidMerge)); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
                 w("Radius", Radius.ToString(CultureInfo.InvariantCulture)); w("UiScale", UiScale.ToString(CultureInfo.InvariantCulture));
                 w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24)); w("ClockStyle", ClockStyle); w("Language", Language);
                 w("ShowSystem", b(ShowSystem)); w("ShowCalendar", b(ShowCalendar)); w("ShowNotes", b(ShowNotes));

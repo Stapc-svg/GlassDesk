@@ -417,3 +417,8 @@ No widget matches	Нет подходящих виджетов
 Liquid glass	Жидкое стекло
 Liquid	Жидкое
 Liquid: clear glass that bends the wallpaper at its edges	Жидкое: прозрачное стекло, которое изгибает обои по краям
+Regular	Обычное
+Liquid glass type	Тип жидкого стекла
+Regular is a little frosted and easy to read; Clear shows the most of your wallpaper	Обычное слегка матовое и легко читается; прозрачное показывает больше обоев
+Melt nearby panels together	Сливать соседние панели
+Liquid glass panels close to each other join with a liquid bridge, like drops of water	Панели из жидкого стекла рядом друг с другом соединяются жидким мостиком, как капли воды
