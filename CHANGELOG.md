@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.20.1
+
+- **No white patch on liquid glass.** The light glint in the top-left corner and the brightening of the rim are gone, so the edges keep the wallpaper's own colors.
+
 ## 1.20.0
 
 - **More realistic liquid glass.**

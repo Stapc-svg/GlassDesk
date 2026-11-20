@@ -143,7 +143,7 @@ namespace GlassDesk
                     // richer colors through the glass, and a little light gathered in the thick rim
                     float avg = (R + G + B) / 3f;
                     R = avg + (R - avg) * 1.16f; G = avg + (G - avg) * 1.16f; B = avg + (B - avg) * 1.16f;
-                    float lift = (dark ? 4f : 10f) + 20f * e * e * e;
+                    float lift = dark ? 2f : 8f;   // no extra brightening at the rim: it looked like a white area
                     R += (255 - R) * lift / 255f; G += (255 - G) * lift / 255f; B += (255 - B) * lift / 255f;
                     glass[i] = ((int)(cover * 255) << 24) | (Cl(R) << 16) | (Cl(G) << 8) | Cl(B);
                     if (e <= 0.01f) { lum += (0.3f * R + 0.59f * G + 0.11f * B) / 255f; lumN++; }
@@ -153,7 +153,7 @@ namespace GlassDesk
                     float rd = -Sdf(px, py, hw, hh, rb, out rnx, out rny);
                     float re = 1f - Math.Max(0f, Math.Min(1f, rd / bevel));
                     float diag = Math.Abs(rnx * -0.707f + rny * -0.707f);
-                    float spec = (float)Math.Pow(re, 9) * (float)Math.Pow(diag, 4) * 0.75f;
+                    float spec = 0f;   // the corner glint read as a white patch, so it is off
                     int la = (int)(Math.Min(1f, spec) * cover * 255);
                     if (la > 2) light[i] = (la << 24) | 0xFFFFFF;
                 }
