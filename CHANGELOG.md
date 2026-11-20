@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0
+
+GlassDesk 2.0 brings together everything since 1.9:
+
+- **Liquid glass:** real lens bending, frost and a thin rainbow edge. Choose Regular or Clear. Turning it on now warns you first that it uses more memory (about 100–200 MB).
+- **A style for each widget** (Glass or Liquid glass), each with its own design: Notes, Reminders-style to-dos, Activity rings, gauges and more.
+- **Live desktop preview and widget pictures in Settings,** and a **Widgets tab** in quick search.
+- **Online calendar, every drive in System, game screenshot fences, the clipboard widget,** and Chinese, Spanish and Russian.
+- **A new welcome screen** shows what's new. It appears once after updating.
+
 ## 1.20.1
 
 - **No white patch on liquid glass.** The light glint in the top-left corner and the brightening of the rim are gone, so the edges keep the wallpaper's own colors.

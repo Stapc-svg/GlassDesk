@@ -338,7 +338,10 @@ namespace GlassDesk
             Section(Lang.L("Glass"));
             string[] styles = { "frosted", "blur", "clear", "transparent", "liquid" };
             var gs = new Segmented(P, k, new[] { Lang.L("Frosted"), Lang.L("Blur"), Lang.L("Clear"), Lang.L("See-through"), Lang.L("Liquid") }, Math.Max(0, Array.IndexOf(styles, S.GlassStyle))) { Font = fSmall };
-            gs.SelectionChanged += delegate { S.GlassStyle = styles[gs.SelectedIndex]; S.Blur = S.GlassOn; S.Save(); app.ApplySettings(); };
+            gs.SelectionChanged += delegate
+            {
+                if (styles[gs.SelectedIndex] == "liquid" && !app.ConfirmLiquid()) { gs.SelectedIndex = Math.Max(0, Array.IndexOf(styles, S.GlassStyle)); return; }
+                S.GlassStyle = styles[gs.SelectedIndex]; S.Blur = S.GlassOn; S.Save(); app.ApplySettings(); };
             Row(Lang.L("Glass style"), S.GlassStyle == "liquid" ? "Liquid: clear glass that bends the wallpaper at its edges" : Native.AcrylicSupported || !Native.IsWindows ? "Real blurred glass, like the Start menu" : "Frosted needs Windows 10 1803+", gs);
             LiquidRows();
             SliderRow(Lang.L("Glass tint"), "{0}%  ·  lower is clearer glass", 5, 95, 5, S.Opacity, v => S.Opacity = v);
@@ -423,7 +426,7 @@ namespace GlassDesk
             int nMac = 0; foreach (var id in app.AllWidgetIds()) if (S.StyleOf(id) == "mac") nMac++;
             int sel = nMac == 0 ? 0 : nMac == app.AllWidgetIds().Length ? 1 : -1;
             var ws = new Segmented(P, k, new[] { Lang.L("Glass"), Lang.L("Liquid glass") }, sel) { Font = fSmall };
-            ws.SelectionChanged += delegate { if (ws.SelectedIndex >= 0) app.SetWidgetStyle(null, ws.SelectedIndex == 1 ? "mac" : "glass"); };
+            ws.SelectionChanged += delegate { if (ws.SelectedIndex < 0) return; if (ws.SelectedIndex == 1 && !app.ConfirmLiquid()) { Refresh(0); return; } app.SetWidgetStyle(null, ws.SelectedIndex == 1 ? "mac" : "glass"); };
             Row(Lang.L("Widget style"), sel < 0 ? Lang.L("Mixed — right-click a widget › Style to change just that one") : Lang.L("For all widgets — or right-click one › Style to change just that one"), ws);
             LiquidRows();
             Section(Lang.L("Clock"));

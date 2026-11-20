@@ -150,7 +150,7 @@ namespace GlassDesk
             foreach (var kv in items) if (kv.Value == AppsTag) appSet.Add(kv.Key);
             chipCount[0] = items.Count; chipCount[2] = appSet.Count; chipCount[1] = items.Count - appSet.Count;
             TopMost = true;
-            int w = (int)(700 * k), h = (int)(500 * k);
+            int w = (int)(700 * k), h = (int)(520 * k);
             Rectangle wa = Screen.FromPoint(Cursor.Position).WorkingArea;
             Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + Math.Max(0, (wa.Height - h) / 3), w, h);
             glide = new Timer { Interval = 15 };
@@ -698,10 +698,10 @@ namespace GlassDesk
         Point dragFrom; bool dragging;
         static readonly string[][] Tips =
         {
-            new[] { Lang.L("Fences"), Lang.L("Your files sorted into glass boxes. Drag a fence's edge to resize it.") },
-            new[] { Lang.L("Widgets"), Lang.L("Clock, weather, music, to-dos and more. Right-click one for options.") },
-            new[] { Lang.L("Quick search"), Lang.L("Press Ctrl + Alt + F to find and open anything on your desktop.") },
-            new[] { Lang.L("Themes"), Lang.L("26 looks, from GlassDesk glass to Mica and Acrylic. Settings → Appearance.") },
+            new[] { Lang.L("Liquid glass"), Lang.L("Real bending, frosted glass like Apple's. Settings → Appearance → Glass style → Liquid.") },
+            new[] { Lang.L("A style for each widget"), Lang.L("Right-click a widget → Style. Notes, Reminders, rings, gauges and more.") },
+            new[] { Lang.L("See it before you add it"), Lang.L("Live desktop preview in Settings, and a Widgets tab in quick search (Ctrl + Alt + F).") },
+            new[] { Lang.L("Smarter widgets"), Lang.L("Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.") },
         };
 
         public WelcomeForm(App app) : base(app)
@@ -733,9 +733,9 @@ namespace GlassDesk
             using (var logo = App.LogoBitmap(256, P.Accent)) { g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(logo, lr); }
             float tx = lr.Right + 18 * k;
             using (var b = new SolidBrush(P.Text))
-                g.DrawString(Lang.L("Welcome to GlassDesk"), Gfx.F(T.DisplayFont, 28 * k, FontStyle.Bold), b, new RectangleF(tx, lr.Y - 2 * k, Width - tx - 60 * k, 40 * k), Gfx.Left);
+                g.DrawString(Lang.L("Welcome to GlassDesk 2.0"), Gfx.F(T.DisplayFont, 28 * k, FontStyle.Bold), b, new RectangleF(tx, lr.Y - 2 * k, Width - tx - 60 * k, 40 * k), Gfx.Left);
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString(Lang.L("Your desktop, organized in beautiful glass."), Gfx.F(T.FontName, 14.5f * k, FontStyle.Regular), b, new RectangleF(tx, lr.Y + 38 * k, Width - tx - 40 * k, 24 * k), Gfx.Left);
+                g.DrawString(Lang.L("Here's what's new — all made from your ideas."), Gfx.F(T.FontName, 14.5f * k, FontStyle.Regular), b, new RectangleF(tx, lr.Y + 38 * k, Width - tx - 40 * k, 24 * k), Gfx.Left);
             Close(g, CloseRect, hotBtn == 0);
 
             // four tips in a 2 x 2 grid

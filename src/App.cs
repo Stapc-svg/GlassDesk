@@ -102,7 +102,9 @@ namespace GlassDesk
 
             // the welcome screen shows once ever: the marker file stays when GlassDesk is updated
             string mark = Path.Combine(Settings.Folder, "welcome-screen-shown");
-            if (!File.Exists(mark))
+            string seen = ""; try { if (File.Exists(mark)) seen = File.ReadAllText(mark).Trim(); } catch { }
+            // shown on first run, and once more after updating to 2.0 to show what's new
+            if (!File.Exists(mark) || !seen.StartsWith("2."))
             {
                 try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(mark, Version); } catch { }
                 var wt = new Timer { Interval = 1200 };
@@ -281,6 +283,16 @@ namespace GlassDesk
             if (!anyUnsorted && Settings.CustomFences.Contains(UnsortedId)) { Settings.CustomFences.Remove(UnsortedId); Settings.Positions.Remove(UnsortedId); }
             Settings.Save();
             Rebuild();
+        }
+
+        /// <summary>Liquid glass keeps full-size copies of the wallpaper in memory; ask before turning it on.</summary>
+        public bool ConfirmLiquid()
+        {
+            if (Settings.GlassStyle == "liquid") return true;
+            foreach (var v in Settings.WidgetStyles.Values) if (v == "mac") return true;   // already using it
+            var r = MessageBox.Show(Lang.L("Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, depending on your screen size).\n\nTurn on liquid glass?"),
+                "GlassDesk", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+            return r == DialogResult.Yes;
         }
 
         public void ShowWelcome()
@@ -1147,7 +1159,7 @@ namespace GlassDesk
             {
                 string id = opt[0];
                 var it = new ToolStripMenuItem(Lang.L(opt[1])) { Checked = Settings.StyleOf(w.Id) == id };
-                it.Click += delegate { SetWidgetStyle(w.Id, id); };
+                it.Click += delegate { if (id == "mac" && !ConfirmLiquid()) return; SetWidgetStyle(w.Id, id); };
                 style.DropDownItems.Add(it);
             }
             if (w == clock && Settings.StyleOf("clock") != "mac")

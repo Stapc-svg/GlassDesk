@@ -422,3 +422,13 @@ Liquid glass type	Тип жидкого стекла
 Regular is a little frosted and easy to read; Clear shows the most of your wallpaper	Обычное слегка матовое и легко читается; прозрачное показывает больше обоев
 Melt nearby panels together	Сливать соседние панели
 Liquid glass panels close to each other join with a liquid bridge, like drops of water	Панели из жидкого стекла рядом друг с другом соединяются жидким мостиком, как капли воды
+Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, depending on your screen size).\n\nTurn on liquid glass?	Жидкое стекло изгибает и размывает обои в каждой панели. Для этого GlassDesk хранит в памяти дополнительные копии обоев, поэтому использует больше ОЗУ (примерно на 100–200 МБ больше, в зависимости от размера экрана).\n\nВключить жидкое стекло?
+Real bending, frosted glass like Apple's. Settings → Appearance → Glass style → Liquid.	Настоящее изгибающее матовое стекло, как у Apple. Настройки → Оформление → Стиль стекла → Жидкое.
+A style for each widget	Свой стиль для каждого виджета
+Right-click a widget → Style. Notes, Reminders, rings, gauges and more.	Правый щелчок по виджету → Стиль. Заметки, Напоминания, кольца, датчики и другое.
+See it before you add it	Посмотрите, прежде чем добавить
+Live desktop preview in Settings, and a Widgets tab in quick search (Ctrl + Alt + F).	Живой предпросмотр в настройках и вкладка виджетов в быстром поиске (Ctrl + Alt + F).
+Smarter widgets	Умнее виджеты
+Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.	Онлайн-календарь, все диски в мониторе системы, папки скриншотов игр, буфер обмена и 3 новых языка.
+Welcome to GlassDesk 2.0	Добро пожаловать в GlassDesk 2.0
+Here's what's new — all made from your ideas.	Вот что нового — всё по вашим идеям.
