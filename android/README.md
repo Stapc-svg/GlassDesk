@@ -10,7 +10,7 @@ Home-screen widgets in GlassDesk's frosted-glass style, plus a settings app to s
 
 ## Install
 
-1. Download **`GlassDesk-Android-1.7.2.apk`** from the [Releases](../../../releases) page on your phone.
+1. Download **`GlassDesk-Android-2.0.apk`** from the [Releases](../../../releases) page on your phone.
 2. Open it and tap **Install**. If Android asks, allow your browser or Files app to install apps.
 3. Open **GlassDesk** and tap **Add** under any widget, or touch and hold your home screen and choose **Widgets → GlassDesk**.
 
@@ -32,9 +32,11 @@ Needs Android 8.0 or newer. Coming from a GlassDesk build older than 1.3? Uninst
 
 All widgets can be resized. They redraw to fit and refresh about every 15 minutes.
 
-## Two designs
+## Three designs
 
 Pick one in **Appearance**:
+
+- **Liquid glass** (new in 2.0): clear, thick glass like iOS 26, brighter toward the rounded edge. Clear or Regular (a little frosted). Android widgets can't see the wallpaper behind them, so the glass looks thick and clear but does not bend the wallpaper.
 
 - **GlassDesk** (default): frosted navy glass tinted with your accent color, a soft glow and a bright rim, like GlassDesk on the desktop. Glass, Dark or Light, with 7 accent colors and a glass tint slider.
 - **Clean:** bright, flat and rounded. Automatic (follows dark mode), Light or Dark, with 8 colors.
@@ -52,7 +54,7 @@ The app is plain Java with no Gradle and no Android Studio needed. It builds wit
 ```sh
 sudo apt install default-jdk aapt dalvik-exchange apksigner zipalign
 mkdir -p sdk && cp /path/to/android.jar sdk/   # android.jar for API 33 (from the Android SDK: platforms/android-33)
-./build.sh                                      # build/GlassDesk-Android-1.7.2.apk
+./build.sh                                      # build/GlassDesk-Android-2.0.apk
 ```
 
 `build.sh` also renders the widget-picker previews and the app icon (on the desktop JVM, with the same drawing code the widgets use). If `keystore/glassdesk.jks` is missing, it creates a new signing key. Official releases are signed with a private key that is not in this repository, so your own build installs as a separate signature.
