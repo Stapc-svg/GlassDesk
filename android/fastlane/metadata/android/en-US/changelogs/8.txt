@@ -1,0 +1,1 @@
+First store release: glass widgets for fences, clock, weather, calendar, notes, to-do, countdown, system info and quotes.
