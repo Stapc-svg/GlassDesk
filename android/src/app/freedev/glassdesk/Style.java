@@ -4,13 +4,14 @@ package app.freedev.glassdesk;
  * Widget look. Two designs:
  *  - GLASSDESK (default): GlassDesk's own frosted navy glass with an accent glow, like the desktop app.
  *  - CLEAN: a clean, bright, rounded system-widget look with flat colors.
+ *  - LIQUID: clear, thick glass like iOS 26 (GLASS theme = Clear, DARK theme = Regular, a little frosted).
  * Each design has its own themes and accent palette.
  */
 public final class Style {
-    public static final int GLASSDESK = 0, CLEAN = 1;
+    public static final int GLASSDESK = 0, CLEAN = 1, LIQUID = 2;
     public static final int GLASS = 0, LIGHT = 1, DARK = 2, AUTO = 3;
 
-    public static final String[] DESIGN_NAMES = {"GlassDesk", "Clean"};
+    public static final String[] DESIGN_NAMES = {"GlassDesk", "Clean", "Liquid glass"};
 
     public static final String[] GD_ACCENT_NAMES = {"Default", "Ocean", "Sunset", "Forest", "Midnight", "Frost", "Rose"};
     static final int[] GD_ACCENTS = {0xFF7C9CFF, 0xFF4FC3F7, 0xFFFF8A65, 0xFF5BD68A, 0xFFA78BFA, 0xFF7DE3F0, 0xFFF48FB1};
@@ -20,7 +21,7 @@ public final class Style {
     static final int[] CL_DARK = {0xFF0A84FF, 0xFFBF5AF2, 0xFFFF375F, 0xFFFF453A, 0xFFFF9F0A, 0xFFFFD60A, 0xFF30D158, 0xFF98989D};
 
     public final int design;
-    public final boolean glass, dark, gd;
+    public final boolean glass, dark, gd, liquid;
     public final int accent, tint;
     public final int bg, bg2, fg, sub, track, sep, onAccent, glow, rimTop, rimBottom;
     public final int green, red, orange, yellow;
@@ -30,7 +31,22 @@ public final class Style {
         this.design = design;
         this.tint = tint;
         gd = design == GLASSDESK;
-        if (gd) {
+        liquid = design == LIQUID;
+        if (liquid) {
+            // clear glass: the home screen wallpaper shows through, white text, a thick bright rim
+            glass = true;
+            dark = true;
+            boolean regular = theme == DARK;
+            int ai = clamp(accentIndex, CL_DARK.length);
+            accent = CL_DARK[ai];
+            this.accentText = accent;
+            onAccent = ai == 5 ? 0xFF000000 : 0xFFFFFFFF;
+            bg = regular ? 0x5C2A2E3A : 0x1AFFFFFF;
+            bg2 = regular ? 0x4D1C1F28 : 0x0DFFFFFF;
+            fg = 0xFFFFFFFF; sub = 0xD9F2F4F8; track = 0x40FFFFFF; sep = 0x2EFFFFFF;
+            glow = 0; rimTop = 0xB3FFFFFF; rimBottom = 0x40FFFFFF;
+            green = 0xFF30D158; red = 0xFFFF453A; orange = 0xFFFF9F0A; yellow = 0xFFFFD60A;
+        } else if (gd) {
             glass = theme == GLASS;
             dark = theme != LIGHT;
             int ac = GD_ACCENTS[clamp(accentIndex, GD_ACCENTS.length)];
@@ -81,9 +97,13 @@ public final class Style {
     public int accentText;
 
     public static String[] accentNames(int design) { return design == GLASSDESK ? GD_ACCENT_NAMES : CL_ACCENT_NAMES; }
+    public static String themeKey(int design) { return design == GLASSDESK ? "gd_theme" : design == LIQUID ? "lq_theme" : "cl_theme"; }
+    public static String accentKey(int design) { return design == GLASSDESK ? "gd_accent" : design == LIQUID ? "lq_accent" : "cl_accent"; }
+    public static int defaultTheme(int design) { return design == GLASSDESK ? GLASS : design == LIQUID ? GLASS : AUTO; }
 
     public static int accentColor(int design, int index, boolean dark) {
         if (design == GLASSDESK) return GD_ACCENTS[clamp(index, GD_ACCENTS.length)];
+        if (design == LIQUID) return CL_DARK[clamp(index, CL_DARK.length)];
         return (dark ? CL_DARK : CL_LIGHT)[clamp(index, CL_LIGHT.length)];
     }
 

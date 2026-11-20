@@ -21,7 +21,7 @@ command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q "$H
 # GTK for Python is preinstalled on most desktops; install it if it's missing.
 if ! python3 -c "import gi; gi.require_version('Gtk','3.0'); from gi.repository import Gtk; import cairo" >/dev/null 2>&1; then
   echo "GlassDesk needs Python GTK. Installing it (you may be asked for your password)..."
-  if command -v apt >/dev/null 2>&1; then sudo apt install -y python3-gi python3-gi-cairo gir1.2-gtk-3.0
+  if command -v apt >/dev/null 2>&1; then sudo apt install -y python3-gi python3-gi-cairo gir1.2-gtk-3.0 python3-numpy
   elif command -v dnf >/dev/null 2>&1; then sudo dnf install -y python3-gobject gtk3
   elif command -v pacman >/dev/null 2>&1; then sudo pacman -S --needed --noconfirm python-gobject gtk3
   elif command -v zypper >/dev/null 2>&1; then sudo zypper install -y python3-gobject-Gdk typelib-1_0-Gtk-3_0

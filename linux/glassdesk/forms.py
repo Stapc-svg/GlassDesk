@@ -667,14 +667,33 @@ class Launcher(GlassForm):
 
 # ================================================================ welcome screen
 class WelcomeWindow(GlassForm):
-    TIPS = [("Fences", "Your files sorted into glass boxes. Drag a fence's edge to resize it."),
-            ("Widgets", "Clock, weather, music, to-dos and more. Right-click one for options."),
+    TIPS = [("Liquid glass", "Glass that really bends light, like Apple's. Settings → Appearance → Glass style."),
+            ("Clipboard widget", "The last things you copied; click one to copy it again. Kept in memory only."),
             ("Quick search", "Press Ctrl + Alt + F to find and open anything on your desktop."),
-            ("Themes", "26 looks, from GlassDesk glass to Mica and Acrylic. Settings → Appearance.")]
+            ("New weather and clock", "Drawn skies, photo clock backgrounds, a vinyl music widget and smooth fades.")]
+    ICONS = (4, 3, 2, 1)   # drop, color dots, magnifier, clock
 
     def __init__(self, app):
-        super().__init__(app, int(640 * app.theme.base_scale), int(500 * app.theme.base_scale), "Welcome to GlassDesk")
+        super().__init__(app, int(640 * app.theme.base_scale), int(500 * app.theme.base_scale), "Welcome to GlassDesk 2.0")
         self.set_keep_above(True)
+        # the intro: logo pops in, title slides in, the four cards rise one after another
+        self.t0 = None
+        if not core.PREVIEW:
+            self.add_tick_callback(self._tick)
+
+    def _tick(self, _w, clock):
+        now = clock.get_frame_time() / 1e6
+        if self.t0 is None:
+            self.t0 = now
+        self.at = now - self.t0
+        self.queue_draw()
+        return self.at < 3.0
+
+    def step(self, delay, length):
+        t = 100.0 if core.PREVIEW else getattr(self, "at", 0.0)
+        t = max(0.0, min(1.0, (t - delay) / length)) - 1
+        c = 1.6
+        return 1 + (c + 1) * t ** 3 + c * t ** 2   # ease-out with a little overshoot
 
     def paint(self, cr):
         T = self.T
@@ -687,6 +706,9 @@ class WelcomeWindow(GlassForm):
         rg.add_color_stop_rgba(1, *(T.accent + (0,)))
         cr.set_source(rg)
         cr.paint()
+        pop = max(0.01, self.step(0, 0.6))
+        cr.save()
+        cr.translate(lx + ls / 2, ly + ls / 2); cr.rotate((1 - min(1, pop)) * -0.45); cr.scale(pop, pop); cr.translate(-lx - ls / 2, -ly - ls / 2)
         icon = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons", "glassdesk.png")
         try:
             from gi.repository import GdkPixbuf
@@ -695,9 +717,17 @@ class WelcomeWindow(GlassForm):
             cr.paint()
         except Exception:
             self.accent_fill(cr, lx, ly, ls, ls, self.s(16))
+        cr.restore()
         tx = lx + ls + self.s(18)
-        text(cr, "Welcome to GlassDesk", tx, ly - self.s(2), self.W - tx - self.s(60), size=self.s(21), bold=True, color=tc)
-        text(cr, "Your desktop, organized in beautiful glass.", tx, ly + self.s(38), self.W - tx - self.s(40), size=self.s(11), color=sc)
+        tin = self.step(0.15, 0.55)
+        cr.save()
+        cr.translate((1 - tin) * self.s(40), 0)
+        cr.push_group()
+        text(cr, "Welcome to GlassDesk 2.0", tx, ly - self.s(2), self.W - tx - self.s(60), size=self.s(21), bold=True, color=tc)
+        text(cr, "Here's what's new — all made from your ideas.", tx, ly + self.s(38), self.W - tx - self.s(40), size=self.s(11), color=sc)
+        cr.pop_group_to_source()
+        cr.paint_with_alpha(max(0, min(1, tin)))
+        cr.restore()
         self.close_x(cr, self.W - self.s(50), self.s(14), self.s(36))
         bh = self.s(42)
         by = self.H - pad - bh
@@ -707,13 +737,20 @@ class WelcomeWindow(GlassForm):
         th = (by - self.s(26) - top - gap) / 2
         for i, (title, desc) in enumerate(self.TIPS):
             x, y = pad + (i % 2) * (tw + gap), top + (i // 2) * (th + gap)
+            ci = self.step(0.35 + i * 0.12, 0.6)
+            if ci <= 0.001:
+                continue
+            cr.save()
+            sc2 = 0.85 + 0.15 * ci
+            cr.translate(x + tw / 2, y + th / 2 + (1 - ci) * self.s(40)); cr.scale(sc2, sc2); cr.translate(-x - tw / 2, -y - th / 2)
             self.chip(cr, x, y, tw, th, self.s(14))
             d = self.s(40)
             ix, iy = x + self.s(16), y + self.s(16)
             self.accent_fill(cr, ix, iy, d, d, self.s(11))
-            self.tip_icon(cr, i, ix, iy, d)
+            self.tip_icon(cr, self.ICONS[i], ix, iy, d)
             text(cr, title, ix + d + self.s(14), y + self.s(14), tw - d - self.s(44), size=self.s(11.4), bold=True, color=tc)
             text(cr, desc, ix + d + self.s(14), y + self.s(37), tw - d - self.s(46), size=self.s(9.4), color=sc, wrap=True, lines=3)
+            cr.restore()
         text(cr, "GlassDesk " + core.VERSION, pad, by, self.s(200), size=self.s(9), color=sc, h=bh, valign="middle")
         sw = self.s(150)
         self.accent_button(cr, self.W - pad - sw, by, sw, bh, "Get started", self.finish)
@@ -726,7 +763,13 @@ class WelcomeWindow(GlassForm):
         cr.set_source_rgba(1, 1, 1, 1)
         cr.set_line_width(self.s(2))
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        if i == 0:
+        if i == 4:   # liquid glass: a drop
+            cr.move_to(cx, cy - s * 1.25)
+            cr.curve_to(cx + s * 0.35, cy - s * 0.6, cx + s, cy - s * 0.1, cx + s, cy + s * 0.35)
+            cr.arc(cx, cy + s * 0.35, s, 0, math.pi)
+            cr.curve_to(cx - s, cy - s * 0.1, cx - s * 0.35, cy - s * 0.6, cx, cy - s * 1.25)
+            cr.stroke()
+        elif i == 0:
             for j in range(4):
                 rounded(cr, cx - s + (j % 2) * s * 1.1, cy - s + (j // 2) * s * 1.1, s * 0.9, s * 0.9, self.s(2.5))
                 cr.stroke()

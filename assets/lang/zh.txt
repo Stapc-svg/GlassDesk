@@ -1,0 +1,434 @@
+# GlassDesk translation: English<TAB>translation. \n = new line. Missing lines stay in English.
+Stack with	堆叠到
+Next in stack	堆叠中的下一个
+Take out of stack	从堆叠中取出
+Stack them	堆叠它们
+No, just put it here	不，放在这里就行
+Settings	设置
+Show	显示
+Hide	隐藏
+ panels    Ctrl+Alt+G	 面板    Ctrl+Alt+G
+Find on desktop…    Ctrl+Alt+F	在桌面上查找…    Ctrl+Alt+F
+New fence…	新建分区…
+Add a rule…	添加规则…
+Edit note	编辑便签
+Organize desktop…	整理桌面…
+Rescan desktop	重新扫描桌面
+Check for updates	检查更新
+Exit GlassDesk	退出 GlassDesk
+Change event…	更改事件…
+Another quote	换一句
+Open profile	打开主页
+Change username…	更改用户名…
+Refresh now	立即刷新
+Play / pause	播放 / 暂停
+Next song	下一首
+Previous song	上一首
+Volume mixer	音量合成器
+Resume	继续
+Pause (don't remember copies)	暂停（不记录复制内容）
+Clear history	清除历史
+Start / pause	开始 / 暂停
+Reset	重置
+Edit list	编辑列表
+Clear finished tasks	清除已完成任务
+Refresh	刷新
+Change city…	更改城市…
+Use °C	使用 °C
+Use °F	使用 °F
+Next photo	下一张照片
+Choose folder…	选择文件夹…
+ seconds	 秒
+Use 12-hour time	使用 12 小时制
+Use 24-hour time	使用 24 小时制
+Reset size	重置大小
+Hide this widget	隐藏此小组件
+Settings…	设置…
+Clipboard	剪贴板
+Today	今天
+Close stack	收起堆叠
+Open stack	展开堆叠
+Turn off stacks	关闭堆叠功能
+Open	打开
+Empty Recycle Bin	清空回收站
+Show in File Explorer	在文件资源管理器中显示
+Copy path	复制路径
+Move to fence	移到分区
+Back to 	移回 
+Delete (Recycle Bin)	删除（回收站）
+Properties	属性
+Expand	展开
+Roll up	收起
+Rename…	重命名…
+Color	颜色
+Icon size	图标大小
+Stop rolling up by itself	停止自动收起
+Roll up until I point at it	收起，鼠标指向时展开
+Sort by	排序方式
+Add a rule for this fence…	为此分区添加规则…
+Open folder	打开文件夹
+Remove this fence	移除此分区
+Delete this fence	删除此分区
+Open Desktop folder	打开桌面文件夹
+Hide this category	隐藏此类别
+Enter to copy	按 Enter 复制
+Switch to the {0} theme	切换到 {0} 主题
+Open Settings	打开设置
+Organize desktop	整理桌面
+Hide or show all panels	显示或隐藏所有面板
+Make a new fence	新建分区
+Dark mode	深色模式
+Light mode	浅色模式
+GlassDesk command	GlassDesk 命令
+Search the web for "{0}"	在网上搜索“{0}”
+Search your desktop and apps…	搜索桌面和应用…
+Your desktop is empty	桌面是空的
+Nothing on your desktop matches "{0}"	桌面上没有与“{0}”匹配的内容
+Drag an app onto a fence to add it	把应用拖到分区上即可添加
+All	全部
+Desktop	桌面
+Apps	应用
+Fences	分区
+Your files sorted into glass boxes. Drag a fence's edge to resize it.	文件自动整理进玻璃分区。拖动分区边缘即可调整大小。
+Widgets	小组件
+Clock, weather, music, to-dos and more. Right-click one for options.	时钟、天气、音乐、待办等等。右键单击查看选项。
+Quick search	快速搜索
+Press Ctrl + Alt + F to find and open anything on your desktop.	按 Ctrl + Alt + F 查找并打开桌面上的任何内容。
+Themes	主题
+26 looks, from GlassDesk glass to Mica and Acrylic. Settings → Appearance.	26 种外观，从 GlassDesk 玻璃到 Mica 和 Acrylic。设置 → 外观。
+Welcome to GlassDesk	欢迎使用 GlassDesk
+Your desktop, organized in beautiful glass.	你的桌面，整理成精美的玻璃。
+Get started	开始使用
+NOW PLAYING	正在播放
+PAUSED	已暂停
+LAST PLAYED	上次播放
+MUSIC	音乐
+Ticked files go into their fence. Unticked files go to an "Unsorted" fence.	勾选的文件放入对应分区，未勾选的文件放入“未分类”分区。
+Cancel	取消
+Start organizing · 	开始整理 · 
+Desktop organizer	桌面整理工具
+show / hide panels	显示 / 隐藏面板
+General	常规
+Language	语言
+same as Windows	跟随 Windows
+The language of menus, Settings and widgets	菜单、设置和小组件使用的语言
+Startup	启动
+Start with Windows	随 Windows 启动
+Show / hide shortcut	显示 / 隐藏快捷键
+Quick search shortcut	快速搜索快捷键
+Behavior	行为
+Lock positions	锁定位置
+Keep behind windows	保持在窗口后面
+Open with a single click	单击打开
+Appearance	外观
+Windows themes	Windows 主题
+Theme	主题
+Mode	模式
+Accent color	强调色
+Match my wallpaper	匹配我的壁纸
+Glass	玻璃
+Frosted	磨砂
+Blur	模糊
+Clear	透明
+See-through	通透
+Glass style	玻璃样式
+Glass tint	玻璃色调
+Corner radius	圆角半径
+Panel size	面板大小
+Wallpaper changer	壁纸切换
+Change my wallpaper	自动更换壁纸
+Folder	文件夹
+Choose…	选择…
+Change every	更换间隔
+Next wallpaper	下一张壁纸
+Next	下一张
+Size	大小
+Resize any widget	调整任意小组件大小
+Reset all sizes	全部重置大小
+Clock	时钟
+Show seconds	显示秒
+Photos	照片
+Drawn sky	手绘天空
+Off	关闭
+Clock background	时钟背景
+24-hour time	24 小时制
+More widgets	更多小组件
+System monitor	系统监视器
+Calendar	日历
+Notes	便签
+To-do list	待办清单
+Music	音乐
+Quote of the day	每日一句
+GitHub stats	GitHub 统计
+GitHub username	GitHub 用户名
+Change…	更改…
+Network meter	网速表
+Focus timer	专注计时器
+Countdown	倒计时
+Weather	天气
+Weather picture	天气图片
+City	城市
+Use °F and mph	使用 °F 和 mph
+Photo frame	相框
+Change photo every	照片更换间隔
+Layout	布局
+Layout for each monitor setup	为每种显示器布局记住位置
+Group widgets	小组件分组
+Reset widget positions	重置小组件位置
+Organizer	整理
+Desktop fences	桌面分区
+Show desktop fences	显示桌面分区
+Hide empty fences	隐藏空分区
+Hide Windows desktop icons	隐藏 Windows 桌面图标
+Stack similar files	堆叠同类文件
+Preview…	预览…
+Your fences	你的分区
+Rename	重命名
+Delete	删除
+New fence	新建分区
+Rules	规则
+Add a rule	添加规则
+Add rule…	添加规则…
+Find & sort	查找和排序
+Open search	打开搜索
+Sort a fence	分区排序
+Drag & drop	拖放
+Between fences	在分区之间
+Into a folder	拖入文件夹
+From / to File Explorer	从 / 到文件资源管理器
+Recycle Bin	回收站
+Categories	类别
+Folder fences	文件夹分区
+Remove	移除
+Add a folder	添加文件夹
+Add folder…	添加文件夹…
+Rescan	重新扫描
+Reset fence layout	重置分区布局
+Performance	性能
+Right now	当前
+Save power	节能
+Low power mode	低功耗模式
+Pause during full-screen apps	全屏应用时暂停
+Trim memory when idle	空闲时释放内存
+How it stays light	为什么这么轻
+No animation loops	没有动画循环
+Event-based organizer	基于事件的整理
+Native code	原生代码
+About	关于
+Shortcuts & tips	快捷键和技巧
+Ctrl + Alt + G	Ctrl + Alt + G
+Drag a title bar	拖动标题栏
+Double-click a fence title	双击分区标题
+Right-click	右键单击
+Ctrl + Alt + F	Ctrl + Alt + F
+Updates	更新
+Version	版本
+Check now	立即检查
+Check automatically	自动检查
+Updates come from	更新来源
+Backup & sync	备份和同步
+Save my layout	保存我的布局
+Export…	导出…
+Load a layout	加载布局
+Import…	导入…
+Daily backups	每日备份
+Backups folder	备份文件夹
+App	应用
+Settings file	设置文件
+Exit	退出
+Good night	晚安
+Good morning	早上好
+Good afternoon	下午好
+Good evening	晚上好
+System	系统
+live	实时
+CPU	CPU
+double-click to edit	双击编辑
+Partly cloudy	多云
+Cloudy	阴天
+Fog	雾
+Drizzle	毛毛雨
+Rain	雨
+Snow	雪
+Thunderstorm	雷雨
+Loading…	正在加载…
+Double-click to choose your city	双击选择你的城市
+Feels	体感
+Humidity	湿度
+Wind	风
+Sunrise	日出
+Sunset	日落
+To-do	待办
+Nothing to do. Double-click to add tasks.	没有待办事项。双击添加任务。
+Double-click to choose a folder of photos	双击选择照片文件夹
+Double-click to count down to a birthday, a trip or the holidays	双击设置生日、旅行或节日的倒计时
+GitHub	GitHub
+Last 14 days	最近 14 天
+Network	网络
+Apps & Shortcuts	应用和快捷方式
+Folders	文件夹
+Documents	文档
+Images	图片
+Music & Video	音乐和视频
+Archives	压缩包
+Other files	其他文件
+medium	中
+Can't reach the weather service – trying again in a minute	无法连接天气服务 – 一分钟后重试
+The weather service sent something unexpected	天气服务返回了异常数据
+Unsorted	未分类
+How GlassDesk starts and behaves.	GlassDesk 如何启动和运行。
+Launch GlassDesk automatically when you sign in	登录时自动启动 GlassDesk
+Press Ctrl + Alt + G to show or hide every panel	按 Ctrl + Alt + G 显示或隐藏所有面板
+Press Ctrl + Alt + F to find anything on your desktop	按 Ctrl + Alt + F 在桌面上查找任何内容
+Stop panels from being moved or resized by accident	防止面板被意外移动或调整大小
+Panels stay on the desktop, underneath your apps	面板留在桌面上，位于应用下方
+Open fence items with one click instead of a double-click	单击即可打开分区中的项目，无需双击
+Glass, colors and size of everything on your desktop.	桌面上所有内容的玻璃效果、颜色和大小。
+Auto follows Windows	自动跟随 Windows
+Highlights and bars	高亮和进度条
+Picks the accent color from your wallpaper, and changes with it	从壁纸中提取强调色，并随壁纸变化
+{0}%  ·  lower is clearer glass	{0}%  ·  越低玻璃越透明
+{0} px	{0} 像素
+{0}%  ·  scales text, icons and widgets	{0}%  ·  缩放文字、图标和小组件
+Rotates your desktop background from a folder of pictures	从图片文件夹中轮换桌面背景
+{0} minutes	{0} 分钟
+Skip to the next picture now	立即切换到下一张图片
+Small glass widgets that live on your desktop.	桌面上的玻璃小组件。
+Drag its bottom-right corner. Everything inside grows with it.	拖动右下角，里面的内容会一起放大。
+Time, date and a friendly greeting	时间、日期和问候语
+Updates every second (otherwise once a minute)	每秒更新（否则每分钟一次）
+Changes with the time of day: morning, day, sunset and night	随一天中的时间变化：早晨、白天、日落和夜晚
+Turn off for 12-hour time with AM / PM	关闭则使用带 AM / PM 的 12 小时制
+CPU, memory, disk and battery	CPU、内存、磁盘和电池
+Month view — click the arrows to change month	月视图 — 点击箭头切换月份
+A sticky note — double-click it to write	便利贴 — 双击即可书写
+Tick tasks off right on the desktop — double-click to edit the list	直接在桌面上勾选任务 — 双击编辑清单
+Rings for how much of the day, week, month and year has passed	用圆环显示今天、本周、本月和今年已过去多少
+The last things you copied; click one to copy it again. Kept in memory only, never saved	你最近复制的内容；点击即可再次复制。只保存在内存中，从不存盘
+The song that's playing — or the last one you listened to	正在播放的歌曲 — 或你上次听的那首
+A new quote every morning — double-click for another	每天早上一句新名言 — 双击换一句
+Stars, followers, repos and your last 14 days	星标、关注者、仓库和你最近 14 天
+Public data only, no sign-in needed	仅公开数据，无需登录
+Live download and upload speed	实时下载和上传速度
+Pomodoro: 	番茄钟： 
+Days left until a birthday, a trip or the holidays	距离生日、旅行或节日还有几天
+Today and the next days, from Open-Meteo or wttr.in (free, no account)	今天和接下来几天，来自 Open-Meteo 或 wttr.in（免费，无需账户）
+A sky that matches the weather (sun, clouds, rain, storm, snow, fog, night) fading into the glass	与天气相符的天空（晴、云、雨、雷暴、雪、雾、夜晚），渐隐融入玻璃
+Turn off for °C and km/h	关闭则使用 °C 和 km/h
+Shows your pictures one at a time — click the arrow for the next one	逐张显示你的照片 — 点击箭头看下一张
+Right-click a widget → Group with, then scroll over it to switch	右键单击小组件 → 分组，然后在上面滚动切换
+Move all widgets back to the right side of the screen	把所有小组件移回屏幕右侧
+Your desktop files, sorted into glass fences automatically.	桌面文件自动整理进玻璃分区。
+Group desktop items by type	按类型分组桌面项目
+Only show a fence when it has something in it	分区里有内容时才显示
+Recommended: the fences replace the normal icons, so nothing overlaps	推荐：分区代替普通图标，不会重叠
+4 or more files of the same type become one stack — click it to open	4 个及以上同类文件合成一个堆叠 — 点击打开
+See where every file goes and pick which ones to sort	查看每个文件的去向，并选择要整理的文件
+Make your own fence, then drag icons into it	创建你自己的分区，然后把图标拖进去
+For example: *.pdf goes to School, Screenshot* goes to Images	例如：*.pdf 放入“学校”，Screenshot* 放入“图片”
+Press Ctrl + Alt + F, type a few letters and press Enter to open	按 Ctrl + Alt + F，输入几个字母，按 Enter 打开
+Right-click a fence's title and choose Sort by: name, type, date or size	右键单击分区标题，选择排序方式：名称、类型、日期或大小
+Drag an icon to another fence to keep it there	把图标拖到另一个分区，它就会留在那里
+Drop an icon on a folder to move it inside (hold Ctrl to copy)	把图标放到文件夹上即可移入（按住 Ctrl 复制）
+Drag files in from Explorer, or drag icons out to Explorer and other apps	从资源管理器拖入文件，或把图标拖到资源管理器和其他应用
+Drop an icon on the Recycle Bin to delete it	把图标放到回收站上即可删除
+Show any folder (Downloads, a project…) as its own fence	把任意文件夹（下载、项目…）显示为单独的分区
+GlassDesk watches for changes, but you can refresh now	GlassDesk 会自动监视变化，你也可以立即刷新
+Put all fences back in a tidy column	把所有分区排回整齐的一列
+GlassDesk is built to stay out of the way.	GlassDesk 设计得不打扰你。
+Refresh the system monitor every 5 seconds instead of 2	系统监视器每 5 秒刷新一次，而不是 2 秒
+No updates at all while you play games or watch videos	玩游戏或看视频时完全不更新
+Give unused memory back to Windows every few minutes	每隔几分钟把未用的内存还给 Windows
+Panels are redrawn only when something actually changes	只有内容真正变化时才重绘面板
+Windows tells GlassDesk when desktop files change — no polling	桌面文件变化时由 Windows 通知 GlassDesk — 无需轮询
+A single small .exe using the built-in .NET Framework — no browser engine	一个小巧的 .exe，使用内置的 .NET Framework — 没有浏览器引擎
+GlassDesk — a light, glassy desktop organizer for Windows.	GlassDesk — 一款轻巧的玻璃风格 Windows 桌面整理工具。
+Show or hide all panels	显示或隐藏所有面板
+Move a fence. Drag the bottom-right corner to resize it	移动分区。拖动右下角调整大小
+Roll the fence up / down	收起 / 展开分区
+Menus for items, fences and widgets	项目、分区和小组件的菜单
+Find anything on your desktop	查找桌面上的任何内容
+Look for a new version once a day and let you know	每天检查一次新版本并通知你
+Fences, rules, widgets and look in one .glassdesk file	分区、规则、小组件和外观都在一个 .glassdesk 文件中
+From a backup, or to copy your setup to another PC	从备份恢复，或把设置复制到另一台电脑
+Keeps the last 7 days, just in case	保留最近 7 天，以防万一
+Closes all panels and the tray icon	关闭所有面板和托盘图标
+Quote	名言
+Copy some text anywhere and it shows up here.\nClick it later to copy it again.	在任何地方复制文字，它都会显示在这里。\n稍后点击即可再次复制。
+Week {0}	第 {0} 周
+H {0}°  L {1}°	高 {0}°  低 {1}°
+Frosted navy glass with a soft glow	柔光海军蓝磨砂玻璃
+Deep violet glass	深紫色玻璃
+Teal water and cyan light	青色海水与蓝光
+Warm coral evening glow	温暖的珊瑚色晚霞
+Green glass, fresh and calm	绿色玻璃，清新宁静
+Soft pink and lilac	柔和的粉色与淡紫
+Northern lights, teal to purple	北极光，从青到紫
+Icy white glass	冰白玻璃
+Glowing coals, red and amber	发光的炭火，红与琥珀
+Light lilac glass	浅紫色玻璃
+Cool, fresh and light	清凉、清新、明亮
+Calm and mostly solid	沉静，基本不透明
+Fully blurred, see-through	完全模糊，通透
+Deeper, darker Mica	更深更暗的 Mica
+Default light	默认浅色
+Default dark	默认深色
+Blue Windows 11 flower	蓝色 Windows 11 花朵
+Purple light, soft acrylic	紫色光，柔和亚克力
+Warm orange morning	温暖的橙色清晨
+Fresh blue-green waves	清新的蓝绿波浪
+Dark with deep pink motion	深色配深粉动感
+Bright, flat and rounded	明亮、扁平、圆润
+Black glass with a glowing edge	黑色玻璃配发光边缘
+Quiet gray, no color	安静的灰色，无彩色
+Warm, solid and easy to read	温暖、不透明、易读
+The original GlassDesk 1.7 look	GlassDesk 1.7 的原始外观
+Disk	磁盘
+free	可用
+Tomorrow	明天
+Nothing coming up	近期没有日程
+That link isn't a calendar (.ics) link	这个链接不是日历 (.ics) 链接
+Can't reach your calendar – trying again soon	无法连接你的日历 – 稍后重试
+Paste your calendar's iCal (.ics) link — several links can be separated by spaces	粘贴日历的 iCal (.ics) 链接 — 多个链接用空格分隔
+Change calendar link…	更改日历链接…
+Connect a calendar…	连接日历…
+Disconnect calendar	断开日历
+System drives	系统磁盘
+Show every internal and USB drive, not just the Windows drive	显示所有内置和 USB 磁盘，而不只是 Windows 所在磁盘
+Online calendar	在线日历
+Connected — your events show as dots and the next ones below	已连接 — 有日程的日期显示圆点，下方显示接下来的日程
+Google, Outlook or iCloud: paste the calendar's private iCal (.ics) link	Google、Outlook 或 iCloud：粘贴日历的私密 iCal (.ics) 链接
+Connect…	连接…
+Game screenshots	游戏截图
+Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders	找到 {0} 个：Xbox Game Bar、NVIDIA 或 Windows 截图文件夹
+Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found	Xbox Game Bar、NVIDIA 和 Windows 截图文件夹已显示，或没有找到
+Add them	添加
+Style	样式
+macOS	macOS
+No picture	无图片
+Widget style	小组件样式
+Mixed — right-click a widget › Style to change just that one	混合 — 右键单击小组件 › 样式，只更改那一个
+For all widgets — or right-click one › Style to change just that one	所有小组件 — 或右键单击某个 › 样式，只更改那一个
+Your desktop	你的桌面
+Live preview	实时预览
+Updates as you change things — point at a panel to see its name	更改设置时即时更新 — 鼠标指向面板可查看名称
+Click a widget to add or remove it	点击小组件即可添加或移除
+No widget matches	没有匹配的小组件
+Liquid glass	液态玻璃
+Liquid	液态
+Liquid: clear glass that bends the wallpaper at its edges	液态：透明玻璃，边缘会弯曲壁纸
+Regular	常规
+Liquid glass type	液态玻璃类型
+Regular is a little frosted and easy to read; Clear shows the most of your wallpaper	常规略带磨砂、易于阅读；清透能看到最多的壁纸
+Melt nearby panels together	让相邻面板融合在一起
+Liquid glass panels close to each other join with a liquid bridge, like drops of water	彼此靠近的液态玻璃面板会像水滴一样以液体桥相连
+Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, depending on your screen size).\n\nTurn on liquid glass?	液态玻璃会让每个面板中的壁纸弯曲和模糊。为此 GlassDesk 会在内存中保留壁纸的额外副本，因此会多占用内存（大约多 100–200 MB，取决于屏幕大小）。\n\n要开启液态玻璃吗？
+Real bending, frosted glass like Apple's. Settings → Appearance → Glass style → Liquid.	真实弯曲的磨砂玻璃，像 Apple 一样。设置 → 外观 → 玻璃样式 → 液态。
+A style for each widget	每个小组件都有自己的样式
+Right-click a widget → Style. Notes, Reminders, rings, gauges and more.	右键单击小组件 → 样式。便签、提醒事项、圆环、仪表等。
+See it before you add it	添加前先看到
+Live desktop preview in Settings, and a Widgets tab in quick search (Ctrl + Alt + F).	设置中的实时桌面预览，以及快速搜索中的小组件标签（Ctrl + Alt + F）。
+Smarter widgets	更聪明的小组件
+Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.	在线日历、系统中的所有磁盘、游戏截图分区、剪贴板和 3 种新语言。
+Welcome to GlassDesk 2.0	欢迎使用 GlassDesk 2.0
+Here's what's new — all made from your ideas.	这些是新功能 — 都来自你们的想法。

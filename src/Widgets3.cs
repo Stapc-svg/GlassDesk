@@ -24,6 +24,8 @@ namespace GlassDesk
         Stats st; string status = ""; bool busy;
         System.Windows.Forms.Timer refresh;
 
+        protected override Color MacColor { get { return Color.FromArgb(255, 94, 92, 230); } }
+
         public GitHubWidget(App app) : base(app, "github") { }
         protected override Size BaseSize { get { return new Size(320, 236); } }
 
@@ -118,7 +120,7 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
-            Title(g, "GitHub", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Title(g, Lang.L("GitHub"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             // the cat-shaped mark is GitHub's; we just show a simple octagon-free dot instead
             if (st == null || status.Length > 0)
             {
@@ -145,7 +147,7 @@ namespace GlassDesk
             // 14-day activity bars
             y += T.Sf(28);
             int max = 1, total = 0; foreach (int d in st.Days) { max = Math.Max(max, d); total += d; }
-            Txt(g, "Last 14 days", Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold), T.SubText, new RectangleF(r.X, y, r.Width, T.Sf(16)), Gfx.Left);
+            Txt(g, Lang.L("Last 14 days"), Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold), T.SubText, new RectangleF(r.X, y, r.Width, T.Sf(16)), Gfx.Left);
             Txt(g, total + (total == 1 ? " contribution" : " contributions"), Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X, y, r.Width, T.Sf(16)), Gfx.Right);
             float bh = T.Sf(40), by = y + T.Sf(20), gap = T.Sf(4), bw = (r.Width - gap * 13) / 14f;
             for (int i = 0; i < 14; i++)
@@ -179,6 +181,8 @@ namespace GlassDesk
         readonly float[] histDown = new float[40], histUp = new float[40];
         System.Windows.Forms.Timer timer;
         string adapter = "";
+
+        protected override Color MacColor { get { return Color.FromArgb(255, 50, 173, 230); } }
 
         public NetworkWidget(App app) : base(app, "network") { }
         protected override Size BaseSize { get { return new Size(320, 168); } }
@@ -243,7 +247,7 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
-            Title(g, "Network", new Rectangle(r.X, r.Y, r.Width, T.S(20)));
+            Title(g, Lang.L("Network"), new Rectangle(r.X, r.Y, r.Width, T.S(20)));
             Txt(g, adapter.Length > 0 ? adapter : "offline", Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);
             float half = r.Width / 2f - T.Sf(8);
             Row(g, "↓ Download", Speed(Down), histDown, new RectangleF(r.X, r.Y + T.Sf(28), half, T.Sf(90)), T.Accent);
@@ -272,6 +276,8 @@ namespace GlassDesk
         int left;                                // seconds left
         int sessions;                            // focus blocks finished today
         System.Windows.Forms.Timer timer;
+
+        protected override Color MacColor { get { return Color.FromArgb(255, 255, 159, 10); } }
 
         public FocusWidget(App app) : base(app, "focus") { left = Math.Max(1, app.Settings.FocusMinutes) * 60; }
         protected override Size BaseSize { get { return new Size(320, 150); } }

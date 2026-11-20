@@ -22,14 +22,19 @@ namespace GlassDesk
         bool sample, started;
         Process helper;
         int restarts;
-        System.Windows.Forms.Timer tick;
+        System.Windows.Forms.Timer tick, spin;
+        float angle;                       // the record turns while a song plays
+        Color coverTone = Color.Empty;     // average color of the cover, for the glow behind the record
+        Bitmap toneOf;
         RectangleF rPrev, rPlay, rNext, rVol;
+
+        protected override Color MacColor { get { return Color.FromArgb(255, 250, 45, 72); } }
 
         public MusicWidget(App app) : base(app, "music")
         {
             try { string f = CoverFile; if (File.Exists(f)) cover = Load(f); } catch { }
         }
-        protected override Size BaseSize { get { return new Size(360, 132); } }
+        protected override Size BaseSize { get { return new Size(370, 140); } }
         bool Playing { get { return status == "Playing"; } }
         static string CoverFile { get { return Path.Combine(Settings.Folder, "music-cover.png"); } }
 
@@ -53,6 +58,10 @@ namespace GlassDesk
             tick = new System.Windows.Forms.Timer { Interval = 1000 };
             tick.Tick += delegate { if (Playing && Visible) Redraw(); };
             tick.Start();
+            // ~12 fps spin while playing; stays still in power-saving mode or when GlassDesk is paused
+            spin = new System.Windows.Forms.Timer { Interval = 80 };
+            spin.Tick += delegate { if (Playing && Visible && !App.Paused && !Cfg.LowPower && !App.Preview) { angle = (angle + 2.4f) % 360; Redraw(); } };
+            spin.Start();
         }
         protected override void OnVisibleChanged(EventArgs e)
         {
@@ -153,6 +162,85 @@ namespace GlassDesk
         // ---------------- drawing ----------------
         static string Time(int s) { s = Math.Max(0, s); return (s / 60).ToString("00") + ":" + (s % 60).ToString("00"); }
 
+        Color Tone(Bitmap b)
+        {
+            if (b == null) return T.Accent;
+            if (b == toneOf && !coverTone.IsEmpty) return coverTone;
+            long R = 0, G = 0, B = 0, n = 0;
+            try
+            {
+                for (int y = 0; y < b.Height; y += Math.Max(1, b.Height / 12))
+                    for (int x = 0; x < b.Width; x += Math.Max(1, b.Width / 12)) { var c = b.GetPixel(x, y); R += c.R; G += c.G; B += c.B; n++; }
+            }
+            catch { }
+            coverTone = n == 0 ? T.Accent : Color.FromArgb((int)(R / n), (int)(G / n), (int)(B / n));
+            toneOf = b;
+            return coverTone;
+        }
+
+        /// <summary>A black vinyl disc: grooves, a still light reflection, the cover turning in the middle, and a tone arm.</summary>
+        void DrawRecord(Graphics g, RectangleF d, Bitmap art, bool playing)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            var c = new PointF(d.X + d.Width / 2, d.Y + d.Height / 2);
+            Gfx.Glow(g, c, d.Width * 0.75f, Color.FromArgb(playing ? 110 : 60, Tone(art)));
+            // disc
+            using (var path = new GraphicsPath())
+            {
+                path.AddEllipse(d);
+                using (var pg = new PathGradientBrush(path) { CenterColor = Color.FromArgb(255, 34, 34, 40), SurroundColors = new[] { Color.FromArgb(255, 10, 10, 14) } })
+                    g.FillPath(pg, path);
+            }
+            // grooves
+            for (float k2 = 0.38f; k2 < 0.97f; k2 += 0.055f)
+                using (var pen = new Pen(Color.FromArgb(k2 > 0.9f ? 40 : 22, 255, 255, 255), 1f))
+                    g.DrawEllipse(pen, c.X - d.Width / 2 * k2, c.Y - d.Height / 2 * k2, d.Width * k2, d.Height * k2);
+            // light reflection (doesn't turn)
+            using (var path = new GraphicsPath())
+            {
+                path.AddPie(d.X, d.Y, d.Width, d.Height, 200, 40);
+                path.AddPie(d.X, d.Y, d.Width, d.Height, 20, 40);
+                using (var b = new SolidBrush(Color.FromArgb(18, 255, 255, 255))) g.FillPath(b, path);
+            }
+            // label = the cover, turning
+            float ls = d.Width * 0.46f;
+            var lr = new RectangleF(-ls / 2, -ls / 2, ls, ls);
+            var st = g.Save();
+            g.TranslateTransform(c.X, c.Y);
+            g.RotateTransform(angle);
+            using (var clip = new GraphicsPath())
+            {
+                clip.AddEllipse(lr);
+                if (art != null)
+                {
+                    g.SetClip(clip, CombineMode.Intersect);
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    float s = Math.Min(art.Width, art.Height);
+                    g.DrawImage(art, lr, new RectangleF((art.Width - s) / 2, (art.Height - s) / 2, s, s), GraphicsUnit.Pixel);
+                    g.ResetClip();
+                }
+                else
+                {
+                    using (var lg = new LinearGradientBrush(lr, T.Accent, Color.FromArgb(255, 176, 108, 255), 45f)) g.FillPath(lg, clip);
+                    DrawNote(g, PointF.Empty, ls * 0.26f);
+                }
+            }
+            g.Restore(st);
+            using (var pen = new Pen(Color.FromArgb(60, 0, 0, 0), T.Sf(1.5f))) g.DrawEllipse(pen, c.X - ls / 2, c.Y - ls / 2, ls, ls);
+            // spindle hole
+            float hs = T.Sf(6);
+            using (var b = new SolidBrush(Color.FromArgb(255, 18, 18, 22))) g.FillEllipse(b, c.X - hs / 2, c.Y - hs / 2, hs, hs);
+            using (var pen = new Pen(Color.FromArgb(70, 255, 255, 255), 1f)) g.DrawEllipse(pen, c.X - hs / 2, c.Y - hs / 2, hs, hs);
+            // tone arm: rests on the record while playing, lifts away when paused
+            var pivot = new PointF(d.Right - d.Width * 0.06f, d.Y + d.Height * 0.06f);
+            double a = (playing ? 118 : 100) * Math.PI / 180;
+            float len = d.Width * 0.5f;
+            var tip = new PointF(pivot.X + (float)Math.Cos(a) * len, pivot.Y + (float)Math.Sin(a) * len);
+            using (var pen = new Pen(Color.FromArgb(230, 210, 214, 224), T.Sf(2.6f)) { StartCap = LineCap.Round, EndCap = LineCap.Round }) g.DrawLine(pen, pivot, tip);
+            using (var b = new SolidBrush(Color.FromArgb(255, 200, 204, 214))) g.FillEllipse(b, pivot.X - T.Sf(5), pivot.Y - T.Sf(5), T.Sf(10), T.Sf(10));
+            using (var b = new SolidBrush(Color.FromArgb(255, 150, 154, 164))) g.FillRectangle(b, tip.X - T.Sf(3), tip.Y - T.Sf(3), T.Sf(6), T.Sf(7));
+        }
+
         protected override void PaintContent(Graphics g)
         {
             Rectangle r = Inner;
@@ -160,30 +248,14 @@ namespace GlassDesk
             string showTitle = live ? title : Cfg.LastSong, showArtist = live ? artist : Cfg.LastArtist;
             bool any = !string.IsNullOrEmpty(showTitle);
 
-            // cover
-            float cs = Math.Min(r.Height, T.Sf(96));
-            var cr = new RectangleF(r.X - T.Sf(2), r.Y + (r.Height - cs) / 2, cs, cs);
-            using (var path = Gfx.Round(cr, T.Sf(14)))
-            {
-                if (cover != null && any)
-                {
-                    var st = g.Save(); g.SetClip(path, CombineMode.Intersect);
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    float s = Math.Min(cover.Width, cover.Height);
-                    g.DrawImage(cover, cr, new RectangleF((cover.Width - s) / 2, (cover.Height - s) / 2, s, s), GraphicsUnit.Pixel);
-                    g.Restore(st);
-                }
-                else
-                {
-                    using (var lg = new LinearGradientBrush(cr, T.Accent, Gfx.WithAlpha(Color.FromArgb(176, 108, 255), 255), 45f)) g.FillPath(lg, path);
-                    DrawNote(g, new PointF(cr.X + cr.Width / 2, cr.Y + cr.Height / 2), cr.Width * 0.22f);
-                }
-                using (var pen = new Pen(Color.FromArgb(50, 255, 255, 255), 1f)) g.DrawPath(pen, path);
-            }
+            // vinyl record with the cover as its label
+            float cs = Math.Min(r.Height + T.Sf(4), T.Sf(110));
+            var cr = new RectangleF(r.X - T.Sf(4), r.Y + (r.Height - cs) / 2, cs, cs);
+            DrawRecord(g, cr, any ? cover : null, live && Playing);
 
             float x = cr.Right + T.Sf(16), w = r.Right - x;
             // status line
-            string label = live ? (Playing ? "NOW PLAYING" : "PAUSED") : any ? "LAST PLAYED" : "MUSIC";
+            string label = Lang.L(live ? (Playing ? "NOW PLAYING" : "PAUSED") : any ? "LAST PLAYED" : "MUSIC");
             Color lc = live && Playing ? T.Accent : T.SubText;
             if (live && Playing) DrawBars(g, new RectangleF(x, r.Y + T.Sf(3), T.Sf(12), T.Sf(11)), lc);
             float lx = live && Playing ? x + T.Sf(17) : x;

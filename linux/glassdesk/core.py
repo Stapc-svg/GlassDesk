@@ -8,7 +8,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import GLib, Gio, Gtk, Gdk, GdkPixbuf
 
-VERSION = "1.9.2"
+VERSION = "2.0.0"
 REPO = "Stapc-svg/GlassDesk"
 APP_ID = "app.glassdesk.GlassDesk"
 
@@ -42,7 +42,8 @@ def log(msg):
 DEFAULTS = {
     "theme": "auto",                # dark / light / auto
     "accent": "#7C9CFF",
-    "glass_style": "frosted",       # frosted / blur / clear / transparent
+    "glass_style": "frosted",       # frosted / blur / clear / transparent / liquid
+    "liquid_kind": "clear",         # liquid glass: regular (a little frosted) or clear
     "opacity": 55,                  # tint strength, %
     "radius": 16,
     "ui_scale": 100,
@@ -55,7 +56,7 @@ DEFAULTS = {
     "show_quote": True, "show_github": True, "show_network": True, "show_focus": True,
     "note_text": "Double-click to write a note.",
     "todo": [["Try GlassDesk on Linux", False], ["Drag a file into a fence", False]],
-    "weather_city": "", "weather_lat": None, "weather_lon": None, "weather_units": "c",
+    "weather_city": "", "weather_lat": None, "weather_lon": None, "weather_units": "c", "weather_city_found": "", "weather_scene": True, "clock_style": "photo",
     "photo_folder": "", "photo_interval": 60,
     "countdown_title": "New Year", "countdown_date": "",
     "github_user": "",
@@ -72,7 +73,7 @@ DEFAULTS = {
     "last_update_check": 0,
     # 1.8
     "look": "glassdesk",            # theme id (see LOOKS)
-    "show_music": True, "show_day": True,
+    "show_music": True, "show_day": True, "show_clip": True,
     "last_song": "", "last_artist": "",
     "stacks": True,                 # 4+ files of one type fold into a stack
     "per_display": True,            # a layout for each monitor setup
@@ -242,6 +243,8 @@ class Theme:
         a = s["opacity"] / 100.0
         if self.style == "transparent":
             a *= 0.3
+        if self.style == "liquid":
+            a *= 0.15   # liquid glass is clear: the bending does the work
         if self.solid:
             a = 1.0
         a2 = a if look["id"] == "classic" or self.solid else min(1.0, a + 0.16)

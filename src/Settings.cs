@@ -18,7 +18,10 @@ namespace GlassDesk
         public bool SingleClickOpen = false;
         public bool Stacks = true;
         public bool WallAccent = false;            // take the accent color from the wallpaper
-        public bool ShowDay = true;                // the "Today" progress rings widget                 // 4+ files of the same type in a fence become one stack
+        /// <summary>Each widget's look: "glass" (the default) or "mac" (solid cards like macOS widgets).</summary>
+        public Dictionary<string, string> WidgetStyles = new Dictionary<string, string>();
+        public string StyleOf(string id) { string v; return WidgetStyles.TryGetValue(id, out v) ? v : "glass"; }
+        public bool ShowDay = true, ShowClip = true, AllDrives = true; public string CalendarIcs = ""; public List<string> CalendarFeeds { get { var l = new List<string>(); foreach (var x in (CalendarIcs ?? "").Split(' ')) if (x.Trim().Length > 0) l.Add(x.Trim()); return l; } }                // the "Today" progress rings widget                 // 4+ files of the same type in a fence become one stack
         public bool PerDisplayLayouts = true;      // remember a layout for each monitor setup
         public string DisplayKey = "";             // the monitor setup the current layout belongs to
         public Dictionary<string, Dictionary<string, Rectangle>> Layouts = new Dictionary<string, Dictionary<string, Rectangle>>();
@@ -29,17 +32,20 @@ namespace GlassDesk
         public string Theme = "Auto";            // Auto | Dark | Light
         public Color Accent = Color.FromArgb(124, 156, 255);
         public bool Blur = true;                 // kept for older settings files; GlassStyle decides
+        public string LiquidKind = "clear";      // liquid glass: "regular" (a little frosted, easier to read) or "clear"
         public string GlassStyle = "frosted";    // frosted | blur | clear
-        public bool GlassOn { get { return GlassStyle != "clear" && GlassStyle != "transparent"; } }
+        public bool GlassOn { get { return GlassStyle != "clear" && GlassStyle != "transparent" && GlassStyle != "liquid"; } }
         public int Opacity = 30;                 // 5..95 (%) tint over the glass
         public int Radius = 16;                  // 0..28 px
         public int UiScale = 100;                // 80..150 (%)
 
         // Widgets
         public bool ShowClock = true, ShowSeconds = false, Clock24 = true;
+        public string ClockStyle = "photo";
+        public string Language = "auto";      // auto = the Windows display language   // photo, drawn or off
         public bool ShowSystem = true, ShowCalendar = true, ShowNotes = true;
         public string NotesText = "Double-click to write a note.\n\n- Tidy desktop\n- Try the settings (tray icon)";
-        public bool ShowWeather = true, WeatherF = false;
+        public bool ShowWeather = true, WeatherF = false, WeatherScene = true;
         public string WeatherCity = "", WeatherPlace = "";          // what you typed / what Open-Meteo found
         public double WeatherLat = double.NaN, WeatherLon = double.NaN;
         public bool ShowTodo = true;
@@ -116,7 +122,7 @@ namespace GlassDesk
                 s.GlassStyle = s.Blur ? "frosted" : "clear";
                 if (s.Opacity == 55) s.Opacity = 30;
             }
-            if (s.GlassStyle != "frosted" && s.GlassStyle != "blur" && s.GlassStyle != "clear" && s.GlassStyle != "transparent") s.GlassStyle = "frosted";
+            if (s.GlassStyle != "frosted" && s.GlassStyle != "blur" && s.GlassStyle != "clear" && s.GlassStyle != "transparent" && s.GlassStyle != "liquid") s.GlassStyle = "frosted";
             s.Blur = s.GlassOn;
             if (s.anyKey && !s.lookSeen) s.Look = "classic";   // 1.8: people updating keep the look they had
             if (Themes.Find(s.Look) == null) s.Look = "glassdesk";
@@ -153,6 +159,9 @@ namespace GlassDesk
                 case "Stacks": Stacks = B(v); return;
                 case "WallAccent": WallAccent = B(v); return;
                 case "ShowDay": ShowDay = B(v); return;
+                case "ShowClip": ShowClip = B(v); return;
+                case "AllDrives": AllDrives = B(v); return;
+                case "CalendarIcs": CalendarIcs = v; return;
                 case "PerDisplayLayouts": PerDisplayLayouts = B(v); return;
                 case "DisplayKey": DisplayKey = v.Trim(); return;
                 case "Theme": Theme = v.Trim(); return;
@@ -160,10 +169,13 @@ namespace GlassDesk
                 case "Blur": Blur = B(v); return;
                 case "Opacity": Opacity = Math.Max(5, Math.Min(95, I(v))); return;
                 case "GlassStyle": GlassStyle = v.Trim(); glassV2 = true; return;
+                case "LiquidKind": LiquidKind = v.Trim() == "regular" ? "regular" : "clear"; return;
                 case "Radius": Radius = Math.Max(0, Math.Min(28, I(v))); return;
                 case "UiScale": UiScale = Math.Max(80, Math.Min(150, I(v))); return;
                 case "ShowClock": ShowClock = B(v); return;
                 case "ShowSeconds": ShowSeconds = B(v); return;
+                case "ClockStyle": ClockStyle = v.Trim(); return;
+                case "Language": Language = v.Trim(); return;
                 case "Clock24": Clock24 = B(v); return;
                 case "ShowSystem": ShowSystem = B(v); return;
                 case "ShowCalendar": ShowCalendar = B(v); return;
@@ -176,6 +188,7 @@ namespace GlassDesk
                 case "PauseFullscreen": PauseFullscreen = B(v); return;
                 case "TrimMemory": TrimMemory = B(v); return;
                 case "ShowWeather": ShowWeather = B(v); return;
+                case "WeatherScene": WeatherScene = B(v); return;
                 case "WeatherF": WeatherF = B(v); return;
                 case "WeatherCity": WeatherCity = Unesc(v); return;
                 case "WeatherPlace": WeatherPlace = Unesc(v); return;
@@ -208,6 +221,7 @@ namespace GlassDesk
                 case "AutoBackup": AutoBackup = B(v); return;
             }
             if (k.StartsWith("cat.")) Categories[k.Substring(4)] = B(v);
+            else if (k.StartsWith("wstyle.")) { if (v == "mac" || v == "glass") WidgetStyles[k.Substring(7)] = v; }
             else if (k.StartsWith("folder.")) { string p = Unesc(v); if (p.Length > 0 && !FolderFences.Contains(p)) FolderFences.Add(p); }
             else if (k.StartsWith("custom.")) { string id = v.Trim(); if (id.Length > 0 && !CustomFences.Contains(id)) CustomFences.Add(id); }
             else if (k.StartsWith("pin."))
@@ -259,14 +273,14 @@ namespace GlassDesk
                 w("StartWithWindows", b(StartWithWindows)); w("StartupV2", "1"); w("IconsV2", "1"); w("Hotkey", b(Hotkey)); w("LockPositions", b(LockPositions));
                 w("KeepBehindWindows", b(KeepBehindWindows)); w("SingleClickOpen", b(SingleClickOpen));
                 w("Look", Look); w("Theme", Theme); w("Accent", (Accent.ToArgb() & 0xFFFFFF).ToString("X6"));
-                w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
+                w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("LiquidKind", LiquidKind); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
                 w("Radius", Radius.ToString(CultureInfo.InvariantCulture)); w("UiScale", UiScale.ToString(CultureInfo.InvariantCulture));
-                w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24));
+                w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24)); w("ClockStyle", ClockStyle); w("Language", Language);
                 w("ShowSystem", b(ShowSystem)); w("ShowCalendar", b(ShowCalendar)); w("ShowNotes", b(ShowNotes));
                 w("NotesText", Esc(NotesText));
                 w("ShowFences", b(ShowFences)); w("HideEmptyFences", b(HideEmptyFences)); w("HideDesktopIcons", b(HideDesktopIcons));
                 w("LowPower", b(LowPower)); w("PauseFullscreen", b(PauseFullscreen)); w("TrimMemory", b(TrimMemory));
-                w("ShowWeather", b(ShowWeather)); w("WeatherF", b(WeatherF)); w("WeatherCity", Esc(WeatherCity)); w("WeatherPlace", Esc(WeatherPlace));
+                w("ShowWeather", b(ShowWeather)); w("WeatherScene", b(WeatherScene)); w("WeatherF", b(WeatherF)); w("WeatherCity", Esc(WeatherCity)); w("WeatherPlace", Esc(WeatherPlace));
                 if (!double.IsNaN(WeatherLat)) { w("WeatherLat", WeatherLat.ToString("R", CultureInfo.InvariantCulture)); w("WeatherLon", WeatherLon.ToString("R", CultureInfo.InvariantCulture)); }
                 w("ShowTodo", b(ShowTodo)); w("TodoText", Esc(TodoText));
                 w("ShowPhotos", b(ShowPhotos)); w("PhotoFolder", Esc(PhotoFolder)); w("PhotoMinutes", PhotoMinutes.ToString(CultureInfo.InvariantCulture));
@@ -283,13 +297,14 @@ namespace GlassDesk
                 foreach (string a in AutoHide) w("fauto." + a, "1");
                 foreach (var kv in Categories) w("cat." + kv.Key, b(kv.Value));
                 for (int i = 0; i < FolderFences.Count; i++) w("folder." + i, Esc(FolderFences[i]));
+                foreach (var kv in WidgetStyles) w("wstyle." + kv.Key, kv.Value);
                 for (int i = 0; i < CustomFences.Count; i++) w("custom." + i, CustomFences[i]);
                 int pn = 0;
                 foreach (var kv in Pins) w("pin." + (pn++), kv.Value + "|" + Esc(kv.Key));
                 foreach (string c in Collapsed) w("col." + c, "1");
                 foreach (var kv in Titles) w("title." + kv.Key, Esc(kv.Value));
                 foreach (var kv in WidgetZoom) if (kv.Value != 100) w("zoom." + kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
-                w("Stacks", b(Stacks)); w("WallAccent", b(WallAccent)); w("ShowDay", b(ShowDay)); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
+                w("Stacks", b(Stacks)); w("WallAccent", b(WallAccent)); w("ShowDay", b(ShowDay)); w("ShowClip", b(ShowClip)); w("AllDrives", b(AllDrives)); w("CalendarIcs", CalendarIcs ?? ""); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
                 for (int i = 0; i < Groups.Count; i++) w("group." + i, string.Join(",", Groups[i].ToArray()));
                 if (PerDisplayLayouts && !string.IsNullOrEmpty(DisplayKey)) Layouts[DisplayKey] = new Dictionary<string, Rectangle>(Positions);
                 foreach (var lay in Layouts)
@@ -331,7 +346,8 @@ namespace GlassDesk
             t.Scale = dpiScale * s.UiScale / 100f;
             t.Accent = s.Accent;
             int a = (int)(255 * s.Opacity / 100f);
-            if (s.GlassStyle == "transparent") a = (int)(a * 0.3f);   // see-through: only a whisper of tint
+            if (s.GlassStyle == "transparent") a = (int)(a * 0.3f);
+            if (s.GlassStyle == "liquid") a = (int)(a * 0.15f);   // liquid glass is clear: the bending does the work   // see-through: only a whisper of tint
             var look = Themes.Find(s.Look) ?? Themes.Find("classic");
             t.LookId = look.Id; t.Solid = look.Solid; t.Flat = look.Flat; t.Neon = look.Neon;
             if (t.Solid) a = 255;
@@ -365,8 +381,34 @@ namespace GlassDesk
             }
             if (look.Id == "paper") { t.Text = t.Dark ? Color.FromArgb(245, 238, 232, 220) : Color.FromArgb(245, 46, 40, 32); }
             t.Tint = t.TintTop;
-            t.FontName = Pick("Segoe UI", "DejaVu Sans");
-            t.DisplayFont = Pick("Segoe UI", "DejaVu Sans");
+            t.FontName = Lang.Font(Pick("Segoe UI", "DejaVu Sans"));
+            t.DisplayFont = Lang.Font(Pick("Segoe UI", "DejaVu Sans"));
+            return t;
+        }
+
+        /// <summary>The macOS widget look: solid rounded cards, SF-style type and system colors.</summary>
+        /// <summary>The same theme with another highlight color.</summary>
+        public Theme WithAccent(Color c) { var t = (Theme)MemberwiseClone(); t.Accent = c; return t; }
+        public Theme Mac()
+        {
+            var t = (Theme)MemberwiseClone();
+            t.Solid = true; t.Flat = true; t.Neon = false; t.Glow = Color.Empty; t.Glow2 = Color.Empty; t.LookId = "mac";
+            if (Dark)
+            {
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(24, 16, 18, 26);
+                t.Text = Color.FromArgb(255, 255, 255, 255); t.SubText = Color.FromArgb(235, 222, 224, 232);
+                t.Accent = Color.FromArgb(255, 10, 132, 255);
+                t.Border = Color.FromArgb(30, 255, 255, 255); t.Hover = Color.FromArgb(30, 255, 255, 255); t.Track = Color.FromArgb(46, 255, 255, 255);
+            }
+            else
+            {
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(46, 255, 255, 255);
+                t.Text = Color.FromArgb(255, 29, 29, 31); t.SubText = Color.FromArgb(255, 134, 134, 139);
+                t.Accent = Color.FromArgb(255, 0, 122, 255);
+                t.Border = Color.FromArgb(18, 0, 0, 0); t.Hover = Color.FromArgb(14, 0, 0, 0); t.Track = Color.FromArgb(22, 0, 0, 0);
+            }
+            t.FontName = Lang.Font(Pick("SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "DejaVu Sans"));
+            t.DisplayFont = Lang.Font(Pick("SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "DejaVu Sans"));
             return t;
         }
 

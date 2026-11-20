@@ -41,6 +41,12 @@ namespace GlassDesk
             if (o == null) throw new Exception("Not a JSON object");
             return o;
         }
+        public static List<object> GetJsonArray(string url)
+        {
+            var o = Json.Parse(Get(url)) as List<object>;
+            if (o == null) throw new Exception("Not a JSON list");
+            return o;
+        }
         public static WebClient NewDownloader() { return new Client(); }
     }
 
@@ -112,6 +118,7 @@ namespace GlassDesk
         public static Dictionary<string, object> Obj(Dictionary<string, object> o, string k) { object v; return o != null && o.TryGetValue(k, out v) ? v as Dictionary<string, object> : null; }
         public static List<object> Arr(Dictionary<string, object> o, string k) { object v; return o != null && o.TryGetValue(k, out v) ? v as List<object> : null; }
         public static string Str(Dictionary<string, object> o, string k) { object v; return o != null && o.TryGetValue(k, out v) && v is string ? (string)v : ""; }
+        public static bool Bool(Dictionary<string, object> o, string k) { object v; return o != null && o.TryGetValue(k, out v) && v is bool && (bool)v; }
         public static double Num(Dictionary<string, object> o, string k) { object v; return o != null && o.TryGetValue(k, out v) && v is double ? (double)v : double.NaN; }
     }
 
@@ -147,13 +154,8 @@ namespace GlassDesk
         public void Check(bool manual)
         {
             if (checking) return;
-            if (!RepoConfigured(S.UpdateRepo))
-            {
-                if (manual) MessageBox.Show("GlassDesk doesn't know where to look for updates yet.\n\nIn Settings > About, set \"Update source\" to your GitHub repository, for example  yourname/GlassDesk.", "GlassDesk updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
             checking = true;
-            string repo = S.UpdateRepo;
+            string repo = App.DefaultRepo;   // updates always come from GlassDesk's own GitHub page
             var ui = app.Invoker;
             ThreadPool.QueueUserWorkItem(delegate
             {
@@ -162,27 +164,45 @@ namespace GlassDesk
                 catch (WebException ex)
                 {
                     var hr = ex.Response as HttpWebResponse;
-                    err = hr != null && hr.StatusCode == HttpStatusCode.NotFound ? "No releases were found for " + repo + "." : "Couldn't reach GitHub. Check your internet connection.";
+                    err = "Couldn't reach GitHub. Check your internet connection.";
                 }
                 catch (Exception ex) { err = "Couldn't read the release information (" + ex.Message + ")."; }
                 try { ui.BeginInvoke(new Action(delegate { checking = false; Done(rel, err, manual); })); } catch { checking = false; }
             });
         }
 
+        /// <summary>Looks through the recent releases (not only "latest": that one may be the Linux or
+        /// Android release) and returns the newest one that has a Windows installer. The version comes
+        /// from the installer's name (GlassDesk-Setup-1.9.4.msi), falling back to the release tag.</summary>
         static Release Fetch(string repo)
         {
-            var j = Http.GetJson("https://api.github.com/repos/" + repo + "/releases/latest");
-            var r = new Release { Tag = Json.Str(j, "tag_name"), Notes = Json.Str(j, "body"), Page = Json.Str(j, "html_url") };
-            r.Version = ParseVersion(r.Tag);
-            var assets = Json.Arr(j, "assets");
-            if (assets != null)
-                foreach (var o in assets)
+            var list = Http.GetJsonArray("https://api.github.com/repos/" + repo + "/releases?per_page=30");
+            Release best = null;
+            foreach (var o in list)
+            {
+                var j = o as Dictionary<string, object>;
+                if (j == null || Json.Bool(j, "draft") || Json.Bool(j, "prerelease")) continue;
+                var assets = Json.Arr(j, "assets");
+                if (assets == null) continue;
+                foreach (var ao in assets)
                 {
-                    var a = o as Dictionary<string, object>;
+                    var a = ao as Dictionary<string, object>;
                     string name = Json.Str(a, "name"), url = Json.Str(a, "browser_download_url");
-                    if (name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) && IsGitHubUrl(url)) { r.MsiUrl = url; r.MsiName = name; break; }
+                    if (!name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) || !IsGitHubUrl(url)) continue;
+                    var v = VersionFromName(name) ?? ParseVersion(Json.Str(j, "tag_name"));
+                    if (v == null || (best != null && v <= best.Version)) continue;
+                    best = new Release { Tag = Json.Str(j, "tag_name"), Notes = Json.Str(j, "body"), Page = Json.Str(j, "html_url"), MsiUrl = url, MsiName = name, Version = v };
                 }
-            return r;
+            }
+            if (best == null) throw new Exception("no Windows installer was found in the releases");
+            return best;
+        }
+
+        /// <summary>"Windows_GlassDesk-Setup-1.9.4.msi" → 1.9.4.</summary>
+        static Version VersionFromName(string name)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(name, @"(\d+\.\d+(\.\d+){0,2})\.msi$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return m.Success ? ParseVersion(m.Groups[1].Value) : null;
         }
 
         /// <summary>Only ever download installers from GitHub itself.</summary>
@@ -194,8 +214,8 @@ namespace GlassDesk
 
         public static Version ParseVersion(string tag)
         {
-            string t = (tag ?? "").Trim().TrimStart('v', 'V');
-            int cut = t.IndexOfAny(new[] { '-', '+', ' ' }); if (cut > 0) t = t.Substring(0, cut);
+            string t = (tag ?? "").Trim().TrimStart('v', 'V', '.');
+            int cut = t.IndexOfAny(new[] { '-', '+', ' ', '_' }); if (cut > 0) t = t.Substring(0, cut);
             Version v;
             if (t.IndexOf('.') < 0) t += ".0";
             return Version.TryParse(t, out v) ? Normalize(v) : null;
@@ -267,7 +287,7 @@ namespace GlassDesk
                 later.Click += delegate { DialogResult = DialogResult.Cancel; };
                 skip.Click += delegate { DialogResult = DialogResult.Ignore; };
                 Controls.AddRange(new Control[] { head, cur, box, bar, state, go, later, skip });
-                Load += delegate { Native.SetDarkTitleBar(Handle, t.Dark); };
+                Load += delegate { Native.ThemeTitleBar(Handle, t.Dark, BackColor, ForeColor); };
                 FormClosing += (s, e) => { if (dl != null) { dl.CancelAsync(); } };
             }
 

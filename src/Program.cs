@@ -9,8 +9,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("GlassDesk")]
 [assembly: System.Reflection.AssemblyProduct("GlassDesk")]
 [assembly: System.Reflection.AssemblyDescription("Glass desktop organizer with widgets")]
-[assembly: System.Reflection.AssemblyVersion("1.8.6.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.8.6.0")]
+[assembly: System.Reflection.AssemblyVersion("2.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.9.2.0")]
 
 namespace GlassDesk
 {
@@ -139,6 +139,7 @@ namespace GlassDesk
             using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-calc.png"), ImageFormat.Png);
             l.SetQuery("ocea");
             using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-theme.png"), ImageFormat.Png);
+            l.SetQuery(""); l.SetFilter(3); using (var b = l.Render()) b.Save(Path.Combine(dir, "launcher-widgets.png"), ImageFormat.Png);
             var o = app.MakeOrganize(); o.Location = new System.Drawing.Point(500, 220);
             using (var b = o.Render()) b.Save(Path.Combine(dir, "organize.png"), ImageFormat.Png);
             var w = new WelcomeForm(app); w.Location = new System.Drawing.Point(640, 290);

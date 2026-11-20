@@ -103,7 +103,7 @@ namespace GlassDesk
         {
             get
             {
-                Theme b = App.Theme;
+                Theme b = MacLook ? MacBase() : App.Theme;
                 if (Math.Abs(Zoom - 1f) < 0.001f) return b;
                 if (zoomed == null || !ReferenceEquals(zoomedFrom, b) || zoomedAt != Zoom) { zoomed = b.Zoomed(Zoom); zoomedFrom = b; zoomedAt = Zoom; }
                 return zoomed;
@@ -193,15 +193,20 @@ namespace GlassDesk
 
         int lastMoveDraw;
         bool UsesBackdrop { get { return !T.Solid && (Cfg.GlassStyle == "frosted" || Cfg.GlassStyle == "blur"); } }
+        /// <summary>True when this panel is drawn as liquid glass (its own style, or the glass style for everything).</summary>
+        public bool LiquidOn { get { return MacLook || Cfg.GlassStyle == "liquid" && !App.Theme.Solid; } }
 
         /// <summary>Paints the matching piece of the blurred wallpaper inside the panel: the actual glass blur.</summary>
-        void DrawBackdrop(Graphics g, GraphicsPath path)
+        void DrawBackdrop(Graphics g, GraphicsPath path) { DrawBackdrop(g, path, false); }
+        /// <summary>The blurred wallpaper behind the panel; <paramref name="always"/> draws it even when the glass style has no blur.</summary>
+        protected void DrawBackdrop(Graphics g, GraphicsPath path, bool always)
         {
-            if (!UsesBackdrop) return;
+            if (!always && !UsesBackdrop) return;
+            if (always && T.Solid && !MacLook) return;
             try
             {
                 Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
-                Bitmap blur = Backdrop.For(scr, T.LookId == "acrylic" ? 3 : Cfg.GlassStyle == "frosted" ? 2 : 1);
+                Bitmap blur = Backdrop.For(scr, MacLook ? 3 : T.LookId == "acrylic" ? 3 : Cfg.GlassStyle == "frosted" ? 2 : 1);
                 var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
                 var st = g.Save();
                 g.SetClip(path, CombineMode.Intersect);
@@ -217,6 +222,62 @@ namespace GlassDesk
 
         // ---------------- painting ----------------
         protected abstract void PaintContent(Graphics g);
+        /// <summary>True when this panel uses the macOS widget look instead of glass.</summary>
+        protected virtual bool MacLook { get { return false; } }
+        protected float PanelRadius { get { return MacLook ? 22 : Cfg.Radius; } }
+        /// <summary>The card behind a macOS-style widget; the weather widget paints a sky instead.</summary>
+        protected virtual void PaintMacBack(Graphics g, GraphicsPath path, RectangleF pr)
+        {
+            // liquid glass like macOS: the desktop bent through clear glass, a whisper of tint, light on the rim
+            LiquidBack(g);
+            using (var b = new SolidBrush(LiquidTint)) g.FillPath(b, path);
+            MacSheen(g, path, pr);
+        }
+
+        readonly LiquidGlass liquid = new LiquidGlass();
+        /// <summary>The glass stays clear on dark wallpapers and gets a little darker (or lighter) behind
+        /// the text on bright ones, so the words stay easy to read.</summary>
+        protected Color LiquidTint
+        {
+            get
+            {
+                Color c = T.TintTop; float lum = liquid.Glass != null ? liquid.Brightness : 0.5f;
+                float need = T.Dark ? Math.Max(0, lum - 0.45f) * 170 : Math.Max(0, 0.6f - lum) * 170;
+                if (Cfg.LiquidKind == "regular") need += 22;   // regular glass is a little more frosted
+                return Color.FromArgb(Math.Min(120, c.A + (int)need), c.R, c.G, c.B);
+            }
+        }
+        /// <summary>Draws the wallpaper as seen through a thick, clear pane of glass (see LiquidGlass).</summary>
+        protected void LiquidBack(Graphics g) { LiquidBack(g, true); }
+        void LiquidBack(Graphics g, bool draw)
+        {
+            try
+            {
+                if (Panel.Width < 8 || Panel.Height < 8) return;
+                Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
+                bool regular = Cfg.LiquidKind == "regular";
+                // what you see through the flat middle, and through the thick (blurrier) rim
+                Bitmap middle = Backdrop.For(scr, regular ? -2 : -1), rim = Backdrop.For(scr, regular ? 1 : -2);
+                var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
+                liquid.Update(middle, rim, src, Panel.Width, Panel.Height, T.S(PanelRadius), T.Sf(1), T.Dark, regular ? 0.35f : 0.18f);
+                if (draw && liquid.Glass != null) g.DrawImageUnscaled(liquid.Glass, Panel.X, Panel.Y);
+            }
+            catch (Exception ex) { Program.Log(ex); }
+        }
+        /// <summary>The bright edge and soft shine of macOS "liquid glass".</summary>
+        protected void MacSheen(Graphics g, GraphicsPath path, RectangleF pr)
+        {
+            if (liquid.Light != null) { g.DrawImageUnscaled(liquid.Light, Panel.X, Panel.Y); return; }
+            using (var lg = new LinearGradientBrush(new PointF(0, pr.Y - 1), new PointF(0, pr.Y + pr.Height * 0.5f), Color.FromArgb(T.Dark ? 26 : 60, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+                g.FillRectangle(lg, pr.X, pr.Y, pr.Width, pr.Height * 0.5f);
+            float r = T.S(PanelRadius);
+            var br = new RectangleF(pr.X + 0.8f, pr.Y + 0.8f, pr.Width - 1.6f, pr.Height - 1.6f);
+            using (var p = Gfx.Round(br, Math.Max(0, r - 0.8f)))
+            using (var lg = new LinearGradientBrush(new PointF(br.X, br.Y - 1), new PointF(br.X + br.Width * 0.35f, br.Bottom + 1), Color.FromArgb(T.Dark ? 120 : 200, 255, 255, 255), Color.FromArgb(T.Dark ? 18 : 50, 255, 255, 255)))
+            using (var pen = new Pen(lg, T.Sf(1.3f))) g.DrawPath(pen, p);
+        }
+        /// <summary>The theme a macOS-style panel draws with (widgets give it their own color).</summary>
+        protected virtual Theme MacBase() { return App.MacTheme; }
         public bool DropHint;   // another panel is being dragged onto this one
 
         // ---- stacks: a tab for every panel in the stack; click a tab to switch ----
@@ -234,17 +295,27 @@ namespace GlassDesk
             foreach (var m in members) want += Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) + T.Sf(6);
             float squeeze = want > area.Width ? area.Width / want : 1f;
             var sf = new StringFormat(Gfx.Center) { Trimming = StringTrimming.EllipsisCharacter };
+            RectangleF curR = RectangleF.Empty, fromR = RectangleF.Empty;
             foreach (var m in members)
             {
-                bool cur = m.Key == Id;
                 float tw = Math.Min(T.Sf(150), g.MeasureString(m.Value, f).Width + T.Sf(18)) * squeeze;
                 var tr = new RectangleF(x, ty, tw, th);
-                if (cur) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, T.Dark ? 110 : 80), tr, th / 2);
-                else Gfx.FillRound(g, T.Hover, tr, th / 2);
-                using (var b = new SolidBrush(cur ? T.Text : T.SubText)) g.DrawString(m.Value, f, b, RectangleF.Inflate(tr, -T.Sf(6), 0), sf);
+                Gfx.FillRound(g, T.Hover, tr, th / 2);
+                if (m.Key == Id) curR = tr;
+                if (m.Key == animFrom) fromR = tr;
                 tabRects.Add(new KeyValuePair<RectangleF, string>(tr, m.Key));
                 x += tw + T.Sf(6) * squeeze;
             }
+            // the highlight glides from the tab you came from to the one you picked
+            float p = AnimProgress;
+            if (p < 1f && !fromR.IsEmpty && !curR.IsEmpty)
+            {
+                float e = Ease(p);
+                curR = new RectangleF(fromR.X + (curR.X - fromR.X) * e, curR.Y, fromR.Width + (curR.Width - fromR.Width) * e, curR.Height);
+            }
+            if (!curR.IsEmpty) Gfx.FillRound(g, Gfx.WithAlpha(T.Accent, T.Dark ? 110 : 80), curR, th / 2);
+            foreach (var t in tabRects)
+                using (var b = new SolidBrush(t.Value == Id ? T.Text : T.SubText)) g.DrawString(members.Find(mm => mm.Key == t.Value).Value, f, b, RectangleF.Inflate(t.Key, -T.Sf(6), 0), sf);
             return true;
         }
 
@@ -253,7 +324,7 @@ namespace GlassDesk
             if (DropHint)
             {
                 var pr = new RectangleF(Panel.X + 1.5f, Panel.Y + 1.5f, Panel.Width - 3, Panel.Height - 3);
-                using (var path = Gfx.Round(pr, Math.Max(2, T.S(Cfg.Radius) - 1.5f)))
+                using (var path = Gfx.Round(pr, Math.Max(2, T.S(PanelRadius) - 1.5f)))
                 {
                     using (var b = new SolidBrush(Gfx.WithAlpha(T.Accent, 50))) g.FillPath(b, path);
                     using (var pen = new Pen(T.Accent, T.Sf(3))) g.DrawPath(pen, path);
@@ -271,6 +342,36 @@ namespace GlassDesk
             return false;
         }
 
+        // ---- a picture of this panel for previews (Settings, quick search), made only when it changed ----
+        bool snapDirty = true; Bitmap snap; int snapAt;
+        /// <summary>The panel as it looks now. Reuses the last picture unless the panel has redrawn since,
+        /// and never makes more than one every <paramref name="minMs"/>. Works for hidden widgets too.</summary>
+        public Bitmap Snapshot(int minMs)
+        {
+            if (snap != null && (!snapDirty || Environment.TickCount - snapAt < minMs)) return snap;
+            try
+            {
+                Rectangle? restore = null;
+                if (!Visible && this is Widget)
+                {
+                    // hidden widgets may never have been sized: give it its normal size just to draw it, then put it back
+                    var sz = PreferredPanelSize(Size.Empty);
+                    if (PanelBounds.Width != sz.Width || PanelBounds.Height != sz.Height)
+                    {
+                        restore = Bounds;
+                        SetPanelBounds(new Rectangle(PanelBounds.X, PanelBounds.Y, sz.Width, sz.Height));
+                    }
+                }
+                Bitmap b;
+                try { b = RenderBitmap(); }
+                finally { if (restore.HasValue) Bounds = restore.Value; }
+                if (snap != null) snap.Dispose();
+                snap = b; snapDirty = false; snapAt = Environment.TickCount;
+            }
+            catch (Exception ex) { Program.Log(ex); }
+            return snap;
+        }
+
         public Bitmap RenderBitmap()
         {
             var bmp = new Bitmap(Math.Max(1, Width), Math.Max(1, Height), PixelFormat.Format32bppArgb);
@@ -278,30 +379,48 @@ namespace GlassDesk
             {
                 Gfx.Setup(g);
                 g.Clear(Color.Transparent);
+                float ps = PressScale;
+                if (ps != 1f)
+                {
+                    // the press bounce: everything shrinks around the middle and springs back
+                    float cx = Panel.X + Panel.Width / 2f, cy = Panel.Y + Panel.Height / 2f;
+                    g.TranslateTransform(cx, cy); g.ScaleTransform(ps, ps); g.TranslateTransform(-cx, -cy);
+                }
                 DrawChrome(g);
                 float t = AnimProgress;
                 if (t >= 1f) PaintContent(g);
                 else
                 {
-                    // switching inside a stack: the new content slides in and fades up
-                    using (var layer = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb))
+                    // switching inside a stack: the new content slides in and fades up.
+                    // The content is drawn once and reused for every frame, so the slide stays smooth.
+                    if (animLayer == null || animLayer.Size != bmp.Size)
                     {
-                        using (var lg = Graphics.FromImage(layer)) { Gfx.Setup(lg); lg.Clear(Color.Transparent); PaintContent(lg); }
-                        float e = 1f - (float)Math.Pow(1 - t, 3);   // ease out
+                        if (animLayer != null) animLayer.Dispose();
+                        animLayer = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb);
+                        using (var lg = Graphics.FromImage(animLayer)) { Gfx.Setup(lg); lg.Clear(Color.Transparent); PaintContent(lg); }
+                    }
+                    var layer = animLayer;
+                    {
+                        float e = Ease(t);
                         int top = Math.Max(0, Math.Min(bmp.Height, AnimTop));
-                        if (top > 0) g.DrawImage(layer, new Rectangle(0, 0, bmp.Width, top), new Rectangle(0, 0, bmp.Width, top), GraphicsUnit.Pixel);
-                        float dx = animDir * (1 - e) * T.Sf(46);
+                        if (top > 0)
+                        {
+                            // the title row (a fence's tabs) is drawn live so its highlight can glide
+                            var st0 = g.Save(); g.SetClip(new Rectangle(0, 0, bmp.Width, top)); PaintContent(g); g.Restore(st0);
+                        }
+                        float dy = (1 - e) * T.Sf(28);   // the new content rises up into place
                         using (var ia = new ImageAttributes())
                         {
                             ia.SetColorMatrix(new ColorMatrix { Matrix33 = 0.15f + 0.85f * e });
                             var st = g.Save();
                             g.SetClip(new Rectangle(Panel.X, top, Panel.Width, Panel.Bottom - top));
-                            g.DrawImage(layer, new Rectangle((int)dx, top, bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
+                            g.DrawImage(layer, new Rectangle(0, top + (int)Math.Round(dy), bmp.Width, bmp.Height - top), 0, top, bmp.Width, bmp.Height - top, GraphicsUnit.Pixel, ia);
                             g.Restore(st);
                         }
                     }
                 }
                 PaintOverlay(g);
+                DrawShimmer(g);
                 if (Resizable && (hoverPanel || resizing) && !Cfg.LockPositions) DrawGrip(g);
             }
             return bmp;
@@ -310,7 +429,7 @@ namespace GlassDesk
         /// <summary>Two little curved lines in the corner, shown on hover, so you can see where to resize.</summary>
         void DrawGrip(Graphics g)
         {
-            float r = T.S(Cfg.Radius);
+            float r = T.S(PanelRadius);
             float x = Panel.Right, y = Panel.Bottom;
             int a = hoverGrip || resizing ? 230 : 120;
             using (var pen = new Pen(Color.FromArgb(a, hoverGrip || resizing ? T.Accent : T.Text), App.Theme.Sf(2.2f)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
@@ -325,21 +444,104 @@ namespace GlassDesk
             }
         }
 
+        void DrawMacChrome(Graphics g, float r)
+        {
+            // a soft drop shadow, then the solid card: no tint, light or rim, like macOS widgets
+            for (int i = pad; i >= 1; i--)
+            {
+                float f = 1f - (float)i / Math.Max(1, pad);
+                var rr = new RectangleF(Panel.X - i * 0.6f, Panel.Y - i * 0.6f + T.Sf(4), Panel.Width + i * 1.2f, Panel.Height + i * 1.2f);
+                using (var p = Gfx.Round(rr, r + i * 0.6f)) using (var pen = new Pen(Color.FromArgb((int)(f * f * (40 + 20 * hover)), 0, 0, 0), 1.4f))
+                    g.DrawPath(pen, p);
+            }
+            var pr = new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height);
+            if (pr.Width < 4 || pr.Height < 4) return;
+            using (var path = Gfx.Round(pr, r))
+            {
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                PaintMacBack(g, path, pr);
+                g.Restore(st);
+            }
+        }
+
+        /// <summary>Glass style "Liquid glass" for every panel (fences too): the wallpaper bent through clear glass.</summary>
+        void DrawLiquidChrome(Graphics g, RectangleF pr, float r)
+        {
+            using (var path = Gfx.Round(pr, r))
+            {
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                LiquidBack(g);
+                using (var b = new SolidBrush(LiquidTint)) g.FillPath(b, path);
+                if (!PanelColor.IsEmpty) using (var b = new SolidBrush(Color.FromArgb(T.Dark ? 40 : 34, PanelColor))) g.FillPath(b, path);
+                if (liquid.Light != null) g.DrawImageUnscaled(liquid.Light, Panel.X, Panel.Y);
+                g.Restore(st);
+                if (hover > 0.01f) using (var pen = new Pen(Color.FromArgb((int)(70 * hover), T.Accent), T.Sf(1.4f))) g.DrawPath(pen, path);
+            }
+        }
+
+        // ================= liquid glass, the Apple ideas =================
+
+        // ---- 2. press: the glass squishes a little, springs back, and a shimmer sweeps across ----
+        int pressStart = -100000;
+        System.Windows.Forms.Timer pressTimer;
+        const int PressMs = 650;
+        float PressT { get { return (Environment.TickCount - pressStart) / 1000f; } }
+        bool Pressing { get { return Environment.TickCount - pressStart < PressMs; } }
+        void StartPress()
+        {
+            if (!LiquidOn || !Smooth) return;
+            pressStart = Environment.TickCount;
+            if (pressTimer == null)
+            {
+                pressTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                pressTimer.Tick += delegate { if (!Pressing) pressTimer.Stop(); Redraw(); };
+            }
+            pressTimer.Start();
+        }
+        float PressScale { get { if (!Pressing) return 1f; float t = PressT; return 1f - 0.032f * (float)(Math.Exp(-5.5 * t) * Math.Cos(2 * Math.PI * 2.3 * t)); } }
+        void DrawShimmer(Graphics g)
+        {
+            if (!Pressing) return;
+            float t = PressT / (PressMs / 1000f);
+            var pr = new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height);
+            float bw = pr.Width * 0.35f, x = pr.X - bw + (pr.Width + bw * 2) * t;
+            using (var path = Gfx.Round(pr, T.S(PanelRadius)))
+            {
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                g.TranslateTransform(x, pr.Y + pr.Height / 2); g.RotateTransform(20);
+                var band = new RectangleF(-bw / 2, -pr.Height, bw, pr.Height * 2);
+                using (var lg = new LinearGradientBrush(new PointF(band.X - 1, 0), new PointF(band.Right + 1, 0), Color.Transparent, Color.Transparent))
+                {
+                    var cb = new ColorBlend(3);
+                    cb.Colors = new[] { Color.FromArgb(0, 255, 255, 255), Color.FromArgb((int)(80 * (1 - t)), 255, 255, 255), Color.FromArgb(0, 255, 255, 255) };
+                    cb.Positions = new[] { 0f, 0.5f, 1f };
+                    lg.InterpolationColors = cb;
+                    g.FillRectangle(lg, band);
+                }
+                g.Restore(st);
+            }
+        }
+
         void DrawChrome(Graphics g)
         {
-            float r = T.S(Cfg.Radius);
+            float r = T.S(PanelRadius);
+            if (MacLook) { DrawMacChrome(g, r); return; }
             if (pad > 0)
             {
                 for (int i = pad; i >= 1; i--)
                 {
                     float f = 1f - (float)i / pad;
                     var rr = new RectangleF(Panel.X - i, Panel.Y - i + T.Sf(3), Panel.Width + 2 * i, Panel.Height + 2 * i);
-                    using (var p = Gfx.Round(rr, r + i)) using (var pen = new Pen(Color.FromArgb((int)(f * f * 26), 0, 0, 0), 1.2f))
+                    using (var p = Gfx.Round(rr, r + i)) using (var pen = new Pen(Color.FromArgb((int)(f * f * (26 + 16 * hover)), 0, 0, 0), 1.2f))
                         g.DrawPath(pen, p);
                 }
             }
             var pr = new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height);
             if (pr.Width < 4 || pr.Height < 4) return;
+            if (Cfg.GlassStyle == "liquid" && !T.Solid) { DrawLiquidChrome(g, pr, r); return; }
             bool glass = Cfg.GlassOn;
             using (var path = Gfx.Round(pr, r))
             {
@@ -378,9 +580,6 @@ namespace GlassDesk
                     lg.InterpolationColors = cb;
                     g.FillPath(lg, path);
                 }
-                // 4. soft glow just inside the edge, like light trapped in thick glass
-                using (var pen = new Pen(Color.FromArgb(T.Dark ? 10 : 18, 255, 255, 255), T.Sf(8))) g.DrawPath(pen, path);
-                using (var pen = new Pen(Color.FromArgb(T.Dark ? 12 : 22, 255, 255, 255), T.Sf(3))) g.DrawPath(pen, path);
                 g.Restore(st);
             }
             rim:
@@ -388,8 +587,7 @@ namespace GlassDesk
             var br = new RectangleF(pr.X + 0.6f, pr.Y + 0.6f, pr.Width - 1.2f, pr.Height - 1.2f);
             if (T.Flat)
             {
-                using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f))) using (var pen = new Pen(T.Border, 1f)) g.DrawPath(pen, p);
-                return;
+                return;   // no outline: the panels have no white border
             }
             if (T.Neon)
             {
@@ -402,6 +600,7 @@ namespace GlassDesk
                 }
                 return;
             }
+            if (false)   // the white rim around the glass was removed (it read as a border)
             using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
             using (var lg = new LinearGradientBrush(new PointF(br.X - 1, br.Y - 1), new PointF(br.Right + 1, br.Bottom + 1), Color.White, Color.White))
             {
@@ -413,8 +612,12 @@ namespace GlassDesk
                 lg.InterpolationColors = cb;
                 using (var pen = new Pen(lg, T.Sf(1.25f))) g.DrawPath(pen, p);
             }
-            // 6. a hairline highlight along the top edge, just inside the rim
-            if (r < pr.Width / 2 - 2)
+            // hovering: a soft light along the rim in the accent color
+            if (hover > 0.01f)
+                using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
+                using (var pen = new Pen(Color.FromArgb((int)(70 * hover), T.Accent), T.Sf(1.4f))) g.DrawPath(pen, p);
+            // 6. (the white hairline along the top edge was removed with the other white borders)
+            if (false && r < pr.Width / 2 - 2)
                 using (var lg = new LinearGradientBrush(new PointF(pr.X + r, 0), new PointF(pr.Right - r, 0), Color.FromArgb(90, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
                 using (var pen = new Pen(lg, 1f))
                     g.DrawLine(pen, pr.X + r * 0.8f, pr.Y + 1.8f, pr.Right - r, pr.Y + 1.8f);
@@ -441,19 +644,44 @@ namespace GlassDesk
 
         // ---- the slide when you switch to this panel in a stack ----
         int animStartTick, animDir; System.Windows.Forms.Timer animTimer;
-        const int AnimMs = 260;
+        Bitmap animLayer; string animFrom;
+        const int AnimMs = 320;
+        /// <summary>Smooth start and stop (ease out, like iOS).</summary>
+        protected static float Ease(float t) { t = Math.Max(0, Math.Min(1, t)); return 1f - (float)Math.Pow(1 - t, 4); }
         float AnimProgress { get { if (animTimer == null || !animTimer.Enabled) return 1f; return Math.Min(1f, (Environment.TickCount - animStartTick) / (float)AnimMs); } }
         /// <summary>Content above this line (a fence's title) stays put while the rest slides.</summary>
         protected virtual int AnimTop { get { return Panel.Y; } }
-        public void PlayEnter(int dir)
+        public void PlayEnter(int dir, string from)
         {
-            animDir = dir >= 0 ? 1 : -1; animStartTick = Environment.TickCount;
+            // switching inside a stack has its own slide, so skip the fade-in
+            if (fadeTimer != null) fadeTimer.Stop();
+            fadeDone = null; fadeAlpha = 255;
+            if (IsHandleCreated) Native.SetLayeredAlpha(Handle, 255);
+            animDir = dir >= 0 ? 1 : -1; animStartTick = Environment.TickCount; animFrom = from;
+            if (animLayer != null) { animLayer.Dispose(); animLayer = null; }
             if (animTimer == null)
             {
-                animTimer = new System.Windows.Forms.Timer { Interval = 15 };
-                animTimer.Tick += delegate { if (Environment.TickCount - animStartTick >= AnimMs) animTimer.Stop(); Redraw(); };
+                animTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                animTimer.Tick += delegate
+                {
+                    if (Environment.TickCount - animStartTick >= AnimMs)
+                    {
+                        animTimer.Stop(); animFrom = null;
+                        if (animLayer != null) { animLayer.Dispose(); animLayer = null; }
+                    }
+                    if (Visible) Redraw();
+                };
             }
-            animTimer.Start(); Redraw();
+            animTimer.Start();
+        }
+
+        /// <summary>Draws the panel even while it is hidden, so it has the right picture the moment it shows.</summary>
+        public void RedrawBeforeShow()
+        {
+            if (!Native.IsWindows || Width <= 0 || Height <= 0) return;
+            if (!IsHandleCreated) CreateHandle();
+            using (var bmp = RenderBitmap()) Push(bmp);
+            snapDirty = true;
         }
 
         public void Redraw()
@@ -461,7 +689,78 @@ namespace GlassDesk
             if (!Native.IsWindows || !IsHandleCreated || !Visible || Width <= 0 || Height <= 0) return;
             if (App.Paused) { App.MarkDirty(this); return; }
             using (var bmp = RenderBitmap()) Push(bmp);
+            snapDirty = true;
         }
+
+        // ---- smooth appearance: panels fade in when they show up, fade out when hidden together,
+        // and glow a little brighter while the mouse is over them ----
+        byte fadeAlpha = 255;
+        System.Windows.Forms.Timer fadeTimer;
+        int fadeStart, fadeMs; float fadeFrom, fadeTo; Action fadeDone;
+        bool Smooth { get { return !Cfg.LowPower && !App.Preview; } }
+
+        public void FadeTo(float target, int ms, Action done)
+        {
+            if (!IsHandleCreated || !Smooth) { fadeAlpha = (byte)(target * 255); if (IsHandleCreated) Native.SetLayeredAlpha(Handle, fadeAlpha); if (done != null) done(); return; }
+            if (fadeTimer == null)
+            {
+                fadeTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                fadeTimer.Tick += delegate
+                {
+                    float t = Math.Min(1f, (Environment.TickCount - fadeStart) / (float)Math.Max(1, fadeMs));
+                    float e = fadeTo > fadeFrom ? Ease(t) : t * t;   // ease out when appearing, ease in when leaving
+                    fadeAlpha = (byte)Math.Round(255 * (fadeFrom + (fadeTo - fadeFrom) * e));
+                    Native.SetLayeredAlpha(Handle, fadeAlpha);
+                    if (t >= 1f) { fadeTimer.Stop(); var d = fadeDone; fadeDone = null; if (d != null) d(); }
+                };
+            }
+            fadeTimer.Stop();
+            fadeFrom = fadeAlpha / 255f; fadeTo = target; fadeMs = ms; fadeStart = Environment.TickCount; fadeDone = done;
+            fadeTimer.Start();
+        }
+
+        protected override void SetVisibleCore(bool value)
+        {
+            // start see-through so there's no flash before the fade-in begins
+            if (value && !Visible && Smooth && IsHandleCreated) { fadeAlpha = 0; Native.SetLayeredAlpha(Handle, 0); }
+            base.SetVisibleCore(value);
+        }
+
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            if (Visible && Smooth && IsHandleCreated && fadeAlpha == 0)
+            {
+                // a small delay per panel so they appear one after another, not all at once
+                int delay = Math.Min(160, (Math.Abs(Id.GetHashCode()) % 6) * 30);
+                var t0 = new System.Windows.Forms.Timer { Interval = Math.Max(1, delay) };
+                t0.Tick += delegate { t0.Stop(); t0.Dispose(); if (fadeAlpha < 255 && Visible) FadeTo(1f, 260, null); };
+                t0.Start();
+            }
+            base.OnVisibleChanged(e);
+        }
+
+        float hover;                          // 0..1, animated
+        bool hoverWanted;
+        System.Windows.Forms.Timer hoverTimer;
+        void SetHover(bool on)
+        {
+            if (hoverWanted == on) return;
+            hoverWanted = on;
+            if (!Smooth) { hover = on ? 1 : 0; Redraw(); return; }
+            if (hoverTimer == null)
+            {
+                hoverTimer = new System.Windows.Forms.Timer { Interval = 30 };
+                hoverTimer.Tick += delegate
+                {
+                    float target = hoverWanted ? 1f : 0f;
+                    hover += Math.Sign(target - hover) * 0.25f;
+                    if (Math.Abs(hover - target) < 0.13f) { hover = target; hoverTimer.Stop(); }
+                    Redraw();
+                };
+            }
+            hoverTimer.Start();
+        }
+        protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); SetHover(true); }
 
         void Push(Bitmap bmp)
         {
@@ -475,7 +774,7 @@ namespace GlassDesk
                 var size = new Native.SIZE(bmp.Width, bmp.Height);
                 var src = new Native.POINT(0, 0);
                 var dst = new Native.POINT(Left, Top);
-                var blend = new Native.BLENDFUNCTION { BlendOp = Native.AC_SRC_OVER, SourceConstantAlpha = 255, AlphaFormat = Native.AC_SRC_ALPHA };
+                var blend = new Native.BLENDFUNCTION { BlendOp = Native.AC_SRC_OVER, SourceConstantAlpha = fadeAlpha, AlphaFormat = Native.AC_SRC_ALPHA };
                 Native.UpdateLayeredWindow(Handle, screen, ref dst, ref size, mem, ref src, 0, ref blend, Native.ULW_ALPHA);
             }
             finally
@@ -517,6 +816,7 @@ namespace GlassDesk
             base.OnMouseDown(e);
             if (e.Button != MouseButtons.Left || Cfg.LockPositions) return;
             downScreen = Cursor.Position; downBounds = PanelBounds; downZoom = Zoom;
+            StartPress();
             zone = ResizeZone(e.Location);
             if (zone != 0) { resizing = true; Capture = true; if (IsHandleCreated) SetGlass(true); }
             else if (IsDragArea(e.Location)) { armed = true; Capture = true; }
@@ -563,7 +863,7 @@ namespace GlassDesk
                 r = Snap(r);
                 Location = new Point(r.X - pad, r.Y - pad);
                 // the blurred wallpaper behind the panel has to follow it while it moves
-                if (UsesBackdrop && Environment.TickCount - lastMoveDraw > 30) { lastMoveDraw = Environment.TickCount; Redraw(); }
+                if ((UsesBackdrop || LiquidOn) && Environment.TickCount - lastMoveDraw > 30) { lastMoveDraw = Environment.TickCount; Redraw(); }
                 return;
             }
             int zn = Cfg.LockPositions ? 0 : ResizeZone(e.Location);
@@ -617,6 +917,7 @@ namespace GlassDesk
         {
             base.OnMouseLeave(e);
             if (hoverPanel && !resizing) { hoverPanel = hoverGrip = false; Redraw(); }
+            SetHover(false);
             OnHover(new Point(-1, -1));
         }
 
@@ -643,8 +944,14 @@ namespace GlassDesk
         // ------------- small drawing helpers for subclasses -------------
         protected void Title(Graphics g, string text, Rectangle r)
         {
+            if (MacLook)
+            {
+                // macOS widgets name themselves in their app's color, in normal case
+                using (var b = new SolidBrush(T.Accent)) g.DrawString(text, Gfx.F(T.DisplayFont, T.Sf(13.5f), FontStyle.Bold), b, new RectangleF(r.X, r.Y - T.Sf(2), r.Width, r.Height + T.Sf(4)), Gfx.Left);
+                return;
+            }
             var f = Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold);
-            if (Cfg.GlassStyle == "transparent")
+            if ((Cfg.GlassStyle == "transparent" || Cfg.GlassStyle == "liquid"))
                 using (var sh = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
                     g.DrawString(text.ToUpperInvariant(), f, sh, new RectangleF(r.X, r.Y + T.Sf(1.2f), r.Width, r.Height), Gfx.Left);
             using (var b = new SolidBrush(T.SubText))

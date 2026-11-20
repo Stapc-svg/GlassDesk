@@ -1,5 +1,215 @@
 # Changelog
 
+## 2.0.0
+
+GlassDesk 2.0 brings together everything since 1.9:
+
+- **Liquid glass:** real lens bending, frost and a thin rainbow edge. Choose Regular or Clear. Turning it on now warns you first that it uses more memory (about 100–200 MB).
+- **A style for each widget** (Glass or Liquid glass), each with its own design: Notes, Reminders-style to-dos, Activity rings, gauges and more.
+- **Live desktop preview and widget pictures in Settings,** and a **Widgets tab** in quick search.
+- **Online calendar, every drive in System, game screenshot fences, the clipboard widget,** and Chinese, Spanish and Russian.
+- **A new animated welcome screen** shows what's new: the logo pops in, the title slides in, the four cards rise one after another, and a light sweeps across each. It appears once after updating.
+
+## 1.20.1
+
+- **No white patch on liquid glass.** The light glint in the top-left corner and the brightening of the rim are gone, so the edges keep the wallpaper's own colors.
+
+## 1.20.0
+
+- **More realistic liquid glass.**
+  - **Blur:** the glass is now frosted, most at the thick rounded rim and least in the flat middle, like real thick glass. **Regular** is frosted all over, like Apple's default glass; **Clear** stays sharp in the middle with soft, blurry edges.
+  - **Curved distortion:** the bending now also leans toward the corners and is smoothed like the surface of a liquid. Straight lines in your wallpaper curve as they pass through the edge, instead of turning into straight stripes along the sides.
+  - **No corner seams:** the diagonal crease that showed in the corners of each panel is gone.
+- **Settings scrolls cleanly.** Scrolling in Settings could leave smeared, doubled rows (repeated labels). The page now redraws in one go on every scroll step.
+
+## 1.19.0
+
+- **Real liquid glass.** The glass now works like a thick, clear lens. Near the rounded edges you see what's just *outside* the panel, squeezed into the rim, the way a drop of water or Apple's Liquid Glass bends light. Before, it pulled from inside and mostly looked like a tinted box. Colors look a little richer through the glass, a thin rainbow fringe shows at the edges, and a small glint sits only where the rim faces the light (top left and bottom right), with no white frame.
+- **Clearer glass.** Much less gray tint: the bending does the work. On bright or busy wallpapers, use Liquid glass type › **Regular**, which is softly frosted like Apple's default glass.
+- **Removed** the mouse-following light and the melting bridges between panels.
+
+## 1.18.0
+
+Four ideas taken from Apple's Liquid Glass, rebuilt for Windows:
+
+- **Regular and Clear liquid glass.** Settings › Appearance (or Widgets) › Liquid glass type. **Regular** bends a softly blurred picture and is a little frosted, so it's easier to read. **Clear** shows the most of your wallpaper.
+- **The light follows your mouse.** As the mouse gets near a liquid glass panel, a bright light slides along the rim toward it, with a softer glint on the opposite side, like tilting an iPhone.
+- **Press bounce and shimmer.** Clicking a liquid glass panel squishes it slightly, it springs back, and a band of light sweeps across it.
+- **Panels melt together.** Liquid glass panels close to each other join with a liquid bridge: thin when they're a little apart, wide when they're almost touching. It follows live while you drag. Turn it off with "Melt nearby panels together".
+
+## 1.17.3
+
+- **Settings scrolls smoothly again.** The desktop preview and the widget pictures were redrawing every panel over and over, even while you scrolled. Now:
+  - they pause while the page is scrolling,
+  - they only update when they are on screen,
+  - each panel's picture is reused until that panel actually changes,
+  - and each widget picture is shrunk once and then just copied, instead of being scaled again on every scroll step.
+- **Widget pictures work for widgets that are off.** Widgets you never turned on had no size yet, so their picture stayed empty. They are now drawn at their normal size, faded.
+
+## 1.17.2
+
+- **Liquid glass for everything.** Settings › Appearance › Glass style now has a fifth choice, **Liquid**. It turns every panel into clear liquid glass that bends the wallpaper at its edges, fences included. Before, Liquid glass could only be picked per widget, from right-click › Style.
+- The last thin white line along the top edge of panels is gone too.
+
+## 1.17.1
+
+- **No more white borders.** The white line around every widget and fence is gone, in both the Glass and the Liquid glass styles. Liquid glass keeps its bent edges and only a soft shine inside the glass.
+
+## 1.17.0
+
+- **Real liquid glass.** The macOS style is now called **Liquid glass** and works like a thick, clear pane of glass. Your wallpaper bends around the rounded edges like through a lens, colors split slightly at the rim like a prism, and light catches the edges: brightest at the top left, with a softer glint on the opposite corner. The middle stays clear.
+- On bright wallpapers the glass gets slightly darker behind the text, so words stay readable. On dark wallpapers it stays completely clear.
+- The bent glass is worked out once for each position and size and then reused, so it costs nothing while the widgets update.
+
+## 1.16.0
+
+- **See each widget in Settings, not just its name.** On the Widgets page, every widget's row has a small live picture of it next to its switch, in the style you picked (Glass or macOS). Widgets that are off are shown faded, so you can see what turning one on will add.
+
+## 1.15.0
+
+- **Smooth scrolling in quick search (Ctrl + Alt + F).** Scrolling used to stutter and jump a whole row at a time. Now the list glides, the glass background is drawn once instead of on every step, and icons load in the background while the window is open, so scrolling never waits for one. You can also drag the scroll bar or click its track to jump.
+- **A Widgets tab in quick search.** It shows a small live picture of every widget. Click one (or press Enter) to put it on your desktop or take it off: a check means it's on, a plus means it's off. Typing filters the widgets too.
+
+## 1.14.0
+
+- **See your desktop in Settings.** The Appearance, Widgets and Organizer pages start with a live picture of your desktop: your wallpaper with every fence and widget exactly where it is and how it looks. Turn a widget on, switch it to the macOS style or change the glass, and the picture changes within a second. Point at a panel in the picture to see its name.
+
+## 1.13.0
+
+- **The macOS style is now see-through glass**, like the new "liquid glass" look on a Mac: the blurred desktop shows through, light catches the top edge, and a soft shadow lifts it off the wallpaper.
+- **Every widget has its own macOS design and color**, like the Mac app it stands for:
+  - **Notes** is a yellow paper note with ruled lines and a folded corner. The first line is the title.
+  - **To-do** looks like Reminders: a big count of what's left and blue circles.
+  - **Today** uses Activity-style rings inside each other (day, week, month, year).
+  - **System** shows round gauges like the Batteries widget, one for each drive.
+  - Clock in orange, calendar and countdown in red, music in pink, focus in orange, quote in purple, network in light blue, GitHub in indigo, all with titles in that color.
+
+## 1.12.0
+
+- **Choose a style for each widget.** Right-click any widget › Style and pick **Glass** (the GlassDesk look) or **macOS** (solid rounded cards like the widgets on a Mac). Settings › Widgets › Widget style switches all of them at once.
+- In the macOS style the clock becomes a round clock face with the day and time beside it, the weather card turns into the sky (blue by day, dark at night, grey when it rains), and the calendar marks today in red.
+- In the Glass style, the clock's Style menu also lets you pick Photos, Drawn sky or No picture, and the weather's Style menu turns its picture on or off.
+
+## 1.11.0
+
+Ideas and bug reports from the XDA thread:
+
+- **Recycle Bin icon stays right.** It could show empty while it was full until GlassDesk was restarted. GlassDesk now watches the Recycle Bin folders on every drive and changes the icon the moment something is deleted or the bin is emptied, and it also checks the bin folders directly when Windows gives the wrong answer.
+- **Every drive in the System monitor.** Internal drives and USB drives each get their own bar with free space, and the widget grows or shrinks when you plug a drive in or out. Settings › Widgets › System drives turns this off.
+- **Online calendar.** Connect Google Calendar, Outlook or iCloud with the calendar's private iCal (.ics) link (right-click the calendar › Connect a calendar…). Days with events get a dot, and the next two events show under the month. It refreshes every 15 minutes, and repeating events are included.
+- **Game screenshots as fences.** Settings › Organizer › Game screenshots finds the Xbox Game Bar, NVIDIA, AMD and Windows screenshot folders and adds them as folder fences in one click.
+
+## 1.10.0
+
+- **GlassDesk speaks your language** (asked for in issue #24): 简体中文 (Chinese), Español and Русский, besides English. It follows your Windows language automatically, or pick one in Settings › General › Language. Menus, Settings, widgets, the welcome screen, search and theme descriptions are translated, and dates follow the language too. Chinese uses Microsoft YaHei so every character shows up.
+- Translations are plain text files in `assets/lang/` (English, a tab, the translation), so anyone can add or fix a language.
+
+## 1.9.10
+
+- **New Clipboard widget:** shows the last things you copied (links, colors, file paths and text, each with a little colored mark). Click one to copy it again. It's kept in memory only, never saved to disk, and copies from password managers are skipped. Right-click to pause it or clear the history.
+
+## 1.9.9
+
+- **Smooth fade-in:** panels and widgets fade in gently, one after another, instead of popping up.
+- **Smooth fade-out:** Ctrl + Alt + G (show / hide panels) fades everything out before hiding it.
+- **Hover glow:** a panel's edge lights up softly in your accent color and its shadow deepens while the mouse is over it.
+- **Smooth scrolling in Settings:** the mouse wheel glides the page instead of jumping.
+- All of this is switched off in power-saving mode.
+
+## 1.9.8
+
+- **Weather pictures:** the weather widget shows a sky that matches the weather: sun, a few clouds, overcast, rain, thunderstorm, snow, fog, and a starry night with a crescent moon. Turn it off in Settings › Widgets › Weather picture.
+- **Half picture, half glass:** the weather picture and the clock photo cover the top of the widget and fade smoothly into the glass, so the lower part stays clear and easy to read.
+
+## 1.9.7
+
+- **Photo backgrounds for the clock:** free public-domain (CC0) photos that change with the time of day: green hills in the morning, snowy mountains by day, a city sunset in the evening and city lights at night. Choose **Photos**, **Drawn sky** or **Off** in Settings › Widgets › Clock background. Photo credits: assets/scenes/CREDITS.md.
+
+## 1.9.6
+
+- **New weather design:** city and today's high/low, a big glowing icon and temperature, glass chips for humidity, wind and chance of rain, a sunrise-to-sunset arc showing where the sun is now, and the next 5 hours.
+- **Vinyl music widget:** the cover now sits on a spinning vinyl record with a tone arm that lowers while a song plays, and a soft glow in the cover's colors.
+- **Sky scene clock:** the clock sits on a little landscape whose sky, sun, moon and stars follow the real time of day. Turn it off in Settings › Widgets › Sky scene.
+
+## 1.9.5
+
+- **No more white title bars:** the Settings window and the small pop-up boxes now use your theme's colors for their title bar. GlassDesk was misreading the Windows version (Windows reports "Windows 8" to apps unless asked properly), which also switched off dark title bars and rounded corners on Windows 10/11.
+- **Weather has a backup service:** if Open-Meteo can't be reached, GlassDesk asks wttr.in instead. Errors are written to error.log in the GlassDesk folder.
+
+## 1.9.4
+
+- **Glass settings window:** the Settings window now shows your blurred wallpaper through it, like the desktop panels.
+- **Glass scroll bar:** a thin, rounded scroll bar that matches the theme replaces the white Windows one. Drag it, click above/below it, or scroll over it.
+- **Updates just work:** GlassDesk now always checks its official GitHub page for new versions. No need to type a GitHub address any more. It finds the newest Windows installer even when the latest release is for Linux or Android.
+- **Recycle Bin icon fixed:** the full/empty icon now updates within a few seconds when you delete or empty files anywhere, and works on PCs where Windows reported the bin as empty by mistake.
+
+## 1.9.3
+
+- **Weather works with "City, Country":** typing "Tel Aviv, Israel" or "Paris France" now finds the place (before, only the plain city name worked).
+- **Weather recovers by itself:** if there's no internet when the PC starts, the widget tries again every minute instead of waiting 30 minutes. Weather in a stack keeps updating too.
+- **Softer theme previews:** the bars in the theme cards are see-through glass instead of bright white.
+
+## 1.9.2
+
+- Fixed: switching tabs in one stack made every other stack lose its tabs and come apart.
+
+## 1.9.1
+
+- Switching tabs in a stack: the new content now rises up into place instead of sliding in from the side.
+
+## 1.9.0
+
+- **All your apps in search:** Ctrl + Alt + F now lists every app installed on your PC (from the Start menu), not only your desktop. Filter with **All**, **Desktop** and **Apps**.
+- **Drag apps onto fences:** drag an app from search onto any fence. GlassDesk puts a shortcut on your desktop in that fence (the app itself is never moved).
+- **Blurrier search:** the search window now fully blurs what is behind it.
+
+## 1.8.9
+
+- Fixed: switching inside a stack could make the whole stack disappear, or show an empty or old picture for a moment. A panel is now fully drawn before it appears.
+
+## 1.8.8
+
+- **Smoother stack switching:** the tab highlight glides from the old tab to the new one, the content slides in smoothly, and there is no more flash or jump when you switch.
+
+## 1.8.7
+
+- Fixed: stacked fences and widgets sometimes showed no tabs after GlassDesk started, until you rescanned the desktop.
+
+## Android 2.0
+
+- **New Liquid glass design:** clear, thick glass like iOS 26. It's nearly see-through, brighter toward the rounded edge like a lens, with a soft shade inside the bottom edge and a faint prism fringe on the rim. Pick **Clear** or **Regular** (a little frosted, easier to read on busy wallpapers) under Appearance › Glass type, with the iOS accent colors.
+- A **"New in GlassDesk 2.0"** card at the top of the Widgets tab, until you tap it.
+- Android doesn't let home-screen widgets see the wallpaper behind them, so the widgets can't bend it like on Windows and Linux. The glass is drawn to look thick and clear instead.
+
+## Linux 2.0.0
+
+- **Liquid glass** comes to Linux: Settings › Appearance › Glass style › **Liquid glass**. The wallpaper bends at each panel's rounded edges like a thick lens, with frost and a thin rainbow fringe at the rim. Liquid glass type lets you choose **Regular** (a little frosted) or **Clear**. Before turning it on, GlassDesk warns that it uses about 100–200 MB more memory. It needs python3-numpy, which the .deb now recommends; without numpy, the option is hidden.
+- **Animated welcome screen** for 2.0, shown once after updating.
+- Includes everything from Linux 1.9.8–1.9.10 (new weather, clock backgrounds, vinyl music, clipboard, fades).
+
+## Linux 1.9.10
+
+- **New Clipboard widget:** the last things you copied; click one to copy it again. Memory only, never saved; copies marked private by password managers are skipped. Right-click to pause or clear.
+
+## Linux 1.9.9
+
+- **Smooth fade-in** of panels and widgets, one after another; **fade-out** before hiding them all.
+- **Hover glow:** the edge lights up softly in your accent color and the shadow deepens under the mouse.
+- Needs a compositor (GNOME, KDE, Cinnamon…); without one, panels simply appear.
+
+## Linux 1.9.8
+
+Everything from Windows 1.9.3–1.9.8, now on Linux:
+
+- **New weather widget:** city with today's high/low, a big glowing icon and temperature, glass chips for humidity, wind and chance of rain, a sunrise-to-sunset arc, and the next 5 hours.
+- **Weather pictures:** a drawn sky that matches the weather (sun, clouds, rain, storm, snow, fog, starry night) covers the top of the widget and fades into the glass. Settings › Widgets › Weather picture.
+- **Weather that works more often:** "City, Country" names are found, it retries every minute after an error, and wttr.in is used when Open-Meteo can't be reached.
+- **Clock backgrounds:** free CC0 photos for morning, day, sunset and night that fade into the glass, or a drawn sky with sun, moon, stars and mountains. Settings › Widgets › Clock background.
+- **Vinyl music widget:** the cover spins on a vinyl record while a song plays, with a tone arm and a glow in the cover's colors.
+- **Glass Settings window:** the blurred wallpaper shows through the Settings window (with a compositor), with a thin glass scroll bar.
+- **Softer theme previews:** see-through bars instead of bright white.
+- **Updates:** the update check finds the newest release that has a Linux download, even when the latest release is for Windows or Android.
+
 ## Linux 1.9.2
 
 - **All your apps in search:** the search window lists every app in your app menu, not only your desktop. Filter with **All**, **Desktop** and **Apps**.

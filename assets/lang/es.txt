@@ -1,0 +1,434 @@
+# GlassDesk translation: English<TAB>translation. \n = new line. Missing lines stay in English.
+Stack with	Apilar con
+Next in stack	Siguiente en la pila
+Take out of stack	Sacar de la pila
+Stack them	Apilarlos
+No, just put it here	No, solo ponlo aquí
+Settings	Configuración
+Show	Mostrar
+Hide	Ocultar
+ panels    Ctrl+Alt+G	 paneles    Ctrl+Alt+G
+Find on desktop…    Ctrl+Alt+F	Buscar en el escritorio…    Ctrl+Alt+F
+New fence…	Nuevo grupo…
+Add a rule…	Añadir una regla…
+Edit note	Editar nota
+Organize desktop…	Organizar escritorio…
+Rescan desktop	Volver a escanear el escritorio
+Check for updates	Buscar actualizaciones
+Exit GlassDesk	Salir de GlassDesk
+Change event…	Cambiar evento…
+Another quote	Otra cita
+Open profile	Abrir perfil
+Change username…	Cambiar usuario…
+Refresh now	Actualizar ahora
+Play / pause	Reproducir / pausar
+Next song	Siguiente canción
+Previous song	Canción anterior
+Volume mixer	Mezclador de volumen
+Resume	Reanudar
+Pause (don't remember copies)	Pausar (no recordar copias)
+Clear history	Borrar historial
+Start / pause	Iniciar / pausar
+Reset	Restablecer
+Edit list	Editar lista
+Clear finished tasks	Borrar tareas terminadas
+Refresh	Actualizar
+Change city…	Cambiar ciudad…
+Use °C	Usar °C
+Use °F	Usar °F
+Next photo	Siguiente foto
+Choose folder…	Elegir carpeta…
+ seconds	 segundos
+Use 12-hour time	Usar formato de 12 horas
+Use 24-hour time	Usar formato de 24 horas
+Reset size	Restablecer tamaño
+Hide this widget	Ocultar este widget
+Settings…	Configuración…
+Clipboard	Portapapeles
+Today	Hoy
+Close stack	Cerrar pila
+Open stack	Abrir pila
+Turn off stacks	Desactivar pilas
+Open	Abrir
+Empty Recycle Bin	Vaciar papelera
+Show in File Explorer	Mostrar en el Explorador de archivos
+Copy path	Copiar ruta
+Move to fence	Mover al grupo
+Back to 	Volver a 
+Delete (Recycle Bin)	Eliminar (papelera)
+Properties	Propiedades
+Expand	Expandir
+Roll up	Contraer
+Rename…	Cambiar nombre…
+Color	Color
+Icon size	Tamaño de iconos
+Stop rolling up by itself	Dejar de contraerse solo
+Roll up until I point at it	Contraer hasta que lo señale
+Sort by	Ordenar por
+Add a rule for this fence…	Añadir una regla a este grupo…
+Open folder	Abrir carpeta
+Remove this fence	Quitar este grupo
+Delete this fence	Eliminar este grupo
+Open Desktop folder	Abrir carpeta del escritorio
+Hide this category	Ocultar esta categoría
+Enter to copy	Enter para copiar
+Switch to the {0} theme	Cambiar al tema {0}
+Open Settings	Abrir configuración
+Organize desktop	Organizar escritorio
+Hide or show all panels	Mostrar u ocultar todos los paneles
+Make a new fence	Crear un grupo nuevo
+Dark mode	Modo oscuro
+Light mode	Modo claro
+GlassDesk command	Comando de GlassDesk
+Search the web for "{0}"	Buscar «{0}» en la web
+Search your desktop and apps…	Busca en tu escritorio y tus apps…
+Your desktop is empty	Tu escritorio está vacío
+Nothing on your desktop matches "{0}"	Nada en tu escritorio coincide con «{0}»
+Drag an app onto a fence to add it	Arrastra una app a un grupo para añadirla
+All	Todo
+Desktop	Escritorio
+Apps	Apps
+Fences	Grupos
+Your files sorted into glass boxes. Drag a fence's edge to resize it.	Tus archivos ordenados en cajas de cristal. Arrastra el borde de un grupo para cambiar su tamaño.
+Widgets	Widgets
+Clock, weather, music, to-dos and more. Right-click one for options.	Reloj, tiempo, música, tareas y más. Haz clic derecho en uno para ver opciones.
+Quick search	Búsqueda rápida
+Press Ctrl + Alt + F to find and open anything on your desktop.	Pulsa Ctrl + Alt + F para buscar y abrir cualquier cosa de tu escritorio.
+Themes	Temas
+26 looks, from GlassDesk glass to Mica and Acrylic. Settings → Appearance.	26 estilos, del cristal de GlassDesk a Mica y Acrylic. Configuración → Apariencia.
+Welcome to GlassDesk	Bienvenido a GlassDesk
+Your desktop, organized in beautiful glass.	Tu escritorio, organizado en un cristal precioso.
+Get started	Empezar
+NOW PLAYING	REPRODUCIENDO
+PAUSED	EN PAUSA
+LAST PLAYED	ÚLTIMA ESCUCHADA
+MUSIC	MÚSICA
+Ticked files go into their fence. Unticked files go to an "Unsorted" fence.	Los archivos marcados van a su grupo. Los no marcados van al grupo «Sin ordenar».
+Cancel	Cancelar
+Start organizing · 	Empezar a organizar · 
+Desktop organizer	Organizador de escritorio
+show / hide panels	mostrar / ocultar paneles
+General	General
+Language	Idioma
+same as Windows	igual que Windows
+The language of menus, Settings and widgets	El idioma de los menús, la configuración y los widgets
+Startup	Inicio
+Start with Windows	Iniciar con Windows
+Show / hide shortcut	Atajo para mostrar / ocultar
+Quick search shortcut	Atajo de búsqueda rápida
+Behavior	Comportamiento
+Lock positions	Bloquear posiciones
+Keep behind windows	Mantener detrás de las ventanas
+Open with a single click	Abrir con un solo clic
+Appearance	Apariencia
+Windows themes	Temas de Windows
+Theme	Tema
+Mode	Modo
+Accent color	Color de acento
+Match my wallpaper	Combinar con mi fondo
+Glass	Cristal
+Frosted	Esmerilado
+Blur	Desenfoque
+Clear	Claro
+See-through	Transparente
+Glass style	Estilo del cristal
+Glass tint	Tinte del cristal
+Corner radius	Radio de las esquinas
+Panel size	Tamaño de los paneles
+Wallpaper changer	Cambiador de fondos
+Change my wallpaper	Cambiar mi fondo de pantalla
+Folder	Carpeta
+Choose…	Elegir…
+Change every	Cambiar cada
+Next wallpaper	Siguiente fondo
+Next	Siguiente
+Size	Tamaño
+Resize any widget	Cambiar tamaño de widgets
+Reset all sizes	Restablecer tamaños
+Clock	Reloj
+Show seconds	Mostrar segundos
+Photos	Fotos
+Drawn sky	Dibujo
+Off	No
+Clock background	Fondo del reloj
+24-hour time	Formato de 24 horas
+More widgets	Más widgets
+System monitor	Monitor del sistema
+Calendar	Calendario
+Notes	Notas
+To-do list	Lista de tareas
+Music	Música
+Quote of the day	Cita del día
+GitHub stats	Estadísticas de GitHub
+GitHub username	Usuario de GitHub
+Change…	Cambiar…
+Network meter	Medidor de red
+Focus timer	Temporizador de enfoque
+Countdown	Cuenta atrás
+Weather	Tiempo
+Weather picture	Imagen del tiempo
+City	Ciudad
+Use °F and mph	Usar °F y mph
+Photo frame	Marco de fotos
+Change photo every	Cambiar foto cada
+Layout	Diseño
+Layout for each monitor setup	Diseño para cada configuración de monitores
+Group widgets	Agrupar widgets
+Reset widget positions	Restablecer posiciones de widgets
+Organizer	Organizador
+Desktop fences	Grupos del escritorio
+Show desktop fences	Mostrar grupos del escritorio
+Hide empty fences	Ocultar grupos vacíos
+Hide Windows desktop icons	Ocultar iconos del escritorio de Windows
+Stack similar files	Apilar archivos parecidos
+Preview…	Vista previa…
+Your fences	Tus grupos
+Rename	Cambiar nombre
+Delete	Eliminar
+New fence	Nuevo grupo
+Rules	Reglas
+Add a rule	Añadir una regla
+Add rule…	Añadir regla…
+Find & sort	Buscar y ordenar
+Open search	Abrir búsqueda
+Sort a fence	Ordenar un grupo
+Drag & drop	Arrastrar y soltar
+Between fences	Entre grupos
+Into a folder	A una carpeta
+From / to File Explorer	Desde / hacia el Explorador
+Recycle Bin	Papelera de reciclaje
+Categories	Categorías
+Folder fences	Grupos de carpetas
+Remove	Quitar
+Add a folder	Añadir una carpeta
+Add folder…	Añadir carpeta…
+Rescan	Volver a escanear
+Reset fence layout	Restablecer diseño de grupos
+Performance	Rendimiento
+Right now	Ahora mismo
+Save power	Ahorrar energía
+Low power mode	Modo de bajo consumo
+Pause during full-screen apps	Pausar con apps a pantalla completa
+Trim memory when idle	Liberar memoria en reposo
+How it stays light	Por qué es tan ligero
+No animation loops	Sin bucles de animación
+Event-based organizer	Organizador por eventos
+Native code	Código nativo
+About	Acerca de
+Shortcuts & tips	Atajos y consejos
+Ctrl + Alt + G	Ctrl + Alt + G
+Drag a title bar	Arrastra una barra de título
+Double-click a fence title	Doble clic en el título de un grupo
+Right-click	Clic derecho
+Ctrl + Alt + F	Ctrl + Alt + F
+Updates	Actualizaciones
+Version	Versión
+Check now	Buscar ahora
+Check automatically	Buscar automáticamente
+Updates come from	Las actualizaciones vienen de
+Backup & sync	Copia de seguridad y sincronización
+Save my layout	Guardar mi diseño
+Export…	Exportar…
+Load a layout	Cargar un diseño
+Import…	Importar…
+Daily backups	Copias diarias
+Backups folder	Carpeta de copias
+App	App
+Settings file	Archivo de configuración
+Exit	Salir
+Good night	Buenas noches
+Good morning	Buenos días
+Good afternoon	Buenas tardes
+Good evening	Buenas tardes
+System	Sistema
+live	en vivo
+CPU	CPU
+double-click to edit	doble clic para editar
+Partly cloudy	Algo nublado
+Cloudy	Nublado
+Fog	Niebla
+Drizzle	Llovizna
+Rain	Lluvia
+Snow	Nieve
+Thunderstorm	Tormenta
+Loading…	Cargando…
+Double-click to choose your city	Doble clic para elegir tu ciudad
+Feels	Sensación
+Humidity	Humedad
+Wind	Viento
+Sunrise	Amanecer
+Sunset	Atardecer
+To-do	Tareas
+Nothing to do. Double-click to add tasks.	No hay tareas. Doble clic para añadirlas.
+Double-click to choose a folder of photos	Doble clic para elegir una carpeta de fotos
+Double-click to count down to a birthday, a trip or the holidays	Doble clic para contar los días hasta un cumpleaños, un viaje o las fiestas
+GitHub	GitHub
+Last 14 days	Últimos 14 días
+Network	Red
+Apps & Shortcuts	Apps y accesos directos
+Folders	Carpetas
+Documents	Documentos
+Images	Imágenes
+Music & Video	Música y vídeo
+Archives	Archivos comprimidos
+Other files	Otros archivos
+medium	medio
+Can't reach the weather service – trying again in a minute	No se puede conectar con el servicio del tiempo – se reintentará en un minuto
+The weather service sent something unexpected	El servicio del tiempo envió algo inesperado
+Unsorted	Sin ordenar
+How GlassDesk starts and behaves.	Cómo se inicia y se comporta GlassDesk.
+Launch GlassDesk automatically when you sign in	Abre GlassDesk automáticamente al iniciar sesión
+Press Ctrl + Alt + G to show or hide every panel	Pulsa Ctrl + Alt + G para mostrar u ocultar todos los paneles
+Press Ctrl + Alt + F to find anything on your desktop	Pulsa Ctrl + Alt + F para buscar cualquier cosa en tu escritorio
+Stop panels from being moved or resized by accident	Evita que los paneles se muevan o cambien de tamaño por accidente
+Panels stay on the desktop, underneath your apps	Los paneles se quedan en el escritorio, debajo de tus apps
+Open fence items with one click instead of a double-click	Abre los elementos con un clic en lugar de doble clic
+Glass, colors and size of everything on your desktop.	Cristal, colores y tamaño de todo lo que hay en tu escritorio.
+Auto follows Windows	Automático sigue a Windows
+Highlights and bars	Resaltados y barras
+Picks the accent color from your wallpaper, and changes with it	Toma el color de acento de tu fondo y cambia con él
+{0}%  ·  lower is clearer glass	{0}%  ·  menos es cristal más claro
+{0} px	{0} px
+{0}%  ·  scales text, icons and widgets	{0}%  ·  escala texto, iconos y widgets
+Rotates your desktop background from a folder of pictures	Cambia el fondo de tu escritorio con imágenes de una carpeta
+{0} minutes	{0} minutos
+Skip to the next picture now	Pasar ahora a la siguiente imagen
+Small glass widgets that live on your desktop.	Pequeños widgets de cristal que viven en tu escritorio.
+Drag its bottom-right corner. Everything inside grows with it.	Arrastra su esquina inferior derecha. Todo lo de dentro crece con él.
+Time, date and a friendly greeting	Hora, fecha y un saludo amable
+Updates every second (otherwise once a minute)	Se actualiza cada segundo (si no, una vez por minuto)
+Changes with the time of day: morning, day, sunset and night	Cambia con la hora del día: mañana, día, atardecer y noche
+Turn off for 12-hour time with AM / PM	Desactívalo para el formato de 12 horas con AM / PM
+CPU, memory, disk and battery	CPU, memoria, disco y batería
+Month view — click the arrows to change month	Vista mensual — haz clic en las flechas para cambiar de mes
+A sticky note — double-click it to write	Una nota adhesiva — doble clic para escribir
+Tick tasks off right on the desktop — double-click to edit the list	Marca tareas directamente en el escritorio — doble clic para editar la lista
+Rings for how much of the day, week, month and year has passed	Anillos con cuánto ha pasado del día, la semana, el mes y el año
+The last things you copied; click one to copy it again. Kept in memory only, never saved	Lo último que copiaste; haz clic para copiarlo de nuevo. Solo en memoria, nunca se guarda
+The song that's playing — or the last one you listened to	La canción que suena — o la última que escuchaste
+A new quote every morning — double-click for another	Una cita nueva cada mañana — doble clic para otra
+Stars, followers, repos and your last 14 days	Estrellas, seguidores, repositorios y tus últimos 14 días
+Public data only, no sign-in needed	Solo datos públicos, sin iniciar sesión
+Live download and upload speed	Velocidad de descarga y subida en vivo
+Pomodoro: 	Pomodoro: 
+Days left until a birthday, a trip or the holidays	Días que faltan para un cumpleaños, un viaje o las fiestas
+Today and the next days, from Open-Meteo or wttr.in (free, no account)	Hoy y los próximos días, de Open-Meteo o wttr.in (gratis, sin cuenta)
+A sky that matches the weather (sun, clouds, rain, storm, snow, fog, night) fading into the glass	Un cielo que coincide con el tiempo (sol, nubes, lluvia, tormenta, nieve, niebla, noche) que se funde con el cristal
+Turn off for °C and km/h	Desactívalo para °C y km/h
+Shows your pictures one at a time — click the arrow for the next one	Muestra tus fotos de una en una — haz clic en la flecha para la siguiente
+Right-click a widget → Group with, then scroll over it to switch	Clic derecho en un widget → Agrupar con, y desplaza encima para cambiar
+Move all widgets back to the right side of the screen	Mueve todos los widgets de vuelta al lado derecho de la pantalla
+Your desktop files, sorted into glass fences automatically.	Los archivos de tu escritorio, ordenados en grupos de cristal automáticamente.
+Group desktop items by type	Agrupar elementos del escritorio por tipo
+Only show a fence when it has something in it	Mostrar un grupo solo cuando tenga algo
+Recommended: the fences replace the normal icons, so nothing overlaps	Recomendado: los grupos sustituyen a los iconos normales, así nada se superpone
+4 or more files of the same type become one stack — click it to open	4 o más archivos del mismo tipo forman una pila — haz clic para abrirla
+See where every file goes and pick which ones to sort	Mira adónde va cada archivo y elige cuáles ordenar
+Make your own fence, then drag icons into it	Crea tu propio grupo y arrastra iconos a él
+For example: *.pdf goes to School, Screenshot* goes to Images	Por ejemplo: *.pdf va a Escuela, Screenshot* va a Imágenes
+Press Ctrl + Alt + F, type a few letters and press Enter to open	Pulsa Ctrl + Alt + F, escribe unas letras y pulsa Enter para abrir
+Right-click a fence's title and choose Sort by: name, type, date or size	Clic derecho en el título de un grupo y elige Ordenar por: nombre, tipo, fecha o tamaño
+Drag an icon to another fence to keep it there	Arrastra un icono a otro grupo para dejarlo allí
+Drop an icon on a folder to move it inside (hold Ctrl to copy)	Suelta un icono sobre una carpeta para moverlo dentro (mantén Ctrl para copiar)
+Drag files in from Explorer, or drag icons out to Explorer and other apps	Arrastra archivos desde el Explorador, o arrastra iconos al Explorador y a otras apps
+Drop an icon on the Recycle Bin to delete it	Suelta un icono sobre la papelera para eliminarlo
+Show any folder (Downloads, a project…) as its own fence	Muestra cualquier carpeta (Descargas, un proyecto…) como su propio grupo
+GlassDesk watches for changes, but you can refresh now	GlassDesk vigila los cambios, pero puedes actualizar ahora
+Put all fences back in a tidy column	Vuelve a poner todos los grupos en una columna ordenada
+GlassDesk is built to stay out of the way.	GlassDesk está hecho para no molestar.
+Refresh the system monitor every 5 seconds instead of 2	Actualiza el monitor del sistema cada 5 segundos en vez de 2
+No updates at all while you play games or watch videos	Nada de actualizaciones mientras juegas o ves vídeos
+Give unused memory back to Windows every few minutes	Devuelve la memoria sin usar a Windows cada pocos minutos
+Panels are redrawn only when something actually changes	Los paneles solo se redibujan cuando algo cambia de verdad
+Windows tells GlassDesk when desktop files change — no polling	Windows avisa a GlassDesk cuando cambian los archivos del escritorio — sin sondeos
+A single small .exe using the built-in .NET Framework — no browser engine	Un solo .exe pequeño que usa el .NET Framework integrado — sin motor de navegador
+GlassDesk — a light, glassy desktop organizer for Windows.	GlassDesk — un organizador de escritorio ligero y de cristal para Windows.
+Show or hide all panels	Mostrar u ocultar todos los paneles
+Move a fence. Drag the bottom-right corner to resize it	Mover un grupo. Arrastra la esquina inferior derecha para cambiar su tamaño
+Roll the fence up / down	Contraer / expandir el grupo
+Menus for items, fences and widgets	Menús para elementos, grupos y widgets
+Find anything on your desktop	Buscar cualquier cosa en tu escritorio
+Look for a new version once a day and let you know	Busca una versión nueva una vez al día y te avisa
+Fences, rules, widgets and look in one .glassdesk file	Grupos, reglas, widgets y estilo en un archivo .glassdesk
+From a backup, or to copy your setup to another PC	Desde una copia, o para pasar tu configuración a otro PC
+Keeps the last 7 days, just in case	Guarda los últimos 7 días, por si acaso
+Closes all panels and the tray icon	Cierra todos los paneles y el icono de la bandeja
+Quote	Cita
+Copy some text anywhere and it shows up here.\nClick it later to copy it again.	Copia texto en cualquier sitio y aparecerá aquí.\nHaz clic más tarde para copiarlo de nuevo.
+Week {0}	Semana {0}
+H {0}°  L {1}°	Máx {0}°  Mín {1}°
+Frosted navy glass with a soft glow	Cristal azul marino esmerilado con un brillo suave
+Deep violet glass	Cristal violeta oscuro
+Teal water and cyan light	Agua turquesa y luz cian
+Warm coral evening glow	Cálido brillo coral de atardecer
+Green glass, fresh and calm	Cristal verde, fresco y tranquilo
+Soft pink and lilac	Rosa suave y lila
+Northern lights, teal to purple	Auroras boreales, de turquesa a morado
+Icy white glass	Cristal blanco helado
+Glowing coals, red and amber	Brasas encendidas, rojo y ámbar
+Light lilac glass	Cristal lila claro
+Cool, fresh and light	Fresco, limpio y claro
+Calm and mostly solid	Tranquilo y casi opaco
+Fully blurred, see-through	Totalmente desenfocado, transparente
+Deeper, darker Mica	Mica más profundo y oscuro
+Default light	Claro predeterminado
+Default dark	Oscuro predeterminado
+Blue Windows 11 flower	Flor azul de Windows 11
+Purple light, soft acrylic	Luz morada, acrílico suave
+Warm orange morning	Mañana naranja y cálida
+Fresh blue-green waves	Olas frescas azul verdoso
+Dark with deep pink motion	Oscuro con movimiento rosa intenso
+Bright, flat and rounded	Brillante, plano y redondeado
+Black glass with a glowing edge	Cristal negro con borde brillante
+Quiet gray, no color	Gris tranquilo, sin color
+Warm, solid and easy to read	Cálido, opaco y fácil de leer
+The original GlassDesk 1.7 look	El estilo original de GlassDesk 1.7
+Disk	Disco
+free	libres
+Tomorrow	Mañana
+Nothing coming up	Nada próximo
+That link isn't a calendar (.ics) link	Ese enlace no es de un calendario (.ics)
+Can't reach your calendar – trying again soon	No se puede conectar con tu calendario – se reintentará pronto
+Paste your calendar's iCal (.ics) link — several links can be separated by spaces	Pega el enlace iCal (.ics) de tu calendario — puedes separar varios con espacios
+Change calendar link…	Cambiar enlace del calendario…
+Connect a calendar…	Conectar un calendario…
+Disconnect calendar	Desconectar calendario
+System drives	Discos del sistema
+Show every internal and USB drive, not just the Windows drive	Muestra todos los discos internos y USB, no solo el de Windows
+Online calendar	Calendario en línea
+Connected — your events show as dots and the next ones below	Conectado — tus eventos salen como puntos y los próximos debajo
+Google, Outlook or iCloud: paste the calendar's private iCal (.ics) link	Google, Outlook o iCloud: pega el enlace iCal (.ics) privado del calendario
+Connect…	Conectar…
+Game screenshots	Capturas de juegos
+Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders	Encontradas {0}: carpetas de Xbox Game Bar, NVIDIA o capturas de Windows
+Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found	Las carpetas de Xbox Game Bar, NVIDIA y Windows ya se muestran, o no se encontraron
+Add them	Añadirlas
+Style	Estilo
+macOS	macOS
+No picture	Sin imagen
+Widget style	Estilo de widgets
+Mixed — right-click a widget › Style to change just that one	Mixto — clic derecho en un widget › Estilo para cambiar solo ese
+For all widgets — or right-click one › Style to change just that one	Para todos los widgets — o clic derecho en uno › Estilo para cambiar solo ese
+Your desktop	Tu escritorio
+Live preview	Vista previa en vivo
+Updates as you change things — point at a panel to see its name	Se actualiza al cambiar cosas — señala un panel para ver su nombre
+Click a widget to add or remove it	Haz clic en un widget para añadirlo o quitarlo
+No widget matches	Ningún widget coincide
+Liquid glass	Vidrio líquido
+Liquid	Líquido
+Liquid: clear glass that bends the wallpaper at its edges	Líquido: vidrio transparente que curva el fondo en los bordes
+Regular	Normal
+Liquid glass type	Tipo de vidrio líquido
+Regular is a little frosted and easy to read; Clear shows the most of your wallpaper	Normal es algo esmerilado y fácil de leer; Transparente muestra más de tu fondo
+Melt nearby panels together	Fundir paneles cercanos
+Liquid glass panels close to each other join with a liquid bridge, like drops of water	Los paneles de vidrio líquido cercanos se unen con un puente líquido, como gotas de agua
+Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, depending on your screen size).\n\nTurn on liquid glass?	El vidrio líquido curva y desenfoca tu fondo en cada panel. Para ello, GlassDesk guarda copias extra de tu fondo en memoria, así que usa más RAM (unos 100–200 MB más, según el tamaño de tu pantalla).\n\n¿Activar el vidrio líquido?
+Real bending, frosted glass like Apple's. Settings → Appearance → Glass style → Liquid.	Vidrio esmerilado que curva la luz, como el de Apple. Configuración → Apariencia → Estilo del cristal → Líquido.
+A style for each widget	Un estilo para cada widget
+Right-click a widget → Style. Notes, Reminders, rings, gauges and more.	Clic derecho en un widget → Estilo. Notas, Recordatorios, anillos, medidores y más.
+See it before you add it	Míralo antes de añadirlo
+Live desktop preview in Settings, and a Widgets tab in quick search (Ctrl + Alt + F).	Vista previa en vivo en Configuración y una pestaña de widgets en la búsqueda rápida (Ctrl + Alt + F).
+Smarter widgets	Widgets más listos
+Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.	Calendario en línea, todos los discos en Sistema, grupos de capturas de juegos, portapapeles y 3 idiomas nuevos.
+Welcome to GlassDesk 2.0	Bienvenido a GlassDesk 2.0
+Here's what's new — all made from your ideas.	Esto es lo nuevo — todo nació de vuestras ideas.

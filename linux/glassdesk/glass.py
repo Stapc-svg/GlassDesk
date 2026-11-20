@@ -5,6 +5,7 @@ import math, os
 import cairo
 from gi.repository import Gtk, Gdk, GdkPixbuf, GLib, Pango, PangoCairo
 
+from . import liquid
 from . import core
 
 
@@ -192,6 +193,11 @@ class GlassWindow(Gtk.Window):
         self.connect("delete-event", lambda *a: True)
         self._pos = (0, 0)
         self._press = None
+        self.glow_hover = 0.0          # 0..1, animated while the mouse is over the panel
+        self._hover_on = False
+        self._hover_id = 0
+        self._fade_id = 0
+        self.connect("map-event", lambda *a: self.fade_in())
         self.apply_size()
 
     # ---- geometry
@@ -305,6 +311,8 @@ class GlassWindow(Gtk.Window):
         return t
 
     def play_enter(self, direction, came_from=None):
+        # switching inside a stack has its own slide, so skip the fade-in
+        GLib.idle_add(lambda: (self.fade_to(1.0, 0.01), False)[1])
         self._anim = (GLib.get_monotonic_time() / 1e6, 1 if direction >= 0 else -1, came_from)
         def tick(clock):
             self.queue_draw()
@@ -384,11 +392,19 @@ class GlassWindow(Gtk.Window):
         m = self.m()
         for i in range(m, 0, -2):
             rounded(cr, x - i * 0.5, y - i * 0.3, w + i, h + i, r + i * 0.5)
-            cr.set_source_rgba(0, 0, 0, 0.045 * (1 - i / (m + 1)))
+            cr.set_source_rgba(0, 0, 0, (0.045 + 0.025 * self.glow_hover) * (1 - i / (m + 1)))
             cr.fill()
         cr.save()
         rounded(cr, x, y, w, h, r)
         cr.clip()
+        if T.style == "liquid" and not T.solid and self._draw_liquid(cr, x, y, w, h, r):
+            cr.restore()
+            if self.glow_hover > 0.01:
+                rounded(cr, x + 0.5, y + 0.5, w - 1, h - 1, r)
+                cr.set_source_rgba(T.accent[0], T.accent[1], T.accent[2], 0.3 * self.glow_hover)
+                cr.set_line_width(T.s(1.4))
+                cr.stroke()
+            return
         # 1) the blurred wallpaper that is right behind this panel
         drew = False
         win = self.get_window()
@@ -458,6 +474,12 @@ class GlassWindow(Gtk.Window):
         cr.set_source(g)
         cr.set_line_width(1.2)
         cr.stroke()
+        if self.glow_hover > 0.01:
+            # hovering: a soft light along the rim in the accent color
+            rounded(cr, x + 0.5, y + 0.5, w - 1, h - 1, r)
+            cr.set_source_rgba(T.accent[0], T.accent[1], T.accent[2], 0.3 * self.glow_hover)
+            cr.set_line_width(T.s(1.4))
+            cr.stroke()
         if T.neon:
             rounded(cr, x + 1, y + 1, w - 2, h - 2, r)
             g = cairo.LinearGradient(x, y, x + w, y + h)
@@ -467,6 +489,49 @@ class GlassWindow(Gtk.Window):
             cr.set_source(g)
             cr.set_line_width(T.s(1.8))
             cr.stroke()
+
+    def _draw_liquid(self, cr, x, y, w, h, r):
+        """Liquid glass (see liquid.py): the wallpaper bent through a thick pane, made once per spot and size."""
+        if not liquid.AVAILABLE:
+            return False
+        win = self.get_window()
+        disp = Gdk.Display.get_default()
+        mon = disp.get_monitor_at_window(win) if (disp and win is not None) else None
+        if mon is None:
+            return False
+        T = self.T
+        g = mon.get_geometry()
+        regular = self.S.get("liquid_kind", "clear") == "regular"
+        styles = ("clear", "frosted") if regular else ("transparent", "clear")
+        wx, wy = self.get_position()
+        sx0, sy0 = wx - g.x + x, wy - g.y + y
+        key = (int(sx0), int(sy0), int(w), int(h), int(r), T.dark, regular, Backdrop._path, Backdrop._mtime)
+        if getattr(self, "_liq_key", None) != key:
+            mid = liquid.wall_array(Backdrop.get(g.width, g.height, styles[0]), (g.width, g.height, styles[0]))
+            rim = liquid.wall_array(Backdrop.get(g.width, g.height, styles[1]), (g.width, g.height, styles[1]))
+            if mid is None or rim is None:
+                return False
+            try:
+                self._liq = liquid.build(mid, rim, sx0, sy0, w, h, r, T.s(1), T.dark, 0.35 if regular else 0.18)
+            except Exception as e:
+                core.log("liquid glass: %s" % e)
+                return False
+            self._liq_key = key
+        surf, bright = self._liq
+        cr.set_source_surface(surf, x, y)
+        cr.paint()
+        # a whisper of tint, a little more on bright wallpapers so text stays readable
+        t = T.tint_top
+        need = max(0, bright - 0.45) * 0.67 if T.dark else max(0, 0.6 - bright) * 0.67
+        if regular:
+            need += 0.09
+        cr.set_source_rgba(t[0], t[1], t[2], min(0.47, t[3] + need))
+        cr.paint()
+        if self.panel_color():
+            c = self.panel_color()
+            cr.set_source_rgba(c[0], c[1], c[2], 0.14)
+            cr.paint()
+        return True
 
     def panel_color(self):
         return None
@@ -599,14 +664,74 @@ class GlassWindow(Gtk.Window):
 
     def _on_leave(self, _w, e):
         if e.detail != Gdk.NotifyType.INFERIOR:
+            self._set_hover(False)
             self.hover = None
             self.on_leave()
             self.queue_draw()
         return False
 
     def _on_enter(self, _w, e):
+        self._set_hover(True)
         self.on_enter()
         return False
+
+    # ---- smooth appearance: fade in when shown, fade out before hiding, glow on hover
+    def _smooth(self):
+        return not core.PREVIEW and self.get_screen().is_composited()
+
+    def fade_in(self):
+        if not self._smooth():
+            return False
+        delay = (abs(hash(self.key)) % 6) * 30      # one after another, not all at once
+        self.set_opacity(0.0)
+        GLib.timeout_add(max(1, delay), lambda: (self.fade_to(1.0, 0.26), False)[1])
+        return False
+
+    def fade_to(self, target, secs, done=None):
+        if self._fade_id:
+            GLib.source_remove(self._fade_id)
+            self._fade_id = 0
+        if not self._smooth():
+            self.set_opacity(target)
+            if done:
+                done()
+            return
+        start, t0 = self.get_opacity(), GLib.get_monotonic_time()
+
+        def step():
+            t = min(1.0, (GLib.get_monotonic_time() - t0) / 1e6 / max(0.01, secs))
+            e = 1 - (1 - t) ** 4 if target > start else t * t
+            self.set_opacity(start + (target - start) * e)
+            if t >= 1:
+                self._fade_id = 0
+                if done:
+                    done()
+                return False
+            return True
+        self._fade_id = GLib.timeout_add(15, step)
+
+    def _set_hover(self, on):
+        if on == self._hover_on:
+            return
+        self._hover_on = on
+        if not self._smooth():
+            self.glow_hover = 1.0 if on else 0.0
+            self.queue_draw()
+            return
+        if self._hover_id:
+            return
+
+        def step():
+            tgt = 1.0 if self._hover_on else 0.0
+            self.glow_hover += 0.25 if tgt > self.glow_hover else -0.25
+            if abs(self.glow_hover - tgt) < 0.13:
+                self.glow_hover = tgt
+                self._hover_id = 0
+                self.queue_draw()
+                return False
+            self.queue_draw()
+            return True
+        self._hover_id = GLib.timeout_add(30, step)
 
     def on_enter(self):
         pass

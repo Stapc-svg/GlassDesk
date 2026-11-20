@@ -53,6 +53,7 @@ parts:
       - python3
       - python3-gi
       - python3-gi-cairo
+      - python3-numpy
       - gir1.2-ayatanaappindicator3-0.1
       - gir1.2-keybinder-3.0
       - libnotify-bin

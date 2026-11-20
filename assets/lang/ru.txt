@@ -1,0 +1,434 @@
+# GlassDesk translation: English<TAB>translation. \n = new line. Missing lines stay in English.
+Stack with	Сложить в стопку с
+Next in stack	Следующий в стопке
+Take out of stack	Убрать из стопки
+Stack them	Сложить в стопку
+No, just put it here	Нет, просто положить сюда
+Settings	Настройки
+Show	Показать
+Hide	Скрыть
+ panels    Ctrl+Alt+G	 панели    Ctrl+Alt+G
+Find on desktop…    Ctrl+Alt+F	Найти на рабочем столе…    Ctrl+Alt+F
+New fence…	Новая группа…
+Add a rule…	Добавить правило…
+Edit note	Редактировать заметку
+Organize desktop…	Упорядочить рабочий стол…
+Rescan desktop	Пересканировать рабочий стол
+Check for updates	Проверить обновления
+Exit GlassDesk	Выйти из GlassDesk
+Change event…	Изменить событие…
+Another quote	Другая цитата
+Open profile	Открыть профиль
+Change username…	Изменить имя пользователя…
+Refresh now	Обновить сейчас
+Play / pause	Воспроизвести / пауза
+Next song	Следующая песня
+Previous song	Предыдущая песня
+Volume mixer	Микшер громкости
+Resume	Продолжить
+Pause (don't remember copies)	Пауза (не запоминать копии)
+Clear history	Очистить историю
+Start / pause	Старт / пауза
+Reset	Сбросить
+Edit list	Изменить список
+Clear finished tasks	Удалить выполненные задачи
+Refresh	Обновить
+Change city…	Изменить город…
+Use °C	Использовать °C
+Use °F	Использовать °F
+Next photo	Следующее фото
+Choose folder…	Выбрать папку…
+ seconds	 секунд
+Use 12-hour time	12-часовой формат
+Use 24-hour time	24-часовой формат
+Reset size	Сбросить размер
+Hide this widget	Скрыть этот виджет
+Settings…	Настройки…
+Clipboard	Буфер обмена
+Today	Сегодня
+Close stack	Закрыть стопку
+Open stack	Открыть стопку
+Turn off stacks	Отключить стопки
+Open	Открыть
+Empty Recycle Bin	Очистить корзину
+Show in File Explorer	Показать в проводнике
+Copy path	Копировать путь
+Move to fence	Переместить в группу
+Back to 	Вернуть в 
+Delete (Recycle Bin)	Удалить (в корзину)
+Properties	Свойства
+Expand	Развернуть
+Roll up	Свернуть
+Rename…	Переименовать…
+Color	Цвет
+Icon size	Размер значков
+Stop rolling up by itself	Не сворачивать автоматически
+Roll up until I point at it	Сворачивать, пока не наведу курсор
+Sort by	Сортировать по
+Add a rule for this fence…	Добавить правило для этой группы…
+Open folder	Открыть папку
+Remove this fence	Убрать эту группу
+Delete this fence	Удалить эту группу
+Open Desktop folder	Открыть папку рабочего стола
+Hide this category	Скрыть эту категорию
+Enter to copy	Enter — скопировать
+Switch to the {0} theme	Включить тему {0}
+Open Settings	Открыть настройки
+Organize desktop	Упорядочить рабочий стол
+Hide or show all panels	Показать или скрыть все панели
+Make a new fence	Создать новую группу
+Dark mode	Тёмный режим
+Light mode	Светлый режим
+GlassDesk command	Команда GlassDesk
+Search the web for "{0}"	Искать «{0}» в интернете
+Search your desktop and apps…	Поиск по рабочему столу и приложениям…
+Your desktop is empty	Рабочий стол пуст
+Nothing on your desktop matches "{0}"	На рабочем столе нет ничего похожего на «{0}»
+Drag an app onto a fence to add it	Перетащите приложение на группу, чтобы добавить его
+All	Все
+Desktop	Рабочий стол
+Apps	Приложения
+Fences	Группы
+Your files sorted into glass boxes. Drag a fence's edge to resize it.	Ваши файлы разложены по стеклянным коробкам. Потяните за край группы, чтобы изменить размер.
+Widgets	Виджеты
+Clock, weather, music, to-dos and more. Right-click one for options.	Часы, погода, музыка, задачи и многое другое. Нажмите правой кнопкой для настроек.
+Quick search	Быстрый поиск
+Press Ctrl + Alt + F to find and open anything on your desktop.	Нажмите Ctrl + Alt + F, чтобы найти и открыть что угодно на рабочем столе.
+Themes	Темы
+26 looks, from GlassDesk glass to Mica and Acrylic. Settings → Appearance.	26 оформлений — от стекла GlassDesk до Mica и Acrylic. Настройки → Оформление.
+Welcome to GlassDesk	Добро пожаловать в GlassDesk
+Your desktop, organized in beautiful glass.	Ваш рабочий стол, упорядоченный в красивом стекле.
+Get started	Начать
+NOW PLAYING	СЕЙЧАС ИГРАЕТ
+PAUSED	ПАУЗА
+LAST PLAYED	ПОСЛЕДНЕЕ
+MUSIC	МУЗЫКА
+Ticked files go into their fence. Unticked files go to an "Unsorted" fence.	Отмеченные файлы попадут в свою группу. Неотмеченные — в группу «Без сортировки».
+Cancel	Отмена
+Start organizing · 	Начать упорядочивание · 
+Desktop organizer	Органайзер
+show / hide panels	показать / скрыть панели
+General	Общие
+Language	Язык
+same as Windows	как в Windows
+The language of menus, Settings and widgets	Язык меню, настроек и виджетов
+Startup	Запуск
+Start with Windows	Запускать вместе с Windows
+Show / hide shortcut	Сочетание для показа / скрытия
+Quick search shortcut	Сочетание для быстрого поиска
+Behavior	Поведение
+Lock positions	Закрепить положение
+Keep behind windows	Держать под окнами
+Open with a single click	Открывать одним щелчком
+Appearance	Оформление
+Windows themes	Темы Windows
+Theme	Тема
+Mode	Режим
+Accent color	Акцентный цвет
+Match my wallpaper	Под цвет обоев
+Glass	Стекло
+Frosted	Матовое
+Blur	Размытие
+Clear	Прозрачное
+See-through	Сквозное
+Glass style	Стиль стекла
+Glass tint	Оттенок стекла
+Corner radius	Радиус углов
+Panel size	Размер панелей
+Wallpaper changer	Смена обоев
+Change my wallpaper	Менять мои обои
+Folder	Папка
+Choose…	Выбрать…
+Change every	Менять каждые
+Next wallpaper	Следующие обои
+Next	Далее
+Size	Размер
+Resize any widget	Размер любого виджета
+Reset all sizes	Сбросить размеры
+Clock	Часы
+Show seconds	Показывать секунды
+Photos	Фото
+Drawn sky	Рисунок
+Off	Выкл.
+Clock background	Фон часов
+24-hour time	24-часовой формат
+More widgets	Другие виджеты
+System monitor	Монитор системы
+Calendar	Календарь
+Notes	Заметки
+To-do list	Список задач
+Music	Музыка
+Quote of the day	Цитата дня
+GitHub stats	Статистика GitHub
+GitHub username	Имя на GitHub
+Change…	Изменить…
+Network meter	Сетевой монитор
+Focus timer	Таймер фокуса
+Countdown	Обратный отсчёт
+Weather	Погода
+Weather picture	Картинка погоды
+City	Город
+Use °F and mph	Использовать °F и mph
+Photo frame	Фоторамка
+Change photo every	Менять фото каждые
+Layout	Расположение
+Layout for each monitor setup	Расположение для каждой конфигурации мониторов
+Group widgets	Группировать виджеты
+Reset widget positions	Сбросить положение виджетов
+Organizer	Органайзер
+Desktop fences	Группы рабочего стола
+Show desktop fences	Показывать группы рабочего стола
+Hide empty fences	Скрывать пустые группы
+Hide Windows desktop icons	Скрыть значки рабочего стола Windows
+Stack similar files	Складывать похожие файлы в стопки
+Preview…	Просмотр…
+Your fences	Ваши группы
+Rename	Переименовать
+Delete	Удалить
+New fence	Новая группа
+Rules	Правила
+Add a rule	Добавить правило
+Add rule…	Добавить правило…
+Find & sort	Поиск и сортировка
+Open search	Открыть поиск
+Sort a fence	Сортировать группу
+Drag & drop	Перетаскивание
+Between fences	Между группами
+Into a folder	В папку
+From / to File Explorer	Из проводника / в проводник
+Recycle Bin	Корзина
+Categories	Категории
+Folder fences	Группы-папки
+Remove	Убрать
+Add a folder	Добавить папку
+Add folder…	Добавить папку…
+Rescan	Пересканировать
+Reset fence layout	Сбросить расположение групп
+Performance	Производительность
+Right now	Сейчас
+Save power	Экономия энергии
+Low power mode	Режим низкого энергопотребления
+Pause during full-screen apps	Пауза в полноэкранных приложениях
+Trim memory when idle	Освобождать память в простое
+How it stays light	Почему он такой лёгкий
+No animation loops	Никаких циклов анимации
+Event-based organizer	Органайзер на событиях
+Native code	Нативный код
+About	О программе
+Shortcuts & tips	Сочетания и советы
+Ctrl + Alt + G	Ctrl + Alt + G
+Drag a title bar	Перетащите заголовок
+Double-click a fence title	Двойной щелчок по заголовку группы
+Right-click	Правый щелчок
+Ctrl + Alt + F	Ctrl + Alt + F
+Updates	Обновления
+Version	Версия
+Check now	Проверить сейчас
+Check automatically	Проверять автоматически
+Updates come from	Обновления берутся с
+Backup & sync	Резервная копия и синхронизация
+Save my layout	Сохранить моё расположение
+Export…	Экспорт…
+Load a layout	Загрузить расположение
+Import…	Импорт…
+Daily backups	Ежедневные копии
+Backups folder	Папка копий
+App	Приложение
+Settings file	Файл настроек
+Exit	Выход
+Good night	Доброй ночи
+Good morning	Доброе утро
+Good afternoon	Добрый день
+Good evening	Добрый вечер
+System	Система
+live	сейчас
+CPU	ЦП
+double-click to edit	двойной щелчок для правки
+Partly cloudy	Малооблачно
+Cloudy	Облачно
+Fog	Туман
+Drizzle	Морось
+Rain	Дождь
+Snow	Снег
+Thunderstorm	Гроза
+Loading…	Загрузка…
+Double-click to choose your city	Дважды щёлкните, чтобы выбрать город
+Feels	Ощущается
+Humidity	Влажность
+Wind	Ветер
+Sunrise	Восход
+Sunset	Закат
+To-do	Задачи
+Nothing to do. Double-click to add tasks.	Задач нет. Дважды щёлкните, чтобы добавить.
+Double-click to choose a folder of photos	Дважды щёлкните, чтобы выбрать папку с фото
+Double-click to count down to a birthday, a trip or the holidays	Дважды щёлкните, чтобы считать дни до дня рождения, поездки или праздников
+GitHub	GitHub
+Last 14 days	Последние 14 дней
+Network	Сеть
+Apps & Shortcuts	Приложения и ярлыки
+Folders	Папки
+Documents	Документы
+Images	Изображения
+Music & Video	Музыка и видео
+Archives	Архивы
+Other files	Другие файлы
+medium	средний
+Can't reach the weather service – trying again in a minute	Не удаётся связаться со службой погоды – повтор через минуту
+The weather service sent something unexpected	Служба погоды прислала что-то непонятное
+Unsorted	Без сортировки
+How GlassDesk starts and behaves.	Как GlassDesk запускается и работает.
+Launch GlassDesk automatically when you sign in	Запускать GlassDesk автоматически при входе
+Press Ctrl + Alt + G to show or hide every panel	Нажмите Ctrl + Alt + G, чтобы показать или скрыть все панели
+Press Ctrl + Alt + F to find anything on your desktop	Нажмите Ctrl + Alt + F, чтобы найти что угодно на рабочем столе
+Stop panels from being moved or resized by accident	Не давать случайно двигать или менять размер панелей
+Panels stay on the desktop, underneath your apps	Панели остаются на рабочем столе, под вашими приложениями
+Open fence items with one click instead of a double-click	Открывать элементы одним щелчком вместо двойного
+Glass, colors and size of everything on your desktop.	Стекло, цвета и размер всего на рабочем столе.
+Auto follows Windows	Авто — как в Windows
+Highlights and bars	Выделения и полосы
+Picks the accent color from your wallpaper, and changes with it	Берёт акцентный цвет из обоев и меняется вместе с ними
+{0}%  ·  lower is clearer glass	{0}%  ·  меньше — прозрачнее стекло
+{0} px	{0} пикс.
+{0}%  ·  scales text, icons and widgets	{0}%  ·  масштаб текста, значков и виджетов
+Rotates your desktop background from a folder of pictures	Меняет фон рабочего стола из папки с картинками
+{0} minutes	{0} мин
+Skip to the next picture now	Перейти к следующей картинке сейчас
+Small glass widgets that live on your desktop.	Маленькие стеклянные виджеты на рабочем столе.
+Drag its bottom-right corner. Everything inside grows with it.	Потяните за правый нижний угол — всё внутри растёт вместе с ним.
+Time, date and a friendly greeting	Время, дата и дружелюбное приветствие
+Updates every second (otherwise once a minute)	Обновление каждую секунду (иначе раз в минуту)
+Changes with the time of day: morning, day, sunset and night	Меняется со временем суток: утро, день, закат и ночь
+Turn off for 12-hour time with AM / PM	Выключите для 12-часового формата с AM / PM
+CPU, memory, disk and battery	ЦП, память, диск и батарея
+Month view — click the arrows to change month	Месяц целиком — стрелки меняют месяц
+A sticky note — double-click it to write	Стикер — дважды щёлкните, чтобы писать
+Tick tasks off right on the desktop — double-click to edit the list	Отмечайте задачи прямо на рабочем столе — двойной щелчок для правки списка
+Rings for how much of the day, week, month and year has passed	Кольца: сколько прошло от дня, недели, месяца и года
+The last things you copied; click one to copy it again. Kept in memory only, never saved	Последнее, что вы копировали; щёлкните, чтобы скопировать снова. Только в памяти, никогда не сохраняется
+The song that's playing — or the last one you listened to	Песня, которая играет — или последняя, что вы слушали
+A new quote every morning — double-click for another	Новая цитата каждое утро — двойной щелчок для другой
+Stars, followers, repos and your last 14 days	Звёзды, подписчики, репозитории и ваши последние 14 дней
+Public data only, no sign-in needed	Только публичные данные, вход не нужен
+Live download and upload speed	Скорость загрузки и отдачи в реальном времени
+Pomodoro: 	Помодоро: 
+Days left until a birthday, a trip or the holidays	Сколько дней до дня рождения, поездки или праздников
+Today and the next days, from Open-Meteo or wttr.in (free, no account)	Сегодня и ближайшие дни, от Open-Meteo или wttr.in (бесплатно, без аккаунта)
+A sky that matches the weather (sun, clouds, rain, storm, snow, fog, night) fading into the glass	Небо под погоду (солнце, облака, дождь, гроза, снег, туман, ночь), плавно переходящее в стекло
+Turn off for °C and km/h	Выключите для °C и км/ч
+Shows your pictures one at a time — click the arrow for the next one	Показывает фото по одному — стрелка для следующего
+Right-click a widget → Group with, then scroll over it to switch	Правый щелчок по виджету → Сгруппировать, затем прокрутка для переключения
+Move all widgets back to the right side of the screen	Вернуть все виджеты на правую сторону экрана
+Your desktop files, sorted into glass fences automatically.	Файлы рабочего стола автоматически раскладываются по стеклянным группам.
+Group desktop items by type	Группировать элементы рабочего стола по типу
+Only show a fence when it has something in it	Показывать группу, только когда в ней что-то есть
+Recommended: the fences replace the normal icons, so nothing overlaps	Рекомендуется: группы заменяют обычные значки, ничего не перекрывается
+4 or more files of the same type become one stack — click it to open	4 и больше файлов одного типа складываются в стопку — щёлкните, чтобы открыть
+See where every file goes and pick which ones to sort	Посмотрите, куда пойдёт каждый файл, и выберите, что упорядочить
+Make your own fence, then drag icons into it	Создайте свою группу и перетащите в неё значки
+For example: *.pdf goes to School, Screenshot* goes to Images	Например: *.pdf — в «Учёба», Screenshot* — в «Изображения»
+Press Ctrl + Alt + F, type a few letters and press Enter to open	Нажмите Ctrl + Alt + F, введите пару букв и нажмите Enter, чтобы открыть
+Right-click a fence's title and choose Sort by: name, type, date or size	Правый щелчок по заголовку группы → Сортировать по: имени, типу, дате или размеру
+Drag an icon to another fence to keep it there	Перетащите значок в другую группу, чтобы он остался там
+Drop an icon on a folder to move it inside (hold Ctrl to copy)	Бросьте значок на папку, чтобы переместить внутрь (Ctrl — копировать)
+Drag files in from Explorer, or drag icons out to Explorer and other apps	Перетаскивайте файлы из проводника или значки в проводник и другие приложения
+Drop an icon on the Recycle Bin to delete it	Бросьте значок на корзину, чтобы удалить его
+Show any folder (Downloads, a project…) as its own fence	Показывать любую папку (Загрузки, проект…) отдельной группой
+GlassDesk watches for changes, but you can refresh now	GlassDesk сам следит за изменениями, но можно обновить сейчас
+Put all fences back in a tidy column	Вернуть все группы в аккуратный столбец
+GlassDesk is built to stay out of the way.	GlassDesk сделан так, чтобы не мешать.
+Refresh the system monitor every 5 seconds instead of 2	Обновлять монитор системы каждые 5 секунд вместо 2
+No updates at all while you play games or watch videos	Никаких обновлений, пока вы играете или смотрите видео
+Give unused memory back to Windows every few minutes	Возвращать неиспользуемую память Windows каждые несколько минут
+Panels are redrawn only when something actually changes	Панели перерисовываются, только когда что-то действительно меняется
+Windows tells GlassDesk when desktop files change — no polling	Windows сама сообщает GlassDesk об изменении файлов — без опроса
+A single small .exe using the built-in .NET Framework — no browser engine	Один маленький .exe на встроенном .NET Framework — без движка браузера
+GlassDesk — a light, glassy desktop organizer for Windows.	GlassDesk — лёгкий стеклянный органайзер рабочего стола для Windows.
+Show or hide all panels	Показать или скрыть все панели
+Move a fence. Drag the bottom-right corner to resize it	Переместить группу. Потяните правый нижний угол для изменения размера
+Roll the fence up / down	Свернуть / развернуть группу
+Menus for items, fences and widgets	Меню для элементов, групп и виджетов
+Find anything on your desktop	Найти что угодно на рабочем столе
+Look for a new version once a day and let you know	Раз в день ищет новую версию и сообщает вам
+Fences, rules, widgets and look in one .glassdesk file	Группы, правила, виджеты и оформление в одном файле .glassdesk
+From a backup, or to copy your setup to another PC	Из резервной копии или чтобы перенести настройки на другой ПК
+Keeps the last 7 days, just in case	Хранит последние 7 дней — на всякий случай
+Closes all panels and the tray icon	Закрывает все панели и значок в трее
+Quote	Цитата
+Copy some text anywhere and it shows up here.\nClick it later to copy it again.	Скопируйте текст где угодно — и он появится здесь.\nЩёлкните позже, чтобы скопировать снова.
+Week {0}	Неделя {0}
+H {0}°  L {1}°	Макс {0}°  Мин {1}°
+Frosted navy glass with a soft glow	Матовое тёмно-синее стекло с мягким свечением
+Deep violet glass	Тёмно-фиолетовое стекло
+Teal water and cyan light	Бирюзовая вода и голубой свет
+Warm coral evening glow	Тёплое коралловое вечернее сияние
+Green glass, fresh and calm	Зелёное стекло, свежее и спокойное
+Soft pink and lilac	Нежно-розовый и сиреневый
+Northern lights, teal to purple	Северное сияние, от бирюзового до фиолетового
+Icy white glass	Ледяное белое стекло
+Glowing coals, red and amber	Тлеющие угли, красный и янтарный
+Light lilac glass	Светло-сиреневое стекло
+Cool, fresh and light	Прохладный, свежий и светлый
+Calm and mostly solid	Спокойный, почти непрозрачный
+Fully blurred, see-through	Полное размытие, сквозь видно
+Deeper, darker Mica	Более глубокий и тёмный Mica
+Default light	Светлая по умолчанию
+Default dark	Тёмная по умолчанию
+Blue Windows 11 flower	Синий цветок Windows 11
+Purple light, soft acrylic	Фиолетовый свет, мягкий акрил
+Warm orange morning	Тёплое оранжевое утро
+Fresh blue-green waves	Свежие сине-зелёные волны
+Dark with deep pink motion	Тёмная с ярко-розовым движением
+Bright, flat and rounded	Яркий, плоский и скруглённый
+Black glass with a glowing edge	Чёрное стекло со светящимся краем
+Quiet gray, no color	Спокойный серый, без цвета
+Warm, solid and easy to read	Тёплый, непрозрачный и читаемый
+The original GlassDesk 1.7 look	Оригинальный вид GlassDesk 1.7
+Disk	Диск
+free	свободно
+Tomorrow	Завтра
+Nothing coming up	Ближайших событий нет
+That link isn't a calendar (.ics) link	Это не ссылка на календарь (.ics)
+Can't reach your calendar – trying again soon	Не удаётся связаться с календарём – повтор позже
+Paste your calendar's iCal (.ics) link — several links can be separated by spaces	Вставьте ссылку iCal (.ics) на календарь — несколько ссылок через пробел
+Change calendar link…	Изменить ссылку на календарь…
+Connect a calendar…	Подключить календарь…
+Disconnect calendar	Отключить календарь
+System drives	Диски системы
+Show every internal and USB drive, not just the Windows drive	Показывать все внутренние и USB-диски, а не только диск Windows
+Online calendar	Онлайн-календарь
+Connected — your events show as dots and the next ones below	Подключён — события отмечены точками, ближайшие показаны ниже
+Google, Outlook or iCloud: paste the calendar's private iCal (.ics) link	Google, Outlook или iCloud: вставьте личную ссылку iCal (.ics)
+Connect…	Подключить…
+Game screenshots	Скриншоты игр
+Found {0}: Xbox Game Bar, NVIDIA or Windows screenshot folders	Найдено {0}: папки Xbox Game Bar, NVIDIA или снимков Windows
+Xbox Game Bar, NVIDIA and Windows screenshot folders are already shown, or none were found	Папки Xbox Game Bar, NVIDIA и Windows уже показаны или не найдены
+Add them	Добавить
+Style	Стиль
+macOS	macOS
+No picture	Без картинки
+Widget style	Стиль виджетов
+Mixed — right-click a widget › Style to change just that one	Смешанный — правый щелчок по виджету › Стиль, чтобы сменить только его
+For all widgets — or right-click one › Style to change just that one	Для всех виджетов — или правый щелчок по одному › Стиль, чтобы сменить только его
+Your desktop	Ваш рабочий стол
+Live preview	Живой предпросмотр
+Updates as you change things — point at a panel to see its name	Обновляется при изменениях — наведите на панель, чтобы увидеть её название
+Click a widget to add or remove it	Щёлкните виджет, чтобы добавить или убрать его
+No widget matches	Нет подходящих виджетов
+Liquid glass	Жидкое стекло
+Liquid	Жидкое
+Liquid: clear glass that bends the wallpaper at its edges	Жидкое: прозрачное стекло, которое изгибает обои по краям
+Regular	Обычное
+Liquid glass type	Тип жидкого стекла
+Regular is a little frosted and easy to read; Clear shows the most of your wallpaper	Обычное слегка матовое и легко читается; прозрачное показывает больше обоев
+Melt nearby panels together	Сливать соседние панели
+Liquid glass panels close to each other join with a liquid bridge, like drops of water	Панели из жидкого стекла рядом друг с другом соединяются жидким мостиком, как капли воды
+Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, depending on your screen size).\n\nTurn on liquid glass?	Жидкое стекло изгибает и размывает обои в каждой панели. Для этого GlassDesk хранит в памяти дополнительные копии обоев, поэтому использует больше ОЗУ (примерно на 100–200 МБ больше, в зависимости от размера экрана).\n\nВключить жидкое стекло?
+Real bending, frosted glass like Apple's. Settings → Appearance → Glass style → Liquid.	Настоящее изгибающее матовое стекло, как у Apple. Настройки → Оформление → Стиль стекла → Жидкое.
+A style for each widget	Свой стиль для каждого виджета
+Right-click a widget → Style. Notes, Reminders, rings, gauges and more.	Правый щелчок по виджету → Стиль. Заметки, Напоминания, кольца, датчики и другое.
+See it before you add it	Посмотрите, прежде чем добавить
+Live desktop preview in Settings, and a Widgets tab in quick search (Ctrl + Alt + F).	Живой предпросмотр в настройках и вкладка виджетов в быстром поиске (Ctrl + Alt + F).
+Smarter widgets	Умнее виджеты
+Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.	Онлайн-календарь, все диски в мониторе системы, папки скриншотов игр, буфер обмена и 3 новых языка.
+Welcome to GlassDesk 2.0	Добро пожаловать в GlassDesk 2.0
+Here's what's new — all made from your ideas.	Вот что нового — всё по вашим идеям.

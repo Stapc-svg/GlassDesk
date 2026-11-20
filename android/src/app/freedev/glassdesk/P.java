@@ -36,9 +36,10 @@ public final class P {
     /** GlassDesk (default) or Clean. */
     public static int design(Context c) { return sp(c).getInt("design", Style.GLASSDESK); }
     public static boolean gd(Context c) { return design(c) == Style.GLASSDESK; }
-    public static String themeKey(Context c) { return gd(c) ? "gd_theme" : "cl_theme"; }
-    public static String accentKey(Context c) { return gd(c) ? "gd_accent" : "cl_accent"; }
-    public static int theme(Context c) { return sp(c).getInt(themeKey(c), gd(c) ? Style.GLASS : Style.AUTO); }
+    public static boolean liquid(Context c) { return design(c) == Style.LIQUID; }
+    public static String themeKey(Context c) { return Style.themeKey(design(c)); }
+    public static String accentKey(Context c) { return Style.accentKey(design(c)); }
+    public static int theme(Context c) { return sp(c).getInt(themeKey(c), Style.defaultTheme(design(c))); }
     public static int accent(Context c) { return sp(c).getInt(accentKey(c), 0); }
     public static int tint(Context c) { return sp(c).getInt("tint", 45); }
 

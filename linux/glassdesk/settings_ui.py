@@ -37,6 +37,18 @@ CSS = b"""
 """
 
 
+GLASS_CSS = """
+.gd-settings.gd-glass { background: transparent; }
+.gd-settings.gd-glass stacksidebar, .gd-settings.gd-glass stacksidebar list { background: rgba(0,0,0,0.16); }
+.gd-settings.gd-glass scrolledwindow, .gd-settings.gd-glass viewport, .gd-settings.gd-glass stack { background: transparent; }
+.gd-settings scrollbar, .gd-settings scrollbar contents, .gd-settings scrollbar trough { background: transparent; border: none; }
+.gd-settings scrollbar slider { min-width: 5px; min-height: 40px; border-radius: 99px; border: none; margin: 3px; background: rgba(255,255,255,0.28); }
+.gd-settings scrollbar slider:hover { min-width: 7px; background: rgba(255,255,255,0.45); }
+.gd-settings scrollbar slider:active { background: rgba(255,255,255,0.6); }
+.gd-settings scrollbar button { min-width: 0; min-height: 0; padding: 0; border: none; background: transparent; }
+"""
+
+
 def themed_css(T):
     """The Settings window in the colors of the theme you picked."""
     hx = core.rgb_hex
@@ -46,6 +58,7 @@ def themed_css(T):
                      ("#232735", hx(T.ui_card if light else core.mix(T.ui_card, (1, 1, 1), 0.05))),
                      ("#2c3142", hx(core.mix(T.ui_card, T.accent, 0.15))), ("#eef1f8", hx(T.ui_text)), ("#0b1020", "#FFFFFF")):
         css = css.replace(old, new)
+    css += GLASS_CSS
     if light:
         css = css.replace("rgba(238,241,248", "rgba(20,22,34").replace("rgba(255,255,255,0.0", "rgba(0,0,0,0.0") \
                  .replace("rgba(255,255,255,0.1", "rgba(0,0,0,0.1").replace("rgba(255,255,255,0.12)", "rgba(0,0,0,0.12)") \
@@ -102,12 +115,12 @@ class LookCard(Gtk.DrawingArea):
         cr.set_source_rgb(*acc)
         cr.arc(px + 12, py + 12, 3.5, 0, 2 * math.pi)
         cr.fill()
-        for i, (ww, al) in enumerate(((0.45, 0.5), (0.7, 0.9))):
+        for i, (ww, al) in enumerate(((0.45, 0.28 if dark else 0.35), (0.7, 0.42 if dark else 0.5))):   # see-through, not bright white
             rounded(cr, px + 22 if i == 0 else px + 10, py + 9 + i * 12, pw * ww, 6, 3)
             cr.set_source_rgba(*(tc + (al,)))
             cr.fill()
         rounded(cr, px + 10, py + ph - 11, pw - 20, 4, 2)
-        cr.set_source_rgba(*(tc + (0.2,)))
+        cr.set_source_rgba(*(tc + (0.14,)))
         cr.fill()
         rounded(cr, px + 10, py + ph - 11, (pw - 20) * 0.6, 4, 2)
         cr.set_source_rgb(*acc)
@@ -141,6 +154,16 @@ class SettingsWindow(Gtk.Window):
         hb.set_show_close_button(True)
         self.set_titlebar(hb)
         self.get_style_context().add_class("gd-settings")
+        # glass: the blurred wallpaper shows through the whole window (needs a compositor)
+        scr = self.get_screen()
+        vis = scr.get_rgba_visual()
+        self.glass = vis is not None and scr.is_composited() and not app.theme.solid
+        if self.glass:
+            self.set_visual(vis)
+            self.set_app_paintable(True)
+            self.get_style_context().add_class("gd-glass")
+            self.connect("draw", self._paint_glass)
+            self.connect("configure-event", lambda *a: self.queue_draw())
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         side = Gtk.StackSidebar()
@@ -151,6 +174,30 @@ class SettingsWindow(Gtk.Window):
         box.pack_start(self.stack, True, True, 0)
         self.add(box)
         self.build()
+
+    def _paint_glass(self, _w, cr):
+        from .glass import Backdrop
+        T = self.app.theme
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        gw = self.get_window()
+        try:
+            disp = self.get_display()
+            mon = disp.get_monitor_at_window(gw).get_geometry()
+            ox, oy = gw.get_origin()[1:]
+            pb = Backdrop.get(mon.width, mon.height, "acrylic")
+            if pb is not None:
+                Gdk.cairo_set_source_pixbuf(cr, pb, mon.x - ox, mon.y - oy)
+                cr.paint()
+        except Exception as e:
+            core.log("settings glass: %s" % e)
+        import cairo
+        g = cairo.LinearGradient(0, 0, 0, h)
+        a = 0.78 if T.dark else 0.72
+        g.add_color_stop_rgba(0, *(T.ui_bg[:3] + (a,)))
+        g.add_color_stop_rgba(1, *(core.mix(T.ui_bg, T.accent, 0.08)[:3] + (a,)))
+        cr.set_source(g)
+        cr.paint()
+        return False
 
     # ---- helpers
     def page(self, name, title):
@@ -304,8 +351,31 @@ class SettingsWindow(Gtk.Window):
             fb.set_margin_start(14); fb.set_margin_end(14); fb.set_margin_top(12); fb.set_margin_bottom(12)
             self._card.add(fb)
         self.section("Glass")
-        self.row("Glass style", "Frosted is the softest blur; See-through shows the wallpaper clearly.",
-                 self.combo("glass_style", [("frosted", "Frosted"), ("blur", "Light blur"), ("clear", "Clear"), ("transparent", "See-through")]))
+        styles = [("frosted", "Frosted"), ("blur", "Light blur"), ("clear", "Clear"), ("transparent", "See-through")]
+        from . import liquid
+        if liquid.AVAILABLE:
+            styles.append(("liquid", "Liquid glass"))
+        gs = self.combo("glass_style", styles)
+        prev = {"v": S["glass_style"]}
+        def guard(cb):
+            # liquid glass keeps extra copies of the wallpaper in memory: say so before turning it on
+            if cb.get_active_id() == "liquid" and prev["v"] != "liquid":
+                d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO, buttons=Gtk.ButtonsType.YES_NO,
+                                      text="Turn on liquid glass?")
+                d.format_secondary_text("Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps "
+                                        "extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, "
+                                        "depending on your screen size).")
+                ok = d.run() == Gtk.ResponseType.YES
+                d.destroy()
+                if not ok:
+                    cb.set_active_id(prev["v"])
+                    return
+            prev["v"] = cb.get_active_id()
+        gs.connect("changed", guard)
+        self.row("Glass style", "Frosted is the softest blur; Liquid glass bends the wallpaper at the edges like a thick lens.", gs)
+        if liquid.AVAILABLE:
+            self.row("Liquid glass type", "Regular is a little frosted and easy to read; Clear shows the most of your wallpaper.",
+                     self.combo("liquid_kind", [("regular", "Regular"), ("clear", "Clear")]))
         self.row("Glass tint", "How dark (or light) the glass is.", self.slider("opacity", 0, 100))
         self.row("Corner radius", None, self.slider("radius", 0, 28))
         self.row("Size", "Makes every panel bigger or smaller.", self.slider("ui_scale", 70, 160, 5))
@@ -329,14 +399,15 @@ class SettingsWindow(Gtk.Window):
                                ("show_system", "System monitor", "CPU, memory, disk and battery"),
                                ("show_calendar", "Calendar", "Month view"), ("show_notes", "Notes", "Double-click to write"),
                                ("show_todo", "To-do list", "Click the box to tick a task off"),
-                               ("show_weather", "Weather", "Open-Meteo, free and without an account"),
+                               ("show_weather", "Weather", "Open-Meteo or wttr.in, free and without an account"),
                                ("show_photos", "Photo frame", "Pictures from a folder"), ("show_countdown", "Countdown", "Days until a date"),
                                ("show_quote", "Quote of the day", "Double-click for another"),
                                ("show_github", "GitHub stats", "Stars, followers, repos and your last 14 days"),
                                ("show_network", "Network meter", "Live download and upload speed"),
                                ("show_focus", "Focus timer", "Pomodoro: focus, then a short break"),
                                ("show_music", "Music", "The song that's playing, or the last one you listened to"),
-                               ("show_day", "Today", "Rings for the day, week, month and year")):
+                               ("show_day", "Today", "Rings for the day, week, month and year"),
+                               ("show_clip", "Clipboard", "The last things you copied; click one to copy it again. Memory only, never saved")):
             self.row(name, sub, self.toggle(key))
         self.section("Stacks and sizes")
         self.row("Stack widgets", "Drag a widget onto another one, then click the tabs to switch. Fences stack the same way.", None)
@@ -346,7 +417,10 @@ class SettingsWindow(Gtk.Window):
         self.section("Widget options")
         self.row("GitHub username", "Public data only, no sign-in needed.",
                  self.button("Change…", lambda: self.app.widgets["show_github"].choose_user()))
-        self.row("Weather city", None, self.button("Change…", lambda: self.app.widgets["show_weather"].on_double_click(0, 0)))
+        self.row("Weather city", "You can add the country, e.g. Paris, France", self.button("Change…", lambda: self.app.widgets["show_weather"].on_double_click(0, 0)))
+        self.row("Weather picture", "A sky that matches the weather (sun, clouds, rain, storm, snow, fog, night) fading into the glass", self.toggle("weather_scene"))
+        self.row("Clock background", "Changes with the time of day: morning, day, sunset and night",
+                 self.combo("clock_style", [("photo", "Photos"), ("drawn", "Drawn sky"), ("off", "Off")]))
         self.row("Focus minutes", None, self.spin("focus_minutes", 1, 120))
         self.row("Break minutes", None, self.spin("break_minutes", 1, 60))
         self.row("Photo folder", None, self.button("Choose…", lambda: self.app.widgets["show_photos"].on_double_click(0, 0)))

@@ -367,11 +367,11 @@ namespace GlassDesk
                 else g.FillEllipse(b, titleR.X, titleR.Y + (TitleH - dot) / 2, dot, dot);
             }
             var capR = new Rectangle(titleR.X + T.S(16), titleR.Y, titleR.Width - T.S(70), TitleH);
-            if (Cfg.GlassStyle == "transparent")
+            if ((Cfg.GlassStyle == "transparent" || Cfg.GlassStyle == "liquid"))
                 using (var sh = new SolidBrush(Color.FromArgb(150, 0, 0, 0)))
-                    g.DrawString(Caption, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), sh, new Rectangle(capR.X, capR.Y + 1, capR.Width, capR.Height), Gfx.Left);
+                    g.DrawString(Lang.L(Caption), Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), sh, new Rectangle(capR.X, capR.Y + 1, capR.Width, capR.Height), Gfx.Left);
             if (App.GroupMembers(Id).Count < 2)
-                using (var b = new SolidBrush(T.Text)) { tabRects.Clear();  g.DrawString(Caption, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), b, capR, Gfx.Left); }
+                using (var b = new SolidBrush(T.Text)) { tabRects.Clear();  g.DrawString(Lang.L(Caption), Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), b, capR, Gfx.Left); }
             else DrawTabs(g, new RectangleF(capR.X - T.Sf(4), capR.Y, capR.Width + T.Sf(24), TitleH));
             using (var b = new SolidBrush(T.SubText))
                 g.DrawString(Items.Count.ToString(), Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), b, new Rectangle(titleR.Right - T.S(56), titleR.Y, T.S(34), TitleH), Gfx.Right);
@@ -417,7 +417,7 @@ namespace GlassDesk
                 else if (icon != null) { var im = g.InterpolationMode; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(icon, ir); g.InterpolationMode = im; }
                 else DrawFallbackIcon(g, ir, Tiles[i]);
                 var lr = new RectangleF(r.X + T.S(4), ir.Bottom + T.S(4), r.Width - T.S(8), T.Sf(32));
-                if (T.Dark || Cfg.GlassStyle == "transparent")
+                if (T.Dark || Cfg.GlassStyle == "transparent" || Cfg.GlassStyle == "liquid")
                     using (var sb = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
                         g.DrawString(Tiles[i].Name, label, sb, new RectangleF(lr.X, lr.Y + 1, lr.Width, lr.Height), Gfx.TopCenterWrap);
                 using (var b = new SolidBrush(T.Text)) g.DrawString(Tiles[i].Name, label, b, lr, Gfx.TopCenterWrap);
@@ -602,7 +602,7 @@ namespace GlassDesk
         {
             var m = App.NewMenu();
             m.Items.Add(st.Open ? "Close stack" : "Open stack", null, delegate { ToggleStack(st); });
-            m.Items.Add("Turn off stacks", null, delegate { Cfg.Stacks = false; Cfg.Save(); App.Rebuild(); });
+            m.Items.Add(Lang.L("Turn off stacks"), null, delegate { Cfg.Stacks = false; Cfg.Save(); App.Rebuild(); });
             m.Show(Cursor.Position);
         }
 
@@ -771,19 +771,19 @@ namespace GlassDesk
         void ShowItemMenu(DesktopItem it)
         {
             var m = App.NewMenu();
-            m.Items.Add("Open", null, delegate { Open(it); });
+            m.Items.Add(Lang.L("Open"), null, delegate { Open(it); });
             if (it.IsRecycleBin)
             {
-                m.Items.Add("Empty Recycle Bin", null, delegate { Native.EmptyRecycleBin(Handle); App.RescanSoon(); });
+                m.Items.Add(Lang.L("Empty Recycle Bin"), null, delegate { Native.EmptyRecycleBin(Handle); App.RescanSoon(); });
             }
             else
             {
-                m.Items.Add("Show in File Explorer", null, delegate { try { Process.Start("explorer.exe", "/select,\"" + it.Path + "\""); } catch { } });
-                m.Items.Add("Copy path", null, delegate { try { Clipboard.SetText(it.Path); } catch { } });
+                m.Items.Add(Lang.L("Show in File Explorer"), null, delegate { try { Process.Start("explorer.exe", "/select,\"" + it.Path + "\""); } catch { } });
+                m.Items.Add(Lang.L("Copy path"), null, delegate { try { Clipboard.SetText(it.Path); } catch { } });
             }
 
             // move to another fence
-            var move = new ToolStripMenuItem("Move to fence");
+            var move = new ToolStripMenuItem(Lang.L("Move to fence"));
             foreach (var f in App.DesktopFences())
             {
                 if (f == this) continue;
@@ -791,19 +791,19 @@ namespace GlassDesk
                 move.DropDownItems.Add(target.Caption, null, delegate { App.MoveToFence(it.Path, target); });
             }
             if (move.DropDownItems.Count > 0) move.DropDownItems.Add(new ToolStripSeparator());
-            move.DropDownItems.Add("New fence…", null, delegate { var nf = App.NewFence(); if (nf != null) App.MoveToFence(it.Path, nf); });
+            move.DropDownItems.Add(Lang.L("New fence…"), null, delegate { var nf = App.NewFence(); if (nf != null) App.MoveToFence(it.Path, nf); });
             m.Items.Add(move);
             if (Cfg.Pins.ContainsKey(it.Path))
             {
                 string home = Organizer.CategoryName(Organizer.CategoryOf(it));
-                m.Items.Add("Back to " + home, null, delegate { App.Unpin(it.Path); Cfg.Save(); App.Rebuild(); });
+                m.Items.Add(Lang.L("Back to ") + home, null, delegate { App.Unpin(it.Path); Cfg.Save(); App.Rebuild(); });
             }
 
             if (!it.IsRecycleBin)
             {
                 m.Items.Add(new ToolStripSeparator());
-                m.Items.Add("Delete (Recycle Bin)", null, delegate { RecycleWithConfirm(new[] { it.Path }); });
-                m.Items.Add("Properties", null, delegate { Native.ShowProperties(it.Path); });
+                m.Items.Add(Lang.L("Delete (Recycle Bin)"), null, delegate { RecycleWithConfirm(new[] { it.Path }); });
+                m.Items.Add(Lang.L("Properties"), null, delegate { Native.ShowProperties(it.Path); });
             }
             m.Show(Cursor.Position);
         }
@@ -815,7 +815,7 @@ namespace GlassDesk
             var m = App.NewMenu();
             App.AddGroupItems(m, this);
             m.Items.Add(Collapsed ? "Expand" : "Roll up", null, delegate { ToggleCollapsed(); });
-            m.Items.Add("Rename…", null, delegate
+            m.Items.Add(Lang.L("Rename…"), null, delegate
             {
                 string name = InputBox.Ask("Rename fence", Caption, App.Theme);
                 if (name == null) return;
@@ -823,12 +823,12 @@ namespace GlassDesk
                 else if (name.Trim().Length > 0) Cfg.Titles[Id] = name.Trim();
                 Cfg.Save(); App.Rebuild();
             });
-            m.Items.Add("New fence…", null, delegate { App.NewFence(); });
+            m.Items.Add(Lang.L("New fence…"), null, delegate { App.NewFence(); });
             string cur;
             if (!Cfg.Sort.TryGetValue(Id, out cur)) cur = "name";
             // look: color, icon size, auto-hide
             string curColor; Cfg.FenceColor.TryGetValue(Id, out curColor);
-            var color = new ToolStripMenuItem("Color");
+            var color = new ToolStripMenuItem(Lang.L("Color"));
             foreach (var c in new[] { new[] { "", "None (glass)" }, new[] { "7C9CFF", "Periwinkle" }, new[] { "22BE82", "Green" }, new[] { "FF7A45", "Orange" }, new[] { "EC4899", "Pink" }, new[] { "8A63FF", "Violet" }, new[] { "EAAA1E", "Amber" }, new[] { "14B0C4", "Teal" }, new[] { "E5484D", "Red" } })
             {
                 string hex = c[0];
@@ -839,7 +839,7 @@ namespace GlassDesk
             }
             m.Items.Add(color);
             string curSize; if (!Cfg.FenceIcons.TryGetValue(Id, out curSize)) curSize = "medium";
-            var size = new ToolStripMenuItem("Icon size");
+            var size = new ToolStripMenuItem(Lang.L("Icon size"));
             foreach (var o in new[] { "small", "medium", "large" })
             {
                 string key = o;
@@ -851,7 +851,7 @@ namespace GlassDesk
                 if (Cfg.AutoHide.Contains(Id)) Cfg.AutoHide.Remove(Id); else { Cfg.AutoHide.Add(Id); peek = true; Peek(); }
                 Cfg.Save(); App.PlaceWindow(this);
             }) { Checked = Cfg.AutoHide.Contains(Id) });
-            var sort = new ToolStripMenuItem("Sort by");
+            var sort = new ToolStripMenuItem(Lang.L("Sort by"));
             foreach (var o in new[] { new[] { "name", "Name" }, new[] { "type", "Type" }, new[] { "date", "Date modified (newest first)" }, new[] { "size", "Size (biggest first)" } })
             {
                 string key = o[0];
@@ -859,23 +859,23 @@ namespace GlassDesk
                 sort.DropDownItems.Add(mi);
             }
             m.Items.Add(sort);
-            if (HoldsDesktopItems) m.Items.Add("Add a rule for this fence…", null, delegate { App.AddRule(Id); });
+            if (HoldsDesktopItems) m.Items.Add(Lang.L("Add a rule for this fence…"), null, delegate { App.AddRule(Id); });
             if (Kind == FenceKind.Folder)
             {
-                m.Items.Add("Open folder", null, delegate { try { Process.Start("explorer.exe", "\"" + Key + "\""); } catch { } });
-                m.Items.Add("Remove this fence", null, delegate { Cfg.FolderFences.Remove(Key); Cfg.Save(); App.Rebuild(); });
+                m.Items.Add(Lang.L("Open folder"), null, delegate { try { Process.Start("explorer.exe", "\"" + Key + "\""); } catch { } });
+                m.Items.Add(Lang.L("Remove this fence"), null, delegate { Cfg.FolderFences.Remove(Key); Cfg.Save(); App.Rebuild(); });
             }
             else if (Kind == FenceKind.Custom)
             {
-                m.Items.Add("Delete this fence", null, delegate { App.DeleteCustomFence(Id); });
+                m.Items.Add(Lang.L("Delete this fence"), null, delegate { App.DeleteCustomFence(Id); });
             }
             else
             {
-                m.Items.Add("Open Desktop folder", null, delegate { try { Process.Start("explorer.exe", "\"" + Organizer.UserDesktop + "\""); } catch { } });
-                m.Items.Add("Hide this category", null, delegate { Cfg.Categories[Key] = false; Cfg.Save(); App.Rebuild(); });
+                m.Items.Add(Lang.L("Open Desktop folder"), null, delegate { try { Process.Start("explorer.exe", "\"" + Organizer.UserDesktop + "\""); } catch { } });
+                m.Items.Add(Lang.L("Hide this category"), null, delegate { Cfg.Categories[Key] = false; Cfg.Save(); App.Rebuild(); });
             }
             m.Items.Add(new ToolStripSeparator());
-            m.Items.Add("Settings…", null, delegate { App.ShowSettings(3); });
+            m.Items.Add(Lang.L("Settings…"), null, delegate { App.ShowSettings(3); });
             m.Show(Cursor.Position);
         }
     }

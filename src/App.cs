@@ -13,6 +13,9 @@ namespace GlassDesk
     {
         public Settings Settings;
         public Theme Theme;
+        Theme macTheme, macFrom;
+        /// <summary>The macOS widget look, made from the current theme (light or dark, size).</summary>
+        public Theme MacTheme { get { if (macTheme == null || !ReferenceEquals(macFrom, Theme)) { macTheme = Theme.Mac(); macFrom = Theme; } return macTheme; } }
         public float DpiScale = 1f;
         public readonly SysStats Stats = new SysStats();
         public readonly List<GlassWindow> Windows = new List<GlassWindow>();
@@ -20,7 +23,7 @@ namespace GlassDesk
         public bool Paused;
 
         /// <summary>Where the updater looks for new versions ("owner/repo" on GitHub). Can also be changed in Settings > About.</summary>
-        public const string DefaultRepo = "YOUR-USERNAME/GlassDesk";
+        public const string DefaultRepo = "Stapc-svg/GlassDesk";
         public static Version VersionNumber { get { return typeof(App).Assembly.GetName().Version; } }
         public static string Version { get { return Updater.Short(VersionNumber); } }
         public bool Preview { get { return preview; } }
@@ -30,6 +33,7 @@ namespace GlassDesk
         public PhotoWidget PhotosW { get { return photos; } }
         public TodoWidget TodoW { get { return todo; } }
         public CountdownWidget CountdownW { get { return countdown; } }
+        public CalendarWidget CalendarW { get { return calendar; } }
 
         readonly bool preview;
         public DateTime? FixedNow;
@@ -37,7 +41,7 @@ namespace GlassDesk
 
         ClockWidget clock; SystemWidget system; CalendarWidget calendar; NotesWidget notes;
         WeatherWidget weather; TodoWidget todo; PhotoWidget photos;
-        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music; DayWidget day;
+        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music; DayWidget day; ClipWidget clip;
         internal GitHubWidget GitHubW { get { return github; } } internal FocusWidget FocusW { get { return focus; } }
         public WallpaperChanger Wallpaper;
         readonly Dictionary<string, FenceWindow> fences = new Dictionary<string, FenceWindow>();
@@ -58,6 +62,7 @@ namespace GlassDesk
         public void Start()
         {
             Settings = Settings.Load();
+            Lang.Init(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LANG") ?? Settings.Language);
             try { using (var g = Graphics.FromHwnd(IntPtr.Zero)) DpiScale = g.DpiX / 96f; } catch { DpiScale = 1f; }
             Safe("wallpaper accent", PickWallpaperAccent);
             Theme = Theme.From(Settings, DpiScale);
@@ -78,6 +83,7 @@ namespace GlassDesk
 
             clockTimer = new Timer(); clockTimer.Tick += delegate { ClockTick(); }; ScheduleClock(); clockTimer.Start();
             statsTimer = new Timer(); statsTimer.Tick += delegate { StatsTick(); }; statsTimer.Interval = Settings.LowPower ? 5000 : 2000; statsTimer.Start();
+            if (!Preview) WatchRecycleBin();
             trimTimer = new Timer { Interval = 15000 }; trimTimer.Tick += delegate { trimTimer.Interval = 300000; if (Settings.TrimMemory && !hiddenByUser) Native.TrimMemory(); }; trimTimer.Start();
             rescanTimer = new Timer { Interval = 700 }; rescanTimer.Tick += delegate { rescanTimer.Stop(); Rebuild(); };
             lastDay = Now.Date;
@@ -96,7 +102,9 @@ namespace GlassDesk
 
             // the welcome screen shows once ever: the marker file stays when GlassDesk is updated
             string mark = Path.Combine(Settings.Folder, "welcome-screen-shown");
-            if (!File.Exists(mark))
+            string seen = ""; try { if (File.Exists(mark)) seen = File.ReadAllText(mark).Trim(); } catch { }
+            // shown on first run, and once more after updating to 2.0 to show what's new
+            if (!File.Exists(mark) || !seen.StartsWith("2."))
             {
                 try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(mark, Version); } catch { }
                 var wt = new Timer { Interval = 1200 };
@@ -124,6 +132,7 @@ namespace GlassDesk
             Windows.Add(github); Windows.Add(network); Windows.Add(focus);
             music = new MusicWidget(this); Windows.Add(music);
             day = new DayWidget(this); Windows.Add(day);
+            clip = new ClipWidget(this); Windows.Add(clip);
         }
 
         Action balloonClick;
@@ -186,7 +195,50 @@ namespace GlassDesk
                 foreach (var it in f.Items)
                     if (seen.Add(it.Path)) items.Add(new KeyValuePair<DesktopItem, string>(it, f.Caption));
             items.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
+            // every app installed on the PC (its Start menu shortcut), after the desktop items
+            var names = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+            foreach (var kv in items) names.Add(kv.Key.Name);
+            var apps = new List<KeyValuePair<DesktopItem, string>>();
+            foreach (var it in InstalledApps()) if (names.Add(it.Name)) apps.Add(new KeyValuePair<DesktopItem, string>(it, LauncherForm.AppsTag));
+            apps.Sort((a, b) => string.Compare(a.Key.Name, b.Key.Name, StringComparison.CurrentCultureIgnoreCase));
+            items.AddRange(apps);
             return new LauncherForm(this, items);
+        }
+
+        List<DesktopItem> appCache; DateTime appCacheAt;
+        /// <summary>The apps in the Start menu (for everyone and for you), without uninstallers and help files.</summary>
+        List<DesktopItem> InstalledApps()
+        {
+            if (preview) return PreviewData.Apps();
+            if (appCache != null && (DateTime.Now - appCacheAt).TotalMinutes < 5) return appCache;
+            var list = new List<DesktopItem>();
+            var seen = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+            string[] roots =
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+            };
+            string[] skip = { "uninstall", "deinstall", "remove ", "readme", "read me", "help", "documentation", "manual", "license", "website", "release notes", "changelog" };
+            foreach (string root in roots)
+            {
+                if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) continue;
+                try
+                {
+                    foreach (string f in Directory.GetFiles(root, "*.*", SearchOption.AllDirectories))
+                    {
+                        string ext = Path.GetExtension(f).ToLowerInvariant();
+                        if (ext != ".lnk" && ext != ".url" && ext != ".appref-ms") continue;
+                        string n = Path.GetFileNameWithoutExtension(f), nl = n.ToLowerInvariant();
+                        bool bad = false; foreach (string s in skip) if (nl.Contains(s)) { bad = true; break; }
+                        if (bad || !seen.Add(n)) continue;
+                        list.Add(new DesktopItem(f, false));
+                    }
+                }
+                catch (Exception ex) { Program.Log(ex); }
+            }
+            if (appCache != null) foreach (var it in appCache) it.Dispose();
+            appCache = list; appCacheAt = DateTime.Now;
+            return list;
         }
 
         public const string UnsortedId = "cust.unsorted";
@@ -231,6 +283,16 @@ namespace GlassDesk
             if (!anyUnsorted && Settings.CustomFences.Contains(UnsortedId)) { Settings.CustomFences.Remove(UnsortedId); Settings.Positions.Remove(UnsortedId); }
             Settings.Save();
             Rebuild();
+        }
+
+        /// <summary>Liquid glass keeps full-size copies of the wallpaper in memory; ask before turning it on.</summary>
+        public bool ConfirmLiquid()
+        {
+            if (Settings.GlassStyle == "liquid") return true;
+            foreach (var v in Settings.WidgetStyles.Values) if (v == "mac") return true;   // already using it
+            var r = MessageBox.Show(Lang.L("Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, depending on your screen size).\n\nTurn on liquid glass?"),
+                "GlassDesk", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+            return r == DialogResult.Yes;
         }
 
         public void ShowWelcome()
@@ -332,11 +394,12 @@ namespace GlassDesk
                     foreach (var it in f.Items) it.Dispose();
                     f.Close(); f.Dispose();
                 }
+            groupHidden.Clear();   // every panel gets its own wanted state again right below
             foreach (var f in fences.Values) f.Wanted = true;
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
             weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
-            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic; day.Wanted = Settings.ShowDay;
+            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic; day.Wanted = Settings.ShowDay; clip.Wanted = Settings.ShowClip;
             ApplyGroups();
             if (!preview) UpdateWatchers();
             PlaceAll();
@@ -472,12 +535,13 @@ namespace GlassDesk
             var taken = new List<Rectangle>();
             var pending = new List<GlassWindow>();
             var placed = new List<KeyValuePair<GlassWindow, Rectangle>>();
+            var toHide = new List<GlassWindow>();
 
             // windows you already placed keep their spot
             foreach (var w in Windows)
             {
                 bool show = w.Wanted && !hiddenByUser;
-                if (!show) { if (w.Visible) w.Hide(); continue; }
+                if (!show) { if (w.Visible) toHide.Add(w); continue; }
                 Rectangle saved;
                 if (Settings.Positions.TryGetValue(w.Id, out saved) && (preview || OnSomeScreen(saved)))
                 {
@@ -503,10 +567,18 @@ namespace GlassDesk
                 var win = kv.Key; var rect = kv.Value;
                 Safe("panel " + win.Id, delegate
                 {
-                    if (!preview && !win.Visible) win.Show();
+                    // move and draw it first, then show it: no flash of an old picture in an old spot
                     win.SetPanelBounds(rect);
+                    if (!preview && !win.Visible)
+                    {
+                        win.RedrawBeforeShow();   // a hidden window isn't drawn by SetPanelBounds; without this it would show empty
+                        win.Show();
+                        win.Redraw();
+                    }
                 });
             }
+            // hide after the others are showing, so switching inside a stack never leaves a gap
+            foreach (var w in toHide) w.Hide();
             if (changed && !preview) Settings.Save();
         }
 
@@ -594,6 +666,15 @@ namespace GlassDesk
             }
             catch (Exception ex) { Program.Log(ex); }
         }
+
+        /// <summary>Glass or macOS look for one widget (null id = every widget).</summary>
+        public void SetWidgetStyle(string id, string style)
+        {
+            if (id == null) { foreach (var w in AllWidgetIds()) Settings.WidgetStyles[w] = style; }
+            else Settings.WidgetStyles[id] = style;
+            Settings.Save(); ApplySettings();
+        }
+        public string[] AllWidgetIds() { return new[] { "clock", "system", "calendar", "notes", "todo", "countdown", "quote", "github", "network", "focus", "music", "day", "clip", "weather", "photos" }; }
 
         public void ApplySettings()
         {
@@ -685,9 +766,48 @@ namespace GlassDesk
             if (Now.Date != lastDay) { lastDay = Now.Date; if (calendar.Visible) calendar.Redraw(); if (countdown.Visible) countdown.Redraw(); if (quote.Visible) quote.Redraw(); Backup.Daily(this); }
         }
 
+        bool? binFull;
+        int binTick;
+        /// <summary>The Recycle Bin can fill or empty without the desktop changing (deleting from Explorer,
+        /// emptying it), so check it every few seconds and swap the full/empty icon when it changes.</summary>
+        readonly List<System.IO.FileSystemWatcher> binWatchers = new List<System.IO.FileSystemWatcher>();
+        /// <summary>Watch the bin folders too, so the icon changes right away instead of on the next check.</summary>
+        void WatchRecycleBin()
+        {
+            foreach (string dir in Native.RecycleBinFolders())
+                try
+                {
+                    var w = new System.IO.FileSystemWatcher(dir) { IncludeSubdirectories = false, NotifyFilter = System.IO.NotifyFilters.FileName | System.IO.NotifyFilters.DirectoryName };
+                    System.IO.FileSystemEventHandler h = delegate { try { BeginInvokeUi(delegate { CheckRecycleBin(true); }); } catch { } };
+                    w.Created += h; w.Deleted += h; w.Renamed += delegate { try { BeginInvokeUi(delegate { CheckRecycleBin(true); }); } catch { } };
+                    w.EnableRaisingEvents = true;
+                    binWatchers.Add(w);
+                }
+                catch { }
+        }
+        void BeginInvokeUi(Action a)
+        {
+            foreach (var f in fences.Values) if (f.IsHandleCreated) { f.BeginInvoke(a); return; }
+        }
+
+        void CheckRecycleBin(bool force = false)
+        {
+            if (!force && ++binTick % 2 != 0 && binFull.HasValue) return;
+            bool full = Native.RecycleBinFull();
+            if (binFull.HasValue && binFull.Value == full) return;
+            binFull = full;
+            foreach (var f in fences.Values)
+            {
+                bool hit = false;
+                foreach (var it in f.Items) if (it.IsRecycleBin) { it.ResetIcon(); hit = true; }
+                if (hit) f.Redraw();
+            }
+        }
+
         void StatsTick()
         {
             CheckPause();
+            if (!Paused && !hiddenByUser) CheckRecycleBin();
             if (Paused || hiddenByUser || !system.Visible) return;
             Stats.Sample();
             system.Redraw();
@@ -708,7 +828,25 @@ namespace GlassDesk
 
         public void MarkDirty(GlassWindow w) { dirty.Add(w); }
 
+        bool fadingOut;
         public void ToggleVisible()
+        {
+            if (fadingOut) return;
+            if (!hiddenByUser && !Settings.LowPower)
+            {
+                // fade every panel out together, then hide them
+                var vis = Windows.FindAll(x => x.Visible && x.IsHandleCreated);
+                if (vis.Count > 0)
+                {
+                    fadingOut = true;
+                    int left = vis.Count;
+                    foreach (var w in vis) w.FadeTo(0f, 170, delegate { if (--left == 0) { fadingOut = false; FinishToggle(); } });
+                    return;
+                }
+            }
+            FinishToggle();
+        }
+        void FinishToggle()
         {
             hiddenByUser = !hiddenByUser;
             PlaceAll();
@@ -753,27 +891,38 @@ namespace GlassDesk
         {
             { "clock", "Clock" }, { "system", "System" }, { "calendar", "Calendar" }, { "notes", "Notes" }, { "weather", "Weather" },
             { "todo", "To-do" }, { "photos", "Photos" }, { "countdown", "Countdown" }, { "quote", "Quote" }, { "github", "GitHub" },
-            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" }, { "day", "Today" },
+            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" }, { "day", "Today" }, { "clip", "Clipboard" },
         };
         public static string WidgetName(string id) { string n; return widgetNames.TryGetValue(id, out n) ? n : id; }
 
         List<string> GroupOf(string id) { foreach (var g in Settings.Groups) if (g.Contains(id)) return g; return null; }
+        readonly HashSet<string> groupHidden = new HashSet<string>();   // panels hidden only because another one of their stack shows
         readonly Dictionary<string, List<string>> liveGroups = new Dictionary<string, List<string>>();   // id -> wanted members of its group
 
         /// <summary>Only the first wanted widget of each group shows; the rest wait in the same spot.</summary>
         void ApplyGroups()
         {
+            // panels whose tabs may change must be drawn again, or they keep showing the old title
+            var touched = new HashSet<string>(liveGroups.Keys);
             liveGroups.Clear();
             var byId = new Dictionary<string, GlassWindow>();
             foreach (var w in Windows) byId[w.Id] = w;
+            // panels this hid last time are wanted again before working out the stacks anew;
+            // otherwise switching one stack would break every other stack (and lose its tabs)
+            foreach (string id in groupHidden) { GlassWindow hw; if (byId.TryGetValue(id, out hw)) hw.Wanted = true; }
+            groupHidden.Clear();
             foreach (var g in Settings.Groups)
             {
                 var wanted = new List<string>();
                 foreach (string id in g) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Wanted) wanted.Add(id); }
                 if (wanted.Count < 2) continue;
                 foreach (string id in wanted) liveGroups[id] = wanted;
-                for (int i = 1; i < wanted.Count; i++) byId[wanted[i]].Wanted = false;
+                for (int i = 1; i < wanted.Count; i++) { byId[wanted[i]].Wanted = false; groupHidden.Add(wanted[i]); }
             }
+            foreach (string id in liveGroups.Keys) touched.Add(id);
+            Action redraw = delegate { foreach (string id in touched) { GlassWindow w; if (byId.TryGetValue(id, out w) && w.Visible) w.Redraw(); } };
+            // after this, the caller places and shows the panels; draw once that is done
+            try { if (invoker != null && invoker.IsHandleCreated) invoker.BeginInvoke(redraw); else redraw(); } catch { redraw(); }
         }
 
         /// <summary>Which member this is (0-based) and how many show in its group; false when not grouped.</summary>
@@ -784,16 +933,39 @@ namespace GlassDesk
             index = g.IndexOf(id); count = g.Count; return true;
         }
 
-        public string PanelName(GlassWindow w) { var f = w as FenceWindow; return f != null ? f.Caption : WidgetName(w.Id); }
+        /// <summary>Whether this panel is switched on in Settings (used by the preview in Settings).</summary>
+        public bool WantsShown(GlassWindow w)
+        {
+            if (!(w is Widget)) return w.Visible || preview;
+            if (w == null) return false;
+            var S = Settings;
+            if (w == clock) return S.ShowClock; if (w == system) return S.ShowSystem; if (w == calendar) return S.ShowCalendar; if (w == notes) return S.ShowNotes;
+            if (w == countdown) return S.ShowCountdown; if (w == quote) return S.ShowQuote; if (w == github) return S.ShowGitHub; if (w == network) return S.ShowNetwork;
+            if (w == focus) return S.ShowFocus; if (w == music) return S.ShowMusic; if (w == day) return S.ShowDay; if (w == clip) return S.ShowClip;
+            if (w == weather) return S.ShowWeather; if (w == todo) return S.ShowTodo; if (w == photos) return S.ShowPhotos;
+            return w.Visible;
+        }
+        /// <summary>Puts a widget on the desktop or takes it off (from the search window's Widgets tab).</summary>
+        public void SetWidgetShown(GlassWindow w, bool on)
+        {
+            var S = Settings;
+            if (w == clock) S.ShowClock = on; else if (w == system) S.ShowSystem = on; else if (w == calendar) S.ShowCalendar = on; else if (w == notes) S.ShowNotes = on;
+            else if (w == countdown) S.ShowCountdown = on; else if (w == quote) S.ShowQuote = on; else if (w == github) S.ShowGitHub = on; else if (w == network) S.ShowNetwork = on;
+            else if (w == focus) S.ShowFocus = on; else if (w == music) S.ShowMusic = on; else if (w == day) S.ShowDay = on; else if (w == clip) S.ShowClip = on;
+            else if (w == weather) S.ShowWeather = on; else if (w == todo) S.ShowTodo = on; else if (w == photos) S.ShowPhotos = on;
+            else return;
+            S.Save(); ApplySettings();
+        }
+        public string PanelName(GlassWindow w) { var f = w as FenceWindow; return Lang.L(f != null ? f.Caption : WidgetName(w.Id)); }
 
         public void AddGroupItems(ContextMenuStrip m, GlassWindow w)
         {
             int gi, gc;
-            var grp = new ToolStripMenuItem("Stack with");
+            var grp = new ToolStripMenuItem(Lang.L("Stack with"));
             foreach (var o in Windows)
                 if (o != w && o.Visible && (o is Widget) == (w is Widget)) { var ow = o; grp.DropDownItems.Add(PanelName(ow), null, delegate { JoinGroup(w, ow); }); }
             if (grp.DropDownItems.Count > 0) m.Items.Add(grp);
-            if (GroupInfo(w.Id, out gi, out gc)) { m.Items.Add("Next in stack", null, delegate { SwitchGroup(w, 1); }); m.Items.Add("Take out of stack", null, delegate { LeaveGroup(w); }); }
+            if (GroupInfo(w.Id, out gi, out gc)) { m.Items.Add(Lang.L("Next in stack"), null, delegate { SwitchGroup(w, 1); }); m.Items.Add(Lang.L("Take out of stack"), null, delegate { LeaveGroup(w); }); }
             if (m.Items.Count > 0) m.Items.Add(new ToolStripSeparator());
         }
 
@@ -822,9 +994,9 @@ namespace GlassDesk
             var mine = GroupOf(w.Id);
             if (mine != null && mine.Contains(t.Id)) return;
             var m = NewMenu();
-            m.Items.Add(new ToolStripMenuItem("Stack \u201C" + PanelName(w) + "\u201D with \u201C" + PanelName(t) + "\u201D?") { Enabled = false });
+            m.Items.Add(new ToolStripMenuItem(Lang.L("Stack \u201C") + PanelName(w) + "\u201D with \u201C" + PanelName(t) + "\u201D?") { Enabled = false });
             m.Items.Add(new ToolStripSeparator());
-            m.Items.Add("Stack them", null, delegate
+            m.Items.Add(Lang.L("Stack them"), null, delegate
             {
                 Rectangle spot = t.PanelBounds;
                 JoinGroup(w, t);
@@ -833,7 +1005,7 @@ namespace GlassDesk
                 Settings.Positions[w.Id] = new Rectangle(spot.Location, w.PanelBounds.Size);
                 Settings.Save(); ApplySettings();
             });
-            m.Items.Add("No, just put it here", null, delegate { });
+            m.Items.Add(Lang.L("No, just put it here"), null, delegate { });
             m.Show(Cursor.Position);
         }
 
@@ -879,9 +1051,10 @@ namespace GlassDesk
             Settings.Save();
             // quick: only re-pick who shows in the stack, no full rescan
             foreach (var win in Windows) if (live.Contains(win.Id)) win.Wanted = true;
+            // start the slide before it is shown, so its very first picture is already the first frame
+            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir, w.Id); break; }
             ApplyGroups();
             PlaceAll();
-            foreach (var win in Windows) if (win.Id == next) { win.PlayEnter(dir); break; }
         }
 
         public void JoinGroup(GlassWindow w, GlassWindow target)
@@ -919,6 +1092,7 @@ namespace GlassDesk
                 Font = Gfx.SafeFont(Theme.FontName, 13.5f * DpiScale, FontStyle.Regular),
                 Padding = new Padding(2, 4, 2, 4)
             };
+            m.Opening += delegate { Lang.Menu(m); };
             m.Opened += delegate { Native.SetRoundCorners(m.Handle); };
             m.Closed += delegate { try { invoker.BeginInvoke(new Action(delegate { var f = m.Font; m.Dispose(); f.Dispose(); })); } catch { } };
             return m;
@@ -934,17 +1108,17 @@ namespace GlassDesk
                 Padding = new Padding(2, 4, 2, 4)
             };
             m.Opened += delegate { Native.SetRoundCorners(m.Handle); };
-            m.Items.Add("Settings", null, delegate { ShowSettings(); });
+            m.Items.Add(Lang.L("Settings"), null, delegate { ShowSettings(); });
             m.Items.Add((hiddenByUser ? "Show" : "Hide") + " panels    Ctrl+Alt+G", null, delegate { ToggleVisible(); });
-            m.Items.Add("Find on desktop…    Ctrl+Alt+F", null, delegate { ShowSearch(); });
-            m.Items.Add("New fence…", null, delegate { NewFence(); });
-            m.Items.Add("Add a rule…", null, delegate { AddRule(null); });
-            m.Items.Add("Edit note", null, delegate { if (!notes.Visible) { Settings.ShowNotes = true; ApplySettings(); } notes.Edit(); });
-            m.Items.Add("Organize desktop…", null, delegate { ShowOrganize(); });
-            m.Items.Add("Rescan desktop", null, delegate { Rebuild(); });
-            m.Items.Add("Check for updates", null, delegate { Updates.Check(true); });
+            m.Items.Add(Lang.L("Find on desktop…    Ctrl+Alt+F"), null, delegate { ShowSearch(); });
+            m.Items.Add(Lang.L("New fence…"), null, delegate { NewFence(); });
+            m.Items.Add(Lang.L("Add a rule…"), null, delegate { AddRule(null); });
+            m.Items.Add(Lang.L("Edit note"), null, delegate { if (!notes.Visible) { Settings.ShowNotes = true; ApplySettings(); } notes.Edit(); });
+            m.Items.Add(Lang.L("Organize desktop…"), null, delegate { ShowOrganize(); });
+            m.Items.Add(Lang.L("Rescan desktop"), null, delegate { Rebuild(); });
+            m.Items.Add(Lang.L("Check for updates"), null, delegate { Updates.Check(true); });
             m.Items.Add(new ToolStripSeparator());
-            m.Items.Add("Exit GlassDesk", null, delegate { Exit(); });
+            m.Items.Add(Lang.L("Exit GlassDesk"), null, delegate { Exit(); });
             var old = tray.ContextMenuStrip;
             tray.ContextMenuStrip = m;
             if (old != null) old.Dispose();
@@ -953,37 +1127,71 @@ namespace GlassDesk
         public void ShowWidgetMenu(Widget w)
         {
             var m = NewMenu();
-            if (w == notes) m.Items.Add("Edit note", null, delegate { notes.Edit(); });
-            if (w == countdown) m.Items.Add("Change event…", null, delegate { countdown.Edit(); });
-            if (w == quote) m.Items.Add("Another quote", null, delegate { quote.Next(); });
-            if (w == github) { m.Items.Add("Open profile", null, delegate { github.OpenProfile(); }); m.Items.Add("Change username…", null, delegate { github.ChooseUser(); }); m.Items.Add("Refresh now", null, delegate { github.Fetch(); }); }
+            if (w == notes) m.Items.Add(Lang.L("Edit note"), null, delegate { notes.Edit(); });
+            if (w == countdown) m.Items.Add(Lang.L("Change event…"), null, delegate { countdown.Edit(); });
+            if (w == calendar)
+            {
+                m.Items.Add(Lang.L(calendar.Connected ? "Change calendar link…" : "Connect a calendar…"), null, delegate { calendar.ChooseFeed(); });
+                if (calendar.Connected) { m.Items.Add(Lang.L("Refresh now"), null, delegate { calendar.Fetch(); }); m.Items.Add(Lang.L("Disconnect calendar"), null, delegate { calendar.Disconnect(); }); }
+            }
+            if (w == quote) m.Items.Add(Lang.L("Another quote"), null, delegate { quote.Next(); });
+            if (w == github) { m.Items.Add(Lang.L("Open profile"), null, delegate { github.OpenProfile(); }); m.Items.Add(Lang.L("Change username…"), null, delegate { github.ChooseUser(); }); m.Items.Add(Lang.L("Refresh now"), null, delegate { github.Fetch(); }); }
             AddGroupItems(m, w);
-            if (w == music) { m.Items.Add("Play / pause", null, delegate { music.PlayPause(); }); m.Items.Add("Next song", null, delegate { music.Next(); }); m.Items.Add("Previous song", null, delegate { music.Previous(); }); m.Items.Add("Volume mixer", null, delegate { music.OpenMixer(); }); }
-            if (w == focus) { m.Items.Add("Start / pause", null, delegate { focus.Toggle(); }); m.Items.Add("Reset", null, delegate { focus.Reset(); }); }
-            if (w == todo) { m.Items.Add("Edit list", null, delegate { todo.Edit(); }); m.Items.Add("Clear finished tasks", null, delegate { todo.ClearDone(); }); }
+            if (w == music) { m.Items.Add(Lang.L("Play / pause"), null, delegate { music.PlayPause(); }); m.Items.Add(Lang.L("Next song"), null, delegate { music.Next(); }); m.Items.Add(Lang.L("Previous song"), null, delegate { music.Previous(); }); m.Items.Add(Lang.L("Volume mixer"), null, delegate { music.OpenMixer(); }); }
+            if (w == clip) { m.Items.Add(clip.Paused ? "Resume" : "Pause (don't remember copies)", null, delegate { clip.TogglePause(); }); m.Items.Add(Lang.L("Clear history"), null, delegate { clip.Clear(); }); }
+            if (w == focus) { m.Items.Add(Lang.L("Start / pause"), null, delegate { focus.Toggle(); }); m.Items.Add(Lang.L("Reset"), null, delegate { focus.Reset(); }); }
+            if (w == todo) { m.Items.Add(Lang.L("Edit list"), null, delegate { todo.Edit(); }); m.Items.Add(Lang.L("Clear finished tasks"), null, delegate { todo.ClearDone(); }); }
             if (w == weather)
             {
-                m.Items.Add("Refresh", null, delegate { weather.Fetch(); });
-                m.Items.Add("Change city…", null, delegate { weather.ChooseCity(); });
+                m.Items.Add(Lang.L("Refresh"), null, delegate { weather.Fetch(); });
+                m.Items.Add(Lang.L("Change city…"), null, delegate { weather.ChooseCity(); });
                 m.Items.Add(Settings.WeatherF ? "Use °C" : "Use °F", null, delegate { Settings.WeatherF = !Settings.WeatherF; Settings.Save(); weather.UnitsChanged(); });
             }
-            if (w == photos) { m.Items.Add("Next photo", null, delegate { photos.Next(); }); m.Items.Add("Choose folder…", null, delegate { photos.ChooseFolder(); }); }
+            if (w == photos) { m.Items.Add(Lang.L("Next photo"), null, delegate { photos.Next(); }); m.Items.Add(Lang.L("Choose folder…"), null, delegate { photos.ChooseFolder(); }); }
             if (w == clock)
             {
                 m.Items.Add((Settings.ShowSeconds ? "Hide" : "Show") + " seconds", null, delegate { Settings.ShowSeconds = !Settings.ShowSeconds; Settings.Save(); ApplySettings(); });
                 m.Items.Add(Settings.Clock24 ? "Use 12-hour time" : "Use 24-hour time", null, delegate { Settings.Clock24 = !Settings.Clock24; Settings.Save(); ApplySettings(); });
             }
-            if (Settings.WidgetZoom.ContainsKey(w.Id)) m.Items.Add("Reset size", null, delegate { ResetZoom(w); });
-            m.Items.Add("Hide this widget", null, delegate
+            // each widget picks its own look
+            var style = new ToolStripMenuItem(Lang.L("Style"));
+            foreach (var opt in new[] { new[] { "glass", "Glass" }, new[] { "mac", "Liquid glass" } })
+            {
+                string id = opt[0];
+                var it = new ToolStripMenuItem(Lang.L(opt[1])) { Checked = Settings.StyleOf(w.Id) == id };
+                it.Click += delegate { if (id == "mac" && !ConfirmLiquid()) return; SetWidgetStyle(w.Id, id); };
+                style.DropDownItems.Add(it);
+            }
+            if (w == clock && Settings.StyleOf("clock") != "mac")
+            {
+                style.DropDownItems.Add(new ToolStripSeparator());
+                foreach (var opt in new[] { new[] { "photo", "Photos" }, new[] { "drawn", "Drawn sky" }, new[] { "off", "No picture" } })
+                {
+                    string id = opt[0];
+                    var it = new ToolStripMenuItem(Lang.L(opt[1])) { Checked = Settings.ClockStyle == id };
+                    it.Click += delegate { Settings.ClockStyle = id; Settings.Save(); ApplySettings(); };
+                    style.DropDownItems.Add(it);
+                }
+            }
+            if (w == weather && Settings.StyleOf("weather") != "mac")
+            {
+                style.DropDownItems.Add(new ToolStripSeparator());
+                var it = new ToolStripMenuItem(Lang.L("Weather picture")) { Checked = Settings.WeatherScene };
+                it.Click += delegate { Settings.WeatherScene = !Settings.WeatherScene; Settings.Save(); ApplySettings(); };
+                style.DropDownItems.Add(it);
+            }
+            m.Items.Add(style);
+            if (Settings.WidgetZoom.ContainsKey(w.Id)) m.Items.Add(Lang.L("Reset size"), null, delegate { ResetZoom(w); });
+            m.Items.Add(Lang.L("Hide this widget"), null, delegate
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;
                 else if (w == calendar) Settings.ShowCalendar = false; else if (w == notes) Settings.ShowNotes = false;
-                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false; else if (w == day) Settings.ShowDay = false;
+                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false; else if (w == day) Settings.ShowDay = false; else if (w == clip) Settings.ShowClip = false;
                 else if (w == weather) Settings.ShowWeather = false; else if (w == todo) Settings.ShowTodo = false; else if (w == photos) Settings.ShowPhotos = false;
                 Settings.Save(); ApplySettings();
             });
             m.Items.Add(new ToolStripSeparator());
-            m.Items.Add("Settings…", null, delegate { ShowSettings(2); });
+            m.Items.Add(Lang.L("Settings…"), null, delegate { ShowSettings(2); });
             m.Show(Cursor.Position);
         }
 
@@ -1072,6 +1280,7 @@ namespace GlassDesk
         public void StartPreview(bool dark)
         {
             Settings = new Settings();
+            Lang.Init(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LANG") ?? "en");
             Settings.Theme = dark ? "Dark" : "Light";
             Settings.GlassStyle = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_CLEAR") == "1" ? "clear" : (Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_STYLE") ?? "frosted");
             Settings.Opacity = dark ? 30 : 34;
@@ -1084,6 +1293,7 @@ namespace GlassDesk
             if (look != null) { Settings.Look = look.Id; Settings.Accent = look.Accent; Settings.Radius = look.Radius; Settings.Opacity = look.Tint; }
             Theme = Theme.From(Settings, DpiScale);
             FixedNow = new DateTime(2026, 10, 22, 9, 41, 0);
+            { int ph; if (int.TryParse(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_HOUR"), out ph)) FixedNow = new DateTime(2026, 10, 22, ph, 41, 0); }
             PreviewData.FakeStats(Stats);
             string demoDesk = Path.Combine(Path.GetTempPath(), "Desktop");
             Settings.CustomFences.Add("cust.demo");
@@ -1095,13 +1305,15 @@ namespace GlassDesk
             Settings.FenceColor["cust.demo"] = "22BE82";
             Settings.FenceIcons["cat.folders"] = "large";
             Settings.CountdownTitle = "Summer trip"; Settings.CountdownDate = "2026-11-29";
-            Settings.ShowWeather = false; Settings.ShowPhotos = false;
+            Settings.ShowWeather = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WEATHER") == "1"; Settings.ShowPhotos = false;
+            if (Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_MAC") == "1") foreach (var wid in AllWidgetIds()) Settings.WidgetStyles[wid] = "mac";
+            Settings.LiquidKind = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LIQUID") ?? Settings.LiquidKind;
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote
             if (!string.IsNullOrEmpty(grp)) Settings.Groups.Add(new List<string>(grp.Split(',')));
             CreateWidgets();
-            weather.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
+            weather.SetSample(); clip.SetSample(); calendar.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
             Rebuild();
             string sample = Environment.GetEnvironmentVariable("GLASSDESK_SAMPLE_PHOTO");
             if (!string.IsNullOrEmpty(sample) && File.Exists(sample)) photos.SetSampleFile(sample);
@@ -1122,13 +1334,21 @@ namespace GlassDesk
             add("archives", new[] { "backup.zip", "assets.7z" }, false);
         }
 
+        public static List<DesktopItem> Apps()
+        {
+            var l = new List<DesktopItem>();
+            foreach (var n in new[] { "Calculator", "Firefox", "GIMP", "Microsoft Edge", "Notepad", "Paint", "Photos", "Terminal", "VLC media player", "Word", "Excel", "PowerPoint", "Zoom", "WhatsApp", "Minecraft Launcher", "Epic Games Launcher" })
+                l.Add(new DesktopItem(Path.Combine(Path.GetTempPath(), "StartMenu", n + ".lnk"), false));
+            return l;
+        }
+
         public static void FakeStats(SysStats s)
         {
             for (int i = 0; i < s.CpuHistory.Length; i++)
                 s.CpuHistory[i] = (float)(0.16 + 0.09 * Math.Sin(i * 0.55) + 0.06 * Math.Sin(i * 1.7 + 1) + (i > 28 && i < 33 ? 0.18 : 0));
             s.Cpu = s.CpuHistory[s.CpuHistory.Length - 1];
             s.RamTotal = 16UL * 1073741824; s.RamUsed = (ulong)(9.4 * 1073741824);
-            s.DiskTotal = 476L * 1073741824; s.DiskFree = 212L * 1073741824; s.DiskName = "C:";
+            s.DiskTotal = 476L * 1073741824; s.DiskFree = 212L * 1073741824; s.DiskName = "C:"; s.Drives = new List<Tuple<string, long, long>> { Tuple.Create("C:", s.DiskTotal, s.DiskFree), Tuple.Create("D: Games", 1863L * 1073741824, 640L * 1073741824), Tuple.Create("E: USB", 58L * 1073741824, 41L * 1073741824) };
             s.Battery = 82; s.Charging = true;
         }
     }

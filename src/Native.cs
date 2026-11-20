@@ -1,5 +1,6 @@
 // GlassDesk - Native Windows API calls (kept small; everything is optional and guarded)
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
@@ -8,7 +9,19 @@ namespace GlassDesk
     internal static class Native
     {
         public static readonly bool IsWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
-        public static readonly int WinBuild = IsWindows ? Environment.OSVersion.Version.Build : 0;
+        /// <summary>The real Windows build number. Environment.OSVersion lies (says Windows 8, build 9200)
+        /// to apps without a compatibility manifest, which silently switched off dark title bars,
+        /// rounded corners and Acrylic on Windows 10/11, so ask ntdll directly.</summary>
+        public static readonly int WinBuild = RealBuild();
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct OSVERSIONINFOEX { public int dwOSVersionInfoSize, dwMajorVersion, dwMinorVersion, dwBuildNumber, dwPlatformId; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string szCSDVersion; public ushort wServicePackMajor, wServicePackMinor, wSuiteMask; public byte wProductType, wReserved; }
+        [DllImport("ntdll.dll")] static extern int RtlGetVersion(ref OSVERSIONINFOEX v);
+        static int RealBuild()
+        {
+            if (!IsWindows) return 0;
+            try { var v = new OSVERSIONINFOEX(); v.dwOSVersionInfoSize = Marshal.SizeOf(v); if (RtlGetVersion(ref v) == 0 && v.dwBuildNumber > 0) return v.dwBuildNumber; } catch { }
+            return Environment.OSVersion.Version.Build;
+        }
 
         // ---------- Layered windows ----------
         [StructLayout(LayoutKind.Sequential)] public struct POINT { public int x, y; public POINT(int x, int y) { this.x = x; this.y = y; } }
@@ -21,6 +34,15 @@ namespace GlassDesk
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref POINT pptDst, ref SIZE psize,
             IntPtr hdcSrc, ref POINT pprSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
+        [DllImport("user32.dll", EntryPoint = "UpdateLayeredWindow")]
+        static extern bool UpdateLayeredAlpha(IntPtr hwnd, IntPtr hdcDst, IntPtr pptDst, IntPtr psize, IntPtr hdcSrc, IntPtr pptSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
+        /// <summary>Changes only a layered window's overall opacity, without drawing it again (cheap enough to animate).</summary>
+        public static void SetLayeredAlpha(IntPtr hwnd, byte alpha)
+        {
+            if (!IsWindows) return;
+            var blend = new BLENDFUNCTION { BlendOp = AC_SRC_OVER, SourceConstantAlpha = alpha, AlphaFormat = AC_SRC_ALPHA };
+            try { UpdateLayeredAlpha(hwnd, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, ref blend, ULW_ALPHA); } catch { }
+        }
         [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
         [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
         [DllImport("gdi32.dll")] public static extern IntPtr CreateCompatibleDC(IntPtr hDC);
@@ -67,6 +89,18 @@ namespace GlassDesk
             if (!IsWindows || WinBuild < 17763) return;
             try { int v = dark ? 1 : 0; if (DwmSetWindowAttribute(hwnd, 20, ref v, 4) != 0) DwmSetWindowAttribute(hwnd, 19, ref v, 4); } catch { }
         }
+        /// <summary>Colors the title bar to match the theme (Windows 11), with a dark/light fallback for Windows 10.</summary>
+        public static void ThemeTitleBar(IntPtr hwnd, bool dark, System.Drawing.Color caption, System.Drawing.Color text)
+        {
+            SetDarkTitleBar(hwnd, dark);
+            if (!IsWindows || WinBuild < 22000) return;
+            try
+            {
+                int c = caption.R | (caption.G << 8) | (caption.B << 16); DwmSetWindowAttribute(hwnd, 35, ref c, 4);
+                int t = text.R | (text.G << 8) | (text.B << 16); DwmSetWindowAttribute(hwnd, 36, ref t, 4);
+            }
+            catch { }
+        }
         public static void SetRoundCorners(IntPtr hwnd)
         {
             if (!IsWindows || WinBuild < 22000) return;
@@ -83,6 +117,17 @@ namespace GlassDesk
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string name);
         [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
         [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
+        [DllImport("user32.dll")] public static extern bool RedrawWindow(IntPtr h, IntPtr rect, IntPtr rgn, uint flags);
+        /// <summary>Changes a scrolled panel's position with drawing switched off, then repaints it all at once.
+        /// Windows otherwise copies the old pixels up and down while scrolling, which leaves smeared, doubled rows.</summary>
+        public static void ScrollWithoutSmear(System.Windows.Forms.ScrollableControl c, int y)
+        {
+            if (!IsWindows || !c.IsHandleCreated) { c.AutoScrollPosition = new System.Drawing.Point(0, y); c.Invalidate(true); return; }
+            SendMessage(c.Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);          // WM_SETREDRAW off
+            c.AutoScrollPosition = new System.Drawing.Point(0, y);
+            SendMessage(c.Handle, 0x000B, new IntPtr(1), IntPtr.Zero);        // WM_SETREDRAW on
+            RedrawWindow(c.Handle, IntPtr.Zero, IntPtr.Zero, 0x0001 | 0x0004 | 0x0080 | 0x0100);   // invalidate, erase, all children, update now
+        }
         [DllImport("user32.dll", EntryPoint = "SetWindowLong")] static extern int SetWindowLong32(IntPtr h, int idx, int v);
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")] static extern IntPtr SetWindowLongPtr64(IntPtr h, int idx, IntPtr v);
         public static void SetOwner(IntPtr h, IntPtr owner)
@@ -327,20 +372,61 @@ namespace GlassDesk
         [StructLayout(LayoutKind.Sequential, Pack = 1)] struct SHQUERYRBINFO32 { public int cbSize; public long i64Size, i64NumItems; }
         [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "SHQueryRecycleBinW")] static extern int SHQueryRecycleBin64(string root, ref SHQUERYRBINFO64 info);
         [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "SHQueryRecycleBinW")] static extern int SHQueryRecycleBin32(string root, ref SHQUERYRBINFO32 info);
+        /// <summary>Items in the bin for one drive ("C:\\") or all drives (null); -1 if Windows refused.</summary>
+        static long BinItems(string root)
+        {
+            if (IntPtr.Size == 8)
+            {
+                var q = new SHQUERYRBINFO64(); q.cbSize = Marshal.SizeOf(q);
+                return SHQueryRecycleBin64(root, ref q) == 0 ? q.i64NumItems : -1;
+            }
+            var q32 = new SHQUERYRBINFO32(); q32.cbSize = Marshal.SizeOf(q32);
+            return SHQueryRecycleBin32(root, ref q32) == 0 ? q32.i64NumItems : -1;
+        }
         public static bool RecycleBinFull()
         {
             if (!IsWindows) return false;
             try
             {
-                if (IntPtr.Size == 8)
+                long all = BinItems(null);
+                if (all > 0) return true;
+                // Asking for "all drives" fails or says 0 on some PCs (a card reader, an unplugged or
+                // network drive in the list), so also ask each local drive on its own.
+                foreach (var d in System.IO.DriveInfo.GetDrives())
                 {
-                    var q = new SHQUERYRBINFO64(); q.cbSize = Marshal.SizeOf(q);
-                    return SHQueryRecycleBin64(null, ref q) == 0 && q.i64NumItems > 0;
+                    try
+                    {
+                        if ((d.DriveType != System.IO.DriveType.Fixed && d.DriveType != System.IO.DriveType.Removable) || !d.IsReady) continue;
+                        if (BinItems(d.RootDirectory.FullName) > 0) return true;
+                    }
+                    catch { }
                 }
-                var q32 = new SHQUERYRBINFO32(); q32.cbSize = Marshal.SizeOf(q32);
-                return SHQueryRecycleBin32(null, ref q32) == 0 && q32.i64NumItems > 0;
+                // Last resort: look in the bin folders themselves. Windows keeps a "$I…" file for every
+                // deleted item in X:\$Recycle.Bin\<your account id>.
+                foreach (string dir in RecycleBinFolders())
+                    try { if (System.IO.Directory.GetFiles(dir, "$I*").Length > 0) return true; } catch { }
+                return false;
             }
             catch { return false; }
+        }
+
+        /// <summary>This account's Recycle Bin folder on every local drive that has one.</summary>
+        public static List<string> RecycleBinFolders()
+        {
+            var list = new List<string>();
+            if (!IsWindows) return list;
+            string sid = null;
+            try { sid = System.Security.Principal.WindowsIdentity.GetCurrent().User.Value; } catch { }
+            if (sid == null) return list;
+            foreach (var d in System.IO.DriveInfo.GetDrives())
+                try
+                {
+                    if ((d.DriveType != System.IO.DriveType.Fixed && d.DriveType != System.IO.DriveType.Removable) || !d.IsReady) continue;
+                    string dir = System.IO.Path.Combine(d.RootDirectory.FullName, "$Recycle.Bin", sid);
+                    if (System.IO.Directory.Exists(dir)) list.Add(dir);
+                }
+                catch { }
+            return list;
         }
 
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)] static extern int SHEmptyRecycleBin(IntPtr hwnd, string root, uint flags);
