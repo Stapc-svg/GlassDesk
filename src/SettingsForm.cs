@@ -9,6 +9,12 @@ namespace GlassDesk
 {
     internal class SettingsForm : Form
     {
+        // paint the whole window (and everything in it) in one go: no flicker or half-drawn rows while scrolling
+        protected override CreateParams CreateParams
+        {
+            get { var cp = base.CreateParams; if (Native.IsWindows) cp.ExStyle |= 0x02000000; return cp; }   // WS_EX_COMPOSITED
+        }
+
         readonly App app;
         Palette P;
         float k;
@@ -706,9 +712,8 @@ namespace GlassDesk
                     {
                         DesktopPreview.Scrolled();
                         int cur = VerticalScroll.Value, d = target - cur;
-                        if (Math.Abs(d) <= 1) { AutoScrollPosition = new Point(0, target); glide.Stop(); Invalidate(true); return; }
-                        AutoScrollPosition = new Point(0, cur + (int)Math.Round(d * 0.22f + Math.Sign(d)));
-                        Invalidate(true);
+                        if (Math.Abs(d) <= 1) { Native.ScrollWithoutSmear(this, target); glide.Stop(); return; }
+                        Native.ScrollWithoutSmear(this, cur + (int)Math.Round(d * 0.22f + Math.Sign(d)));
                     };
                 }
                 glide.Start();
@@ -764,7 +769,7 @@ namespace GlassDesk
             {
                 var v = target.VerticalScroll;
                 value = Math.Max(0, Math.Min(v.Maximum - v.LargeChange + 1, value));
-                target.AutoScrollPosition = new Point(0, value);
+                Native.ScrollWithoutSmear(target, value);
                 target.Invalidate(true); Invalidate();
             }
             protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }

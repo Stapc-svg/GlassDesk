@@ -256,9 +256,10 @@ namespace GlassDesk
                 if (Panel.Width < 8 || Panel.Height < 8) return;
                 Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
                 bool regular = Cfg.LiquidKind == "regular";
-                Bitmap wall = Backdrop.For(scr, regular ? 1 : -1);   // regular glass bends a softly blurred picture
+                // what you see through the flat middle, and through the thick (blurrier) rim
+                Bitmap middle = Backdrop.For(scr, regular ? -2 : -1), rim = Backdrop.For(scr, regular ? 1 : -2);
                 var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
-                liquid.Update(wall, src, Panel.Width, Panel.Height, T.S(PanelRadius), T.Sf(1), T.Dark);
+                liquid.Update(middle, rim, src, Panel.Width, Panel.Height, T.S(PanelRadius), T.Sf(1), T.Dark, regular ? 0.35f : 0.18f);
                 if (draw && liquid.Glass != null) g.DrawImageUnscaled(liquid.Glass, Panel.X, Panel.Y);
             }
             catch (Exception ex) { Program.Log(ex); }

@@ -131,7 +131,7 @@ namespace GlassDesk
         static Bitmap Build(Size size, int strength)
         {
             // work on a small copy: blurring 1/10 of the pixels is ~100x cheaper and looks the same once scaled up
-            int div = strength >= 3 ? 16 : strength >= 2 ? 10 : strength >= 1 ? 6 : strength == 0 ? 2 : 1;   // 0 = the plain wallpaper, small; -1 = full size for liquid glass
+            int div = strength >= 3 ? 16 : strength >= 2 ? 10 : strength >= 1 ? 6 : strength == 0 ? 2 : strength == -2 ? 3 : 1;   // -2 = softly blurred, for liquid glass   // 0 = the plain wallpaper, small; -1 = full size for liquid glass
             int sw = Math.Max(8, size.Width / div), sh = Math.Max(8, size.Height / div);
             var small = new Bitmap(sw, sh, PixelFormat.Format32bppArgb);
             using (var g = Graphics.FromImage(small))
@@ -156,7 +156,8 @@ namespace GlassDesk
                     catch { }
                 }
             }
-            if (strength < 0) BoxBlur(small, 1, 2);   // liquid glass: nearly clear, just softened
+            if (strength == -1) BoxBlur(small, 1, 2);   // liquid glass: nearly clear, just softened
+            if (strength == -2) BoxBlur(small, 2, 3);   // liquid glass: a soft frost (about 8 pixels)
             if (strength > 0) BoxBlur(small, strength >= 3 ? 6 : strength >= 2 ? 4 : 2, strength >= 3 ? 4 : 3);
             // scale back up smoothly to the monitor's size
             var big = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppPArgb);

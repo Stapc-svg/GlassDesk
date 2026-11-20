@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.20.0
+
+- **More realistic liquid glass.**
+  - **Blur:** the glass is now frosted, most at the thick rounded rim and least in the flat middle, like real thick glass. **Regular** is frosted all over, like Apple's default glass; **Clear** stays sharp in the middle with soft, blurry edges.
+  - **Curved distortion:** the bending now also leans toward the corners and is smoothed like the surface of a liquid. Straight lines in your wallpaper curve as they pass through the edge, instead of turning into straight stripes along the sides.
+  - **No corner seams:** the diagonal crease that showed in the corners of each panel is gone.
+- **Settings scrolls cleanly.** Scrolling in Settings could leave smeared, doubled rows (repeated labels). The page now redraws in one go on every scroll step.
+
 ## 1.19.0
 
 - **Real liquid glass.** The glass now works like a thick, clear lens. Near the rounded edges you see what's just *outside* the panel, squeezed into the rim, the way a drop of water or Apple's Liquid Glass bends light. Before, it pulled from inside and mostly looked like a tinted box. Colors look a little richer through the glass, a thin rainbow fringe shows at the edges, and a small glint sits only where the rim faces the light (top left and bottom right), with no white frame.

@@ -117,6 +117,17 @@ namespace GlassDesk
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string name);
         [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
         [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
+        [DllImport("user32.dll")] public static extern bool RedrawWindow(IntPtr h, IntPtr rect, IntPtr rgn, uint flags);
+        /// <summary>Changes a scrolled panel's position with drawing switched off, then repaints it all at once.
+        /// Windows otherwise copies the old pixels up and down while scrolling, which leaves smeared, doubled rows.</summary>
+        public static void ScrollWithoutSmear(System.Windows.Forms.ScrollableControl c, int y)
+        {
+            if (!IsWindows || !c.IsHandleCreated) { c.AutoScrollPosition = new System.Drawing.Point(0, y); c.Invalidate(true); return; }
+            SendMessage(c.Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);          // WM_SETREDRAW off
+            c.AutoScrollPosition = new System.Drawing.Point(0, y);
+            SendMessage(c.Handle, 0x000B, new IntPtr(1), IntPtr.Zero);        // WM_SETREDRAW on
+            RedrawWindow(c.Handle, IntPtr.Zero, IntPtr.Zero, 0x0001 | 0x0004 | 0x0080 | 0x0100);   // invalidate, erase, all children, update now
+        }
         [DllImport("user32.dll", EntryPoint = "SetWindowLong")] static extern int SetWindowLong32(IntPtr h, int idx, int v);
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")] static extern IntPtr SetWindowLongPtr64(IntPtr h, int idx, IntPtr v);
         public static void SetOwner(IntPtr h, IntPtr owner)
