@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.10-7C9CFF" alt="Version 1.9.10">
+  <img src="https://img.shields.io/badge/version-2.0-7C9CFF" alt="Version 2.0">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/Linux-beta-FCC624" alt="Linux beta">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84" alt="Android 8+">
@@ -35,8 +35,8 @@
 <table>
   <tr>
     <td width="33%" valign="top"><h3>🗂️ Fences that sort themselves</h3>Apps, folders, documents and images land in their own frosted-glass fence, automatically.</td>
-    <td width="33%" valign="top"><h3>🧊 Real frosted glass</h3>Your wallpaper glows softly through every panel, with a light-catching rim.</td>
-    <td width="33%" valign="top"><h3>🧩 12 widgets</h3>Clock, weather, calendar, to-do, notes, focus timer, GitHub stats and more.</td>
+    <td width="33%" valign="top"><h3>💧 Liquid glass</h3>New in 2.0: glass that really bends your wallpaper at its edges, like Apple's, or classic frosted glass.</td>
+    <td width="33%" valign="top"><h3>🧩 15 widgets</h3>Clock, weather, calendar, to-do, notes, clipboard, focus timer, GitHub stats and more.</td>
   </tr>
   <tr>
     <td valign="top"><h3>⚡ Feather-light</h3>One ~250 KB app. Almost no CPU while nothing changes, and it pauses during games.</td>
@@ -54,6 +54,22 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 <p align="center">
   <img src="docs/screenshots/windows-demo.gif" width="100%" alt="GlassDesk fences and widgets appearing on the desktop (animated)">
 </p>
+
+### ✨ New in 2.0
+
+<p align="center">
+  <img src="docs/screenshots/liquid-glass-clear.jpg" width="49%" alt="Liquid glass, Clear: the city wallpaper bends at the edges of each widget">
+  <img src="docs/screenshots/liquid-glass-regular.jpg" width="49%" alt="Liquid glass, Regular: softly frosted widgets">
+</p>
+
+- **💧 Liquid glass:** a thick, rounded pane of glass. At the edges, the wallpaper bends like through a lens, the rim is frosted, and a thin rainbow fringe shows at the edge. Choose **Regular** (softly frosted, easy to read) or **Clear**. Settings › Appearance › Glass style › **Liquid**. GlassDesk warns you first that it uses about 100–200 MB more memory.
+- **🎨 A style for each widget:** right-click a widget › Style › Glass or Liquid glass. In Liquid glass each widget has its own design: a yellow paper note, Reminders-style to-dos, Activity rings, round system gauges, a clock face, and a sky behind the weather.
+- **👀 See it before you add it:** a live picture of your desktop at the top of Settings, a picture next to every widget switch, and a **Widgets tab** in quick search (Ctrl + Alt + F) to add or remove widgets with one click.
+- **📅 Online calendar:** connect Google, Outlook or iCloud with the calendar's private iCal link; your events show as dots and the next two show under the month.
+- **💽 Every drive** (internal and USB) in the System monitor, and **game screenshot fences** (Xbox Game Bar, NVIDIA, AMD, Windows) in one click.
+- **🧹 Fixes:** the Recycle Bin icon updates right away, Settings and quick search scroll smoothly, and the white borders around panels are gone.
+- **🌍 Languages:** English, 简体中文, Español, Русский.
+- **🎬 A new animated welcome screen** that shows what's new.
 
 ### ✨ New in 1.9
 - **New weather widget:** your city with today's high and low, a big glowing icon, glass chips for humidity, wind and chance of rain, a **sunrise-to-sunset arc** that shows where the sun is now, and the **next 5 hours**.
@@ -246,6 +262,8 @@ winget install Stapc-svg.GlassDesk
 
 GlassDesk also runs on **Ubuntu, Linux Mint, Debian, Fedora, Arch, openSUSE** and more, on GNOME, KDE Plasma, Cinnamon, XFCE and MATE. It has the same fences, widgets, glass blur and settings, rebuilt with Python and GTK.
 
+**New in 2.0 for Linux:** **Liquid glass** (Settings › Appearance › Glass style), with Regular or Clear, and the animated 2.0 welcome screen. Liquid glass needs `python3-numpy`, which the .deb installs for you.
+
 **New in 1.9.10 for Linux:** the new weather widget with weather pictures, clock photos and drawn sky, the vinyl music widget, the Clipboard widget, a glass Settings window, fade-in and hover glow, and an update check that finds Linux downloads.
 
 **New in 1.8.6 for Linux:** 26 themes (with Mica and Acrylic), file stacks, stacks of fences and widgets with tabs, the music and Today widgets, the new search launcher with a calculator, Organize desktop, resizable widgets, per-monitor layouts and Match my wallpaper, the same as on Windows.
@@ -280,12 +298,14 @@ GlassDesk is on your phone too, as **home-screen widgets**: clock, weather, cale
   <img src="docs/screenshots/android-clean.jpg" width="24%" alt="The Clean design on Android">
 </p>
 
-- **Two designs:** *GlassDesk* (frosted glass with a soft glow, the default) and *Clean* (bright and simple), each in light and dark, with your choice of accent color.
+- **Three designs:** *GlassDesk* (frosted glass with a soft glow, the default), *Clean* (bright and simple) and, new in 2.0, *Liquid glass* (clear, thick glass like iOS 26, in Clear or Regular), with your choice of accent color.
 - **Tap to act:** tick off to-dos, open apps from a fence, refresh the weather, or get a new quote, right on the home screen.
 - **Resizable** widgets that redraw to fit, and a settings app that follows the design you pick.
 - **No account, ads or tracking.** Weather comes from [Open-Meteo](https://open-meteo.com).
 
-**Install:** download **`GlassDesk-Android-1.7.2.apk`** from [Releases](../../releases) on your phone, open it and tap Install (Android 8.0 or newer). Then open GlassDesk and tap **Add** under a widget.
+<p align="center"><img src="docs/screenshots/android-liquid.jpg" width="80%" alt="The Liquid glass design on Android, Clear and Regular"></p>
+
+**Install:** download **`GlassDesk-Android-2.0.apk`** from [Releases](../../releases) on your phone, open it and tap Install (Android 8.0 or newer). Then open GlassDesk and tap **Add** under a widget.
 
 ▶ [Watch the full launch video](../../releases/download/android-v1.7.2/GlassDesk-1.7.2-Android-Film.mp4)
 
