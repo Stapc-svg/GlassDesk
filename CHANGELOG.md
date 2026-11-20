@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.17.0
+
+- **Real liquid glass.** The macOS style is now called **Liquid glass** and works like a thick, clear pane of glass. Your wallpaper bends around the rounded edges like through a lens, colors split slightly at the rim like a prism, and light catches the edges: brightest at the top left, with a softer glint on the opposite corner. The middle stays clear.
+- On bright wallpapers the glass gets slightly darker behind the text, so words stay readable. On dark wallpapers it stays completely clear.
+- The bent glass is worked out once for each position and size and then reused, so it costs nothing while the widgets update.
+
 ## 1.16.0
 
 - **See each widget in Settings, not just its name.** On the Widgets page, every widget's row has a small live picture of it next to its switch, in the style you picked (Glass or macOS). Widgets that are off are shown faded, so you can see what turning one on will add.

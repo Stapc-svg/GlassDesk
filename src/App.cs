@@ -1143,7 +1143,7 @@ namespace GlassDesk
             }
             // each widget picks its own look
             var style = new ToolStripMenuItem(Lang.L("Style"));
-            foreach (var opt in new[] { new[] { "glass", "Glass" }, new[] { "mac", "macOS" } })
+            foreach (var opt in new[] { new[] { "glass", "Glass" }, new[] { "mac", "Liquid glass" } })
             {
                 string id = opt[0];
                 var it = new ToolStripMenuItem(Lang.L(opt[1])) { Checked = Settings.StyleOf(w.Id) == id };

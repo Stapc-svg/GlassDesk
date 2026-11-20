@@ -414,3 +414,4 @@ Live preview	Vista previa en vivo
 Updates as you change things — point at a panel to see its name	Se actualiza al cambiar cosas — señala un panel para ver su nombre
 Click a widget to add or remove it	Haz clic en un widget para añadirlo o quitarlo
 No widget matches	Ningún widget coincide
+Liquid glass	Vidrio líquido

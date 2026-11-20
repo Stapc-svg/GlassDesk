@@ -127,7 +127,7 @@ namespace GlassDesk
         }
         protected void Txt(Graphics g, string s, Font f, Color c, RectangleF r, StringFormat sf)
         {
-            if (Cfg.GlassStyle == "transparent")
+            if (Cfg.GlassStyle == "transparent" || MacLook && T.Dark)
                 using (var sh = new SolidBrush(Color.FromArgb(T.Dark ? 150 : 110, 0, 0, 0)))
                     g.DrawString(s, f, sh, new RectangleF(r.X, r.Y + T.Sf(1.2f), r.Width, r.Height), sf);
             using (var b = new SolidBrush(c)) g.DrawString(s, f, b, r, sf);
@@ -641,8 +641,8 @@ namespace GlassDesk
         /// <summary>macOS style: a yellow paper note with faint lines and a folded corner.</summary>
         protected override void PaintMacBack(Graphics g, GraphicsPath path, RectangleF pr)
         {
-            DrawBackdrop(g, path, true);
-            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(232, 255, 236, 140), Color.FromArgb(232, 255, 214, 90))) g.FillPath(lg, path);
+            LiquidBack(g);
+            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(190, 255, 236, 140), Color.FromArgb(190, 255, 214, 90))) g.FillPath(lg, path);
             // ruled lines, like a notepad
             float lh = T.Sf(24), y0 = pr.Y + T.Sf(58);
             using (var pen = new Pen(Color.FromArgb(46, 150, 110, 20), 1f))

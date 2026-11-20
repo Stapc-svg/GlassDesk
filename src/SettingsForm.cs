@@ -408,7 +408,7 @@ namespace GlassDesk
             Section(Lang.L("Style"));
             int nMac = 0; foreach (var id in app.AllWidgetIds()) if (S.StyleOf(id) == "mac") nMac++;
             int sel = nMac == 0 ? 0 : nMac == app.AllWidgetIds().Length ? 1 : -1;
-            var ws = new Segmented(P, k, new[] { Lang.L("Glass"), Lang.L("macOS") }, sel) { Font = fSmall };
+            var ws = new Segmented(P, k, new[] { Lang.L("Glass"), Lang.L("Liquid glass") }, sel) { Font = fSmall };
             ws.SelectionChanged += delegate { if (ws.SelectedIndex >= 0) app.SetWidgetStyle(null, ws.SelectedIndex == 1 ? "mac" : "glass"); };
             Row(Lang.L("Widget style"), sel < 0 ? Lang.L("Mixed — right-click a widget › Style to change just that one") : Lang.L("For all widgets — or right-click one › Style to change just that one"), ws);
             Section(Lang.L("Clock"));

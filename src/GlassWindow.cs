@@ -226,14 +226,42 @@ namespace GlassDesk
         /// <summary>The card behind a macOS-style widget; the weather widget paints a sky instead.</summary>
         protected virtual void PaintMacBack(Graphics g, GraphicsPath path, RectangleF pr)
         {
-            // see-through glass like macOS: the blurred desktop, a light tint, and light catching the top edge
-            DrawBackdrop(g, path, true);
-            using (var b = new SolidBrush(T.TintTop)) g.FillPath(b, path);
+            // liquid glass like macOS: the desktop bent through clear glass, a whisper of tint, light on the rim
+            LiquidBack(g);
+            using (var b = new SolidBrush(LiquidTint)) g.FillPath(b, path);
             MacSheen(g, path, pr);
+        }
+
+        readonly LiquidGlass liquid = new LiquidGlass();
+        /// <summary>The glass stays clear on dark wallpapers and gets a little darker (or lighter) behind
+        /// the text on bright ones, so the words stay easy to read.</summary>
+        protected Color LiquidTint
+        {
+            get
+            {
+                Color c = T.TintTop; float lum = liquid.Glass != null ? liquid.Brightness : 0.5f;
+                float need = T.Dark ? Math.Max(0, lum - 0.42f) * 260 : Math.Max(0, 0.6f - lum) * 260;
+                return Color.FromArgb(Math.Min(170, c.A + (int)need), c.R, c.G, c.B);
+            }
+        }
+        /// <summary>Draws the wallpaper as seen through a thick, clear pane of glass (see LiquidGlass).</summary>
+        protected void LiquidBack(Graphics g)
+        {
+            try
+            {
+                if (Panel.Width < 8 || Panel.Height < 8) return;
+                Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
+                Bitmap wall = Backdrop.For(scr, -1);
+                var src = new Rectangle(Left + Panel.X - scr.X, Top + Panel.Y - scr.Y, Panel.Width, Panel.Height);
+                liquid.Update(wall, src, Panel.Width, Panel.Height, T.S(PanelRadius), T.Sf(1), T.Dark);
+                if (liquid.Glass != null) g.DrawImageUnscaled(liquid.Glass, Panel.X, Panel.Y);
+            }
+            catch (Exception ex) { Program.Log(ex); }
         }
         /// <summary>The bright edge and soft shine of macOS "liquid glass".</summary>
         protected void MacSheen(Graphics g, GraphicsPath path, RectangleF pr)
         {
+            if (liquid.Light != null) { g.DrawImageUnscaled(liquid.Light, Panel.X, Panel.Y); return; }
             using (var lg = new LinearGradientBrush(new PointF(0, pr.Y - 1), new PointF(0, pr.Y + pr.Height * 0.5f), Color.FromArgb(T.Dark ? 26 : 60, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
                 g.FillRectangle(lg, pr.X, pr.Y, pr.Width, pr.Height * 0.5f);
             float r = T.S(PanelRadius);

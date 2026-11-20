@@ -290,8 +290,8 @@ namespace GlassDesk
             else if (wet) { top = Color.FromArgb(255, 74, 96, 128); bot = Color.FromArgb(255, 122, 146, 176); }
             else if (code >= 3) { top = Color.FromArgb(255, 92, 120, 160); bot = Color.FromArgb(255, 150, 176, 206); }
             else { top = Color.FromArgb(255, 36, 116, 214); bot = Color.FromArgb(255, 100, 172, 240); }
-            DrawBackdrop(g, path, true);
-            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(205, top), Color.FromArgb(205, bot))) g.FillPath(lg, path);
+            LiquidBack(g);
+            using (var lg = new LinearGradientBrush(new PointF(0, pr.Top - 1), new PointF(0, pr.Bottom + 1), Color.FromArgb(110, top), Color.FromArgb(110, bot))) g.FillPath(lg, path);
             MacSheen(g, path, pr);
         }
 
