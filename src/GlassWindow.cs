@@ -242,9 +242,9 @@ namespace GlassDesk
             get
             {
                 Color c = T.TintTop; float lum = liquid.Glass != null ? liquid.Brightness : 0.5f;
-                float need = T.Dark ? Math.Max(0, lum - 0.42f) * 260 : Math.Max(0, 0.6f - lum) * 260;
-                if (Cfg.LiquidKind == "regular") need += 42;   // regular glass is a little more frosted
-                return Color.FromArgb(Math.Min(190, c.A + (int)need), c.R, c.G, c.B);
+                float need = T.Dark ? Math.Max(0, lum - 0.45f) * 170 : Math.Max(0, 0.6f - lum) * 170;
+                if (Cfg.LiquidKind == "regular") need += 22;   // regular glass is a little more frosted
+                return Color.FromArgb(Math.Min(120, c.A + (int)need), c.R, c.G, c.B);
             }
         }
         /// <summary>Draws the wallpaper as seen through a thick, clear pane of glass (see LiquidGlass).</summary>
@@ -458,10 +458,8 @@ namespace GlassDesk
             using (var path = Gfx.Round(pr, r))
             {
                 var st = g.Save();
-                DrawNecks(g, r);
                 g.SetClip(path, CombineMode.Intersect);
                 PaintMacBack(g, path, pr);
-                DrawMouseLight(g, pr, r);
                 g.Restore(st);
             }
         }
@@ -472,65 +470,17 @@ namespace GlassDesk
             using (var path = Gfx.Round(pr, r))
             {
                 var st = g.Save();
-                DrawNecks(g, r);
                 g.SetClip(path, CombineMode.Intersect);
                 LiquidBack(g);
                 using (var b = new SolidBrush(LiquidTint)) g.FillPath(b, path);
                 if (!PanelColor.IsEmpty) using (var b = new SolidBrush(Color.FromArgb(T.Dark ? 40 : 34, PanelColor))) g.FillPath(b, path);
                 if (liquid.Light != null) g.DrawImageUnscaled(liquid.Light, Panel.X, Panel.Y);
-                DrawMouseLight(g, pr, r);
                 g.Restore(st);
                 if (hover > 0.01f) using (var pen = new Pen(Color.FromArgb((int)(70 * hover), T.Accent), T.Sf(1.4f))) g.DrawPath(pen, path);
             }
         }
 
         // ================= liquid glass, the Apple ideas =================
-
-        // ---- 1. the light on the rim follows the mouse (like tilting an iPhone) ----
-        float lightAng = float.NaN, lightProx;
-        /// <summary>Called by App as the mouse moves; redraws only when the light visibly moves.</summary>
-        public void MouseLight(Point cursor)
-        {
-            if (!LiquidOn || !(Visible || App.Preview)) return;
-            var pb = PanelBounds;
-            float cx = pb.X + pb.Width / 2f, cy = pb.Y + pb.Height / 2f;
-            float dx = Math.Max(pb.Left - cursor.X, Math.Max(0, cursor.X - pb.Right)), dy = Math.Max(pb.Top - cursor.Y, Math.Max(0, cursor.Y - pb.Bottom));
-            float dist = (float)Math.Sqrt(dx * dx + dy * dy);
-            float prox = Math.Max(0, Math.Min(1, 1 - dist / T.Sf(320)));
-            float ang = (float)Math.Atan2((cursor.Y - cy) / Math.Max(1f, pb.Height), (cursor.X - cx) / Math.Max(1f, pb.Width));
-            if (prox <= 0 && lightProx <= 0) return;
-            float da = float.IsNaN(lightAng) ? 9 : Math.Abs((float)Math.IEEERemainder(ang - lightAng, Math.PI * 2));
-            if (da < 0.07f && Math.Abs(prox - lightProx) < 0.06f) return;
-            lightAng = ang; lightProx = prox;
-            Redraw();
-        }
-        void DrawMouseLight(Graphics g, RectangleF pr, float r)
-        {
-            if (lightProx <= 0.01f || float.IsNaN(lightAng)) return;
-            // the spot on the edge facing the mouse, and a softer one on the opposite edge
-            for (int side = 0; side < 2; side++)
-            {
-                float a = lightAng + (side == 1 ? (float)Math.PI : 0), k = side == 0 ? 1f : 0.35f;
-                float px = pr.X + pr.Width / 2f + (float)Math.Cos(a) * pr.Width * 0.62f, py = pr.Y + pr.Height / 2f + (float)Math.Sin(a) * pr.Height * 0.62f;
-                float rad = Math.Max(T.Sf(60), Math.Min(pr.Width, pr.Height) * 0.75f);
-                using (var gp = new GraphicsPath())
-                {
-                    gp.AddEllipse(px - rad, py - rad, rad * 2, rad * 2);
-                    using (var br = new PathGradientBrush(gp) { CenterColor = Color.FromArgb((int)(170 * lightProx * k), 255, 255, 255), SurroundColors = new[] { Color.FromArgb(0, 255, 255, 255) } })
-                    {
-                        // only on the curved rim of the glass: a thin bright line and a soft band inside it
-                        using (var outer = Gfx.Round(pr, r))
-                        using (var thin = Gfx.Round(RectangleF.Inflate(pr, -T.Sf(3f), -T.Sf(3f)), Math.Max(0, r - T.Sf(3f))))
-                        using (var band = Gfx.Round(RectangleF.Inflate(pr, -T.Sf(16), -T.Sf(16)), Math.Max(0, r - T.Sf(16))))
-                        {
-                            using (var rg = new Region(outer)) { rg.Exclude(thin); g.FillRegion(br, rg); }
-                            using (var soft = new PathGradientBrush(gp) { CenterColor = Color.FromArgb((int)(70 * lightProx * k), 255, 255, 255), SurroundColors = new[] { Color.FromArgb(0, 255, 255, 255) } })
-                            using (var rg = new Region(thin)) { rg.Exclude(band); g.FillRegion(soft, rg); }
-                        }
-                    }
-                }
-            }
-        }
 
         // ---- 2. press: the glass squishes a little, springs back, and a shimmer sweeps across ----
         int pressStart = -100000;
@@ -572,73 +522,6 @@ namespace GlassDesk
                 }
                 g.Restore(st);
             }
-        }
-
-        // ---- 3. glass merging: panels close to each other melt together with a liquid bridge ----
-        public readonly List<float[]> Necks = new List<float[]>();   // side (0 right,1 bottom,2 left,3 top), start, end, gap, in screen units
-        public string NeckKey = "";
-        void DrawNecks(Graphics g, float r)
-        {
-            if (Necks.Count == 0) return;
-            LiquidBack(g, false);   // make sure the glass (and how bright it is) is worked out, so the bridge gets the same tint
-            try
-            {
-                Rectangle scr = App.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromRectangle(PanelBounds).Bounds;
-                Bitmap wall = Backdrop.For(scr, Cfg.LiquidKind == "regular" ? 1 : -1);
-                foreach (var n in Necks)
-                {
-                    GraphicsPath sides;
-                    using (var path = NeckPath((int)n[0], n[1], n[2], n[3], out sides))
-                    {
-                        if (path == null) continue;
-                        var st = g.Save();
-                        g.SetClip(path, CombineMode.Intersect);
-                        var b = Rectangle.Round(path.GetBounds());
-                        b.Inflate(2, 2);
-                        g.DrawImage(wall, b, new Rectangle(Left + b.X - scr.X, Top + b.Y - scr.Y, b.Width, b.Height), GraphicsUnit.Pixel);
-                        using (var br = new SolidBrush(LiquidTint)) g.FillPath(br, path);
-                        if (!PanelColor.IsEmpty) using (var br = new SolidBrush(Color.FromArgb(T.Dark ? 40 : 34, PanelColor))) g.FillPath(br, path);
-                        g.Restore(st);
-                        // a soft light along the bridge's curved sides
-                        using (sides) using (var pen = new Pen(Color.FromArgb(T.Dark ? 45 : 80, 255, 255, 255), T.Sf(1f))) g.DrawPath(pen, sides);
-                    }
-                }
-            }
-            catch (Exception ex) { Program.Log(ex); }
-        }
-        /// <summary>The bridge from this panel's edge to the middle of the gap: it flows out of the edge in a smooth
-        /// curve and is pinched in the middle, like two drops of water touching. sides = just the two curved edges (for the light).</summary>
-        GraphicsPath NeckPath(int side, float a, float b, float gap, out GraphicsPath sides)
-        {
-            sides = null;
-            float thr = T.Sf(24), close = Math.Max(0, 1 - gap / thr);
-            float len = b - a; if (len < T.Sf(12)) return null;
-            float c = (a + b) / 2, hm = len / 2 * (0.07f + 0.83f * close * close), he = Math.Min(len / 2 + T.Sf(8), hm + gap * 0.9f + T.Sf(6));
-            float half = gap / 2 + 0.6f, inset = T.Sf(8);
-            // built for the right side, then turned to the real side
-            var p = new GraphicsPath();
-            p.AddLine(-inset, -he, 0, -he);
-            p.AddBezier(0, -he, 0, -he + (he - hm) * 0.6f, half * 0.3f, -hm, half, -hm);
-            p.AddLine(half, -hm, half, hm);
-            p.AddBezier(half, hm, half * 0.3f, hm, 0, he - (he - hm) * 0.6f, 0, he);
-            p.AddLine(0, he, -inset, he);
-            p.CloseFigure();
-            var sp = new GraphicsPath();
-            sp.AddBezier(0, -he, 0, -he + (he - hm) * 0.6f, half * 0.3f, -hm, half + 0.6f, -hm);
-            sp.StartFigure();
-            sp.AddBezier(half + 0.6f, hm, half * 0.3f, hm, 0, he - (he - hm) * 0.6f, 0, he);
-            var m = new Matrix();
-            var pr = Panel;
-            switch (side)
-            {
-                case 0: m.Translate(pr.Right, c - Top); break;                       // right edge, c is screen y
-                case 2: m.Translate(pr.Left, c - Top); m.Scale(-1, 1); break;
-                case 1: m.Translate(c - Left, pr.Bottom); m.Rotate(90); break;        // bottom edge, c is screen x
-                default: m.Translate(c - Left, pr.Top); m.Rotate(-90); break;
-            }
-            p.Transform(m); sp.Transform(m);
-            sides = sp;
-            return p;
         }
 
         void DrawChrome(Graphics g)
@@ -980,7 +863,6 @@ namespace GlassDesk
                 Location = new Point(r.X - pad, r.Y - pad);
                 // the blurred wallpaper behind the panel has to follow it while it moves
                 if ((UsesBackdrop || LiquidOn) && Environment.TickCount - lastMoveDraw > 30) { lastMoveDraw = Environment.TickCount; Redraw(); }
-                if (LiquidOn) App.UpdateMerges(false);
                 return;
             }
             int zn = Cfg.LockPositions ? 0 : ResizeZone(e.Location);

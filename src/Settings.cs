@@ -32,8 +32,7 @@ namespace GlassDesk
         public string Theme = "Auto";            // Auto | Dark | Light
         public Color Accent = Color.FromArgb(124, 156, 255);
         public bool Blur = true;                 // kept for older settings files; GlassStyle decides
-        public string LiquidKind = "clear";
-        public bool LiquidMerge = true;         // liquid glass panels close together melt into each other      // liquid glass: "regular" (a little frosted, easier to read) or "clear"
+        public string LiquidKind = "clear";      // liquid glass: "regular" (a little frosted, easier to read) or "clear"
         public string GlassStyle = "frosted";    // frosted | blur | clear
         public bool GlassOn { get { return GlassStyle != "clear" && GlassStyle != "transparent" && GlassStyle != "liquid"; } }
         public int Opacity = 30;                 // 5..95 (%) tint over the glass
@@ -170,7 +169,6 @@ namespace GlassDesk
                 case "Blur": Blur = B(v); return;
                 case "Opacity": Opacity = Math.Max(5, Math.Min(95, I(v))); return;
                 case "GlassStyle": GlassStyle = v.Trim(); glassV2 = true; return;
-                case "LiquidMerge": LiquidMerge = B(v); return;
                 case "LiquidKind": LiquidKind = v.Trim() == "regular" ? "regular" : "clear"; return;
                 case "Radius": Radius = Math.Max(0, Math.Min(28, I(v))); return;
                 case "UiScale": UiScale = Math.Max(80, Math.Min(150, I(v))); return;
@@ -275,7 +273,7 @@ namespace GlassDesk
                 w("StartWithWindows", b(StartWithWindows)); w("StartupV2", "1"); w("IconsV2", "1"); w("Hotkey", b(Hotkey)); w("LockPositions", b(LockPositions));
                 w("KeepBehindWindows", b(KeepBehindWindows)); w("SingleClickOpen", b(SingleClickOpen));
                 w("Look", Look); w("Theme", Theme); w("Accent", (Accent.ToArgb() & 0xFFFFFF).ToString("X6"));
-                w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("LiquidKind", LiquidKind); w("LiquidMerge", b(LiquidMerge)); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
+                w("Blur", b(GlassOn)); w("GlassStyle", GlassStyle); w("LiquidKind", LiquidKind); w("Opacity", Opacity.ToString(CultureInfo.InvariantCulture));
                 w("Radius", Radius.ToString(CultureInfo.InvariantCulture)); w("UiScale", UiScale.ToString(CultureInfo.InvariantCulture));
                 w("ShowClock", b(ShowClock)); w("ShowSeconds", b(ShowSeconds)); w("Clock24", b(Clock24)); w("ClockStyle", ClockStyle); w("Language", Language);
                 w("ShowSystem", b(ShowSystem)); w("ShowCalendar", b(ShowCalendar)); w("ShowNotes", b(ShowNotes));
@@ -348,7 +346,8 @@ namespace GlassDesk
             t.Scale = dpiScale * s.UiScale / 100f;
             t.Accent = s.Accent;
             int a = (int)(255 * s.Opacity / 100f);
-            if (s.GlassStyle == "transparent" || s.GlassStyle == "liquid") a = (int)(a * 0.3f);   // see-through: only a whisper of tint
+            if (s.GlassStyle == "transparent") a = (int)(a * 0.3f);
+            if (s.GlassStyle == "liquid") a = (int)(a * 0.15f);   // liquid glass is clear: the bending does the work   // see-through: only a whisper of tint
             var look = Themes.Find(s.Look) ?? Themes.Find("classic");
             t.LookId = look.Id; t.Solid = look.Solid; t.Flat = look.Flat; t.Neon = look.Neon;
             if (t.Solid) a = 255;
@@ -396,14 +395,14 @@ namespace GlassDesk
             t.Solid = true; t.Flat = true; t.Neon = false; t.Glow = Color.Empty; t.Glow2 = Color.Empty; t.LookId = "mac";
             if (Dark)
             {
-                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(46, 16, 18, 26);
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(24, 16, 18, 26);
                 t.Text = Color.FromArgb(255, 255, 255, 255); t.SubText = Color.FromArgb(235, 222, 224, 232);
                 t.Accent = Color.FromArgb(255, 10, 132, 255);
                 t.Border = Color.FromArgb(30, 255, 255, 255); t.Hover = Color.FromArgb(30, 255, 255, 255); t.Track = Color.FromArgb(46, 255, 255, 255);
             }
             else
             {
-                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(70, 255, 255, 255);
+                t.TintTop = t.TintBottom = t.Tint = Color.FromArgb(46, 255, 255, 255);
                 t.Text = Color.FromArgb(255, 29, 29, 31); t.SubText = Color.FromArgb(255, 134, 134, 139);
                 t.Accent = Color.FromArgb(255, 0, 122, 255);
                 t.Border = Color.FromArgb(18, 0, 0, 0); t.Hover = Color.FromArgb(14, 0, 0, 0); t.Track = Color.FromArgb(22, 0, 0, 0);

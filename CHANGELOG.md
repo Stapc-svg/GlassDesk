@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.19.0
+
+- **Real liquid glass.** The glass now works like a thick, clear lens. Near the rounded edges you see what's just *outside* the panel, squeezed into the rim, the way a drop of water or Apple's Liquid Glass bends light. Before, it pulled from inside and mostly looked like a tinted box. Colors look a little richer through the glass, a thin rainbow fringe shows at the edges, and a small glint sits only where the rim faces the light (top left and bottom right), with no white frame.
+- **Clearer glass.** Much less gray tint: the bending does the work. On bright or busy wallpapers, use Liquid glass type › **Regular**, which is softly frosted like Apple's default glass.
+- **Removed** the mouse-following light and the melting bridges between panels.
+
 ## 1.18.0
 
 Four ideas taken from Apple's Liquid Glass, rebuilt for Windows:

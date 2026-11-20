@@ -64,9 +64,10 @@ namespace GlassDesk
             var glass = new int[w * h];
             var light = new int[w * h];
             float hw = w / 2f, hh = h / 2f, r = Math.Min(radius, Math.Min(hw, hh));
-            float bevel = Math.Min(Math.Min(hw, hh) * 0.85f, Math.Max(12f, 36f * scale));   // how wide the curved rim is
-            float bend = bevel * 1.25f;                                                     // how far the rim bends the picture
-            float lx = -0.55f, ly = -0.835f;                                                // light comes from the top left
+            // the glass is thick at the edge: a rounded rim about a fifth of the panel deep
+            float bevel = Math.Max(14f * scale, Math.Min(48f * scale, Math.Min(w, h) * 0.22f));
+            bevel = Math.Min(bevel, Math.Min(hw, hh) * 0.9f);
+            float maxBend = bevel * 1.5f;
             float cx = src.X + hw, cy = src.Y + hh;
             double lum = 0; int lumN = 0;
             for (int y = 0; y < h; y++)
@@ -75,7 +76,7 @@ namespace GlassDesk
                 for (int x = 0; x < w; x++)
                 {
                     float px = x + 0.5f - hw;
-                    // distance to the rounded edge (negative inside) and the direction out of the glass
+                    // distance to the rounded edge and the direction pointing out of the glass
                     float qx = Math.Abs(px) - (hw - r), qy = Math.Abs(py) - (hh - r);
                     float ox = Math.Max(qx, 0), oy = Math.Max(qy, 0);
                     float outside = (float)Math.Sqrt(ox * ox + oy * oy) + Math.Min(Math.Max(qx, qy), 0) - r;
@@ -87,29 +88,33 @@ namespace GlassDesk
                     else if (qx > qy) { nx = 1; ny = 0; } else { nx = 0; ny = 1; }
                     if (px < 0) nx = -nx; if (py < 0) ny = -ny;
 
-                    // the rim is a rounded bevel: flat in the middle, curving down to the edge
+                    // The rim is a quarter circle seen from above. Its slope bends the light like a lens:
+                    // what you see near the edge comes from OUTSIDE the glass, squeezed in. That is what
+                    // makes it look like a drop of liquid instead of a tinted box.
                     float t = Math.Max(0f, Math.Min(1f, depth / bevel)), e = 1f - t;
-                    float m = bend * e * e * e * (2.2f - 1.2f * e);
-                    // a hint of magnification over the whole pane, like thick glass
-                    float sx = cx + px * 0.985f, sy = cy + py * 0.985f;
-                    // pull the picture in from the edge; red, green and blue bend by slightly different amounts
-                    float R = Sample(sx - nx * m * 0.90f, sy - ny * m * 0.90f, 16);
-                    float G = Sample(sx - nx * m, sy - ny * m, 8);
-                    float B = Sample(sx - nx * m * 1.14f, sy - ny * m * 1.14f, 0);
-                    // the rim glows a little, and the whole pane is lifted very slightly
-                    float lift = (dark ? 6f : 14f) + 8f * e * e;
+                    float hgt = (float)Math.Sqrt(Math.Max(0.0001f, 1f - e * e));
+                    float slope = e / hgt;                                   // 0 in the flat middle, huge at the edge
+                    float m = Math.Min(maxBend, slope * bevel * 0.42f);
+                    // the flat middle magnifies a tiny bit, like a thick lens
+                    float sx = cx + px * 0.97f, sy = cy + py * 0.97f;
+                    float R = Sample(sx + nx * m * 0.93f, sy + ny * m * 0.93f, 16);
+                    float G = Sample(sx + nx * m, sy + ny * m, 8);
+                    float B = Sample(sx + nx * m * 1.08f, sy + ny * m * 1.08f, 0);
+                    // richer colors through the glass, and a little light gathered in the rim
+                    float avg = (R + G + B) / 3f;
+                    R = avg + (R - avg) * 1.18f; G = avg + (G - avg) * 1.18f; B = avg + (B - avg) * 1.18f;
+                    float lift = (dark ? 4f : 10f) + 22f * e * e * e;
                     R += (255 - R) * lift / 255f; G += (255 - G) * lift / 255f; B += (255 - B) * lift / 255f;
                     int A = (int)(cover * 255);
                     glass[y * w + x] = (A << 24) | (Cl(R) << 16) | (Cl(G) << 8) | Cl(B);
                     if (t >= 1) { lum += (0.3f * R + 0.59f * G + 0.11f * B) / 255f; lumN++; }
 
-                    // light catching the rim: brightest facing the light, a softer glint on the opposite corner
-                    float facing = nx * lx + ny * ly;
-                    // only a soft shine inside the glass: no white line around the edge
-                    float rim = (float)Math.Pow(e, 4.5) * (0.6f * Math.Max(0, facing) + 0.25f * Math.Max(0, -facing));
-                    float glow = Math.Min(1f, rim * 0.28f);
-                    int la = (int)(glow * cover * 255);
-                    if (la > 0) light[y * w + x] = (la << 24) | 0xFFFFFF;
+                    // specular: a thin glint only where the curved rim faces the light (top-left and bottom-right),
+                    // fading away along the sides, so there is no white frame around the panel
+                    float diag = Math.Abs(nx * -0.707f + ny * -0.707f);
+                    float spec = (float)Math.Pow(e, 9) * (float)Math.Pow(diag, 4) * 0.75f;
+                    int la = (int)(Math.Min(1f, spec) * cover * 255);
+                    if (la > 2) light[y * w + x] = (la << 24) | 0xFFFFFF;
                 }
             }
             Brightness = lumN > 0 ? (float)(lum / lumN) : 0.5f;

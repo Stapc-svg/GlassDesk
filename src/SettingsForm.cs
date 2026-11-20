@@ -402,7 +402,6 @@ namespace GlassDesk
             var lk = new Segmented(P, k, new[] { Lang.L("Regular"), Lang.L("Clear") }, S.LiquidKind == "regular" ? 0 : 1) { Font = fSmall };
             lk.SelectionChanged += delegate { S.LiquidKind = lk.SelectedIndex == 0 ? "regular" : "clear"; S.Save(); app.ApplySettings(); };
             Row(Lang.L("Liquid glass type"), "Regular is a little frosted and easy to read; Clear shows the most of your wallpaper", lk);
-            Row(Lang.L("Melt nearby panels together"), "Liquid glass panels close to each other join with a liquid bridge, like drops of water", Toggle(S.LiquidMerge, v => S.LiquidMerge = v));
         }
 
         void PageWidgets()
