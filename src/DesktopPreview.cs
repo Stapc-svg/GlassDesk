@@ -16,6 +16,21 @@ namespace GlassDesk
         string hoverName = "";
         readonly List<KeyValuePair<RectangleF, GlassWindow>> spots = new List<KeyValuePair<RectangleF, GlassWindow>>();
 
+        // previews never redraw while the Settings page is scrolling: that is what made scrolling stutter
+        static int scrolledAt = -100000;
+        public static void Scrolled() { scrolledAt = Environment.TickCount; }
+        public static bool Busy { get { return Environment.TickCount - scrolledAt < 600; } }
+        /// <summary>True when the control is actually on screen inside its scrolled page.</summary>
+        public static bool OnScreen(Control c)
+        {
+            if (!c.Visible || c.Parent == null) return false;
+            var f = c.FindForm(); if (f == null || !f.Visible || f.WindowState == FormWindowState.Minimized) return false;
+            var r = c.Parent.RectangleToScreen(c.Bounds);
+            Control p = c.Parent;
+            while (p != null) { if (!p.RectangleToScreen(p.ClientRectangle).IntersectsWith(r)) return false; p = p.Parent; }
+            return true;
+        }
+
         public DesktopPreview(App app, float k, int width)
         {
             this.app = app;
@@ -24,8 +39,8 @@ namespace GlassDesk
             Width = width;
             Height = Math.Max(120, (int)(width * (float)scr.Height / Math.Max(1, scr.Width)));
             // redraw now and then, so changes made in Settings (or on the desktop) appear in the picture
-            timer = new Timer { Interval = 1200 };
-            timer.Tick += delegate { if (Visible && FindForm() != null && FindForm().Visible) Snap(); };
+            timer = new Timer { Interval = 1500 };
+            timer.Tick += delegate { if (!Busy && OnScreen(this)) Snap(); };
             timer.Start();
             Snap();
         }
@@ -53,6 +68,7 @@ namespace GlassDesk
                     using (var path = Gfx.Round(new RectangleF(0, 0, Width - 1, Height - 1), 12))
                     {
                         g.SetClip(path);
+                        g.InterpolationMode = InterpolationMode.Bilinear;
                         Bitmap wall = null;
                         try { wall = Backdrop.For(scr, 0); } catch { }
                         if (wall != null) g.DrawImage(wall, new Rectangle(0, 0, Width, Height));
@@ -63,9 +79,8 @@ namespace GlassDesk
                             if (w == null || w.IsDisposed || !(app.Preview ? app.WantsShown(w) : w.Visible) || w.Width < 4) continue;
                             var b = w.Bounds;
                             if (!b.IntersectsWith(scr)) continue;   // on another monitor
-                            Bitmap img0;
-                            try { img0 = w.RenderBitmap(); } catch { continue; }   // one panel failing never blanks the picture
-                            using (var img = img0)
+                            Bitmap img = w.Snapshot(1400);   // reused unless the panel changed
+                            if (img == null) continue;
                             {
                                 var dst = new RectangleF((b.X - scr.X) * s, (b.Y - scr.Y) * s, b.Width * s, b.Height * s);
                                 g.DrawImage(img, dst);
@@ -118,49 +133,58 @@ namespace GlassDesk
     {
         readonly App app; readonly GlassWindow w;
         readonly Timer timer;
-        Bitmap shot;
+        Bitmap small;        // already shrunk and faded: painting it is just a copy, so scrolling stays smooth
+        bool shownOn;
 
         public WidgetThumb(App app, GlassWindow w, int width, int height)
         {
             this.app = app; this.w = w;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
             Size = new Size(width, height);
-            timer = new Timer { Interval = 2000 };
-            timer.Tick += delegate { if (Visible) Snap(); };
+            timer = new Timer { Interval = 3000 };
+            timer.Tick += delegate { if (!DesktopPreview.Busy && DesktopPreview.OnScreen(this)) Make(); };
             timer.Start();
-            Snap();
+            HandleCreated += delegate { Make(); };
         }
-        protected override void Dispose(bool disposing) { if (disposing) { timer.Dispose(); if (shot != null) shot.Dispose(); } base.Dispose(disposing); }
+        protected override void Dispose(bool disposing) { if (disposing) { timer.Dispose(); if (small != null) small.Dispose(); } base.Dispose(disposing); }
 
-        void Snap()
+        void Make()
         {
-            Bitmap b = null;
-            try { if (!w.IsDisposed && w.Width > 4) b = w.RenderBitmap(); } catch { }
-            var old = shot; shot = b; if (old != null) old.Dispose();
-            Invalidate();
+            try
+            {
+                bool on = app.WantsShown(w);
+                var shot = w.IsDisposed ? null : w.Snapshot(2500);
+                var b = new Bitmap(Math.Max(1, Width), Math.Max(1, Height), System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                using (var g = Graphics.FromImage(b))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
+                    using (var p = Gfx.Round(r, 10))
+                    {
+                        using (var lg = new LinearGradientBrush(r, Color.FromArgb(70, 60, 80, 130), Color.FromArgb(70, 140, 100, 160), 45f)) g.FillPath(lg, p);
+                        if (shot != null)
+                        {
+                            float sc = Math.Min((Width - 6f) / shot.Width, (Height - 6f) / shot.Height);
+                            var dst = new RectangleF((Width - shot.Width * sc) / 2, (Height - shot.Height * sc) / 2, shot.Width * sc, shot.Height * sc);
+                            using (var ia = new System.Drawing.Imaging.ImageAttributes())
+                            {
+                                ia.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix { Matrix33 = on ? 1f : 0.4f });
+                                g.DrawImage(shot, Rectangle.Round(dst), 0, 0, shot.Width, shot.Height, GraphicsUnit.Pixel, ia);
+                            }
+                        }
+                    }
+                }
+                var old = small; small = b; shownOn = on; if (old != null) old.Dispose();
+                Invalidate();
+            }
+            catch (Exception ex) { Program.Log(ex); }
         }
-
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias; g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
-            bool on = app.WantsShown(w);
-            using (var p = Gfx.Round(r, 10))
-            {
-                using (var b = new LinearGradientBrush(r, Color.FromArgb(70, 60, 80, 130), Color.FromArgb(70, 140, 100, 160), 45f)) g.FillPath(b, p);
-                if (shot != null)
-                {
-                    float sc = Math.Min((Width - 8f) / shot.Width, (Height - 8f) / shot.Height);
-                    var dst = new RectangleF((Width - shot.Width * sc) / 2, (Height - shot.Height * sc) / 2, shot.Width * sc, shot.Height * sc);
-                    using (var ia = new System.Drawing.Imaging.ImageAttributes())
-                    {
-                        ia.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix { Matrix33 = on ? 1f : 0.4f });
-                        g.DrawImage(shot, Rectangle.Round(dst), 0, 0, shot.Width, shot.Height, GraphicsUnit.Pixel, ia);
-                    }
-                }
-                using (var pen = new Pen(Color.FromArgb(on ? 60 : 30, 255, 255, 255), 1f)) g.DrawPath(pen, p);
-            }
+            if (small == null) return;
+            if (shownOn != app.WantsShown(w)) { BeginInvoke(new Action(Make)); }   // the switch was flipped: fade or brighten right away
+            e.Graphics.DrawImageUnscaled(small, 0, 0);
         }
     }
 }

@@ -336,6 +336,36 @@ namespace GlassDesk
             return false;
         }
 
+        // ---- a picture of this panel for previews (Settings, quick search), made only when it changed ----
+        bool snapDirty = true; Bitmap snap; int snapAt;
+        /// <summary>The panel as it looks now. Reuses the last picture unless the panel has redrawn since,
+        /// and never makes more than one every <paramref name="minMs"/>. Works for hidden widgets too.</summary>
+        public Bitmap Snapshot(int minMs)
+        {
+            if (snap != null && (!snapDirty || Environment.TickCount - snapAt < minMs)) return snap;
+            try
+            {
+                Rectangle? restore = null;
+                if (!Visible && this is Widget)
+                {
+                    // hidden widgets may never have been sized: give it its normal size just to draw it, then put it back
+                    var sz = PreferredPanelSize(Size.Empty);
+                    if (PanelBounds.Width != sz.Width || PanelBounds.Height != sz.Height)
+                    {
+                        restore = Bounds;
+                        SetPanelBounds(new Rectangle(PanelBounds.X, PanelBounds.Y, sz.Width, sz.Height));
+                    }
+                }
+                Bitmap b;
+                try { b = RenderBitmap(); }
+                finally { if (restore.HasValue) Bounds = restore.Value; }
+                if (snap != null) snap.Dispose();
+                snap = b; snapDirty = false; snapAt = Environment.TickCount;
+            }
+            catch (Exception ex) { Program.Log(ex); }
+            return snap;
+        }
+
         public Bitmap RenderBitmap()
         {
             var bmp = new Bitmap(Math.Max(1, Width), Math.Max(1, Height), PixelFormat.Format32bppArgb);
@@ -593,6 +623,7 @@ namespace GlassDesk
             if (!Native.IsWindows || Width <= 0 || Height <= 0) return;
             if (!IsHandleCreated) CreateHandle();
             using (var bmp = RenderBitmap()) Push(bmp);
+            snapDirty = true;
         }
 
         public void Redraw()
@@ -600,6 +631,7 @@ namespace GlassDesk
             if (!Native.IsWindows || !IsHandleCreated || !Visible || Width <= 0 || Height <= 0) return;
             if (App.Paused) { App.MarkDirty(this); return; }
             using (var bmp = RenderBitmap()) Push(bmp);
+            snapDirty = true;
         }
 
         // ---- smooth appearance: panels fade in when they show up, fade out when hidden together,

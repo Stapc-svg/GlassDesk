@@ -9,7 +9,7 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("GlassDesk")]
 [assembly: System.Reflection.AssemblyProduct("GlassDesk")]
 [assembly: System.Reflection.AssemblyDescription("Glass desktop organizer with widgets")]
-[assembly: System.Reflection.AssemblyVersion("1.17.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.17.3.0")]
 [assembly: System.Reflection.AssemblyFileVersion("1.9.2.0")]
 
 namespace GlassDesk

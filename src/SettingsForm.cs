@@ -679,7 +679,7 @@ namespace GlassDesk
                 SetStyle(ControlStyles.SupportsTransparentBackColor | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
             }
             protected override void OnPaintBackground(PaintEventArgs e) { if (Paint2 != null) Paint2(e.Graphics, this); else base.OnPaintBackground(e); }
-            protected override void OnScroll(ScrollEventArgs se) { base.OnScroll(se); Invalidate(true); }
+            protected override void OnScroll(ScrollEventArgs se) { base.OnScroll(se); DesktopPreview.Scrolled(); Invalidate(true); }
 
             // smooth scrolling: the wheel sets a target and the page glides there
             int target = -1; System.Windows.Forms.Timer glide;
@@ -694,6 +694,7 @@ namespace GlassDesk
                     glide = new System.Windows.Forms.Timer { Interval = 12 };
                     glide.Tick += delegate
                     {
+                        DesktopPreview.Scrolled();
                         int cur = VerticalScroll.Value, d = target - cur;
                         if (Math.Abs(d) <= 1) { AutoScrollPosition = new Point(0, target); glide.Stop(); Invalidate(true); return; }
                         AutoScrollPosition = new Point(0, cur + (int)Math.Round(d * 0.22f + Math.Sign(d)));

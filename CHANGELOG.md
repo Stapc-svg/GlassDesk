@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.17.3
+
+- **Settings scrolls smoothly again.** The desktop preview and the widget pictures were redrawing every panel over and over, even while you scrolled. Now:
+  - they pause while the page is scrolling,
+  - they only update when they are on screen,
+  - each panel's picture is reused until that panel actually changes,
+  - and each widget picture is shrunk once and then just copied, instead of being scaled again on every scroll step.
+- **Widget pictures work for widgets that are off.** Widgets you never turned on had no size yet, so their picture stayed empty. They are now drawn at their normal size, faded.
+
 ## 1.17.2
 
 - **Liquid glass for everything.** Settings › Appearance › Glass style now has a fifth choice, **Liquid**. It turns every panel into clear liquid glass that bends the wallpaper at its edges, fences included. Before, Liquid glass could only be picked per widget, from right-click › Style.
