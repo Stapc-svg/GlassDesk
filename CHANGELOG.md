@@ -8,7 +8,7 @@ GlassDesk 2.0 brings together everything since 1.9:
 - **A style for each widget** (Glass or Liquid glass), each with its own design: Notes, Reminders-style to-dos, Activity rings, gauges and more.
 - **Live desktop preview and widget pictures in Settings,** and a **Widgets tab** in quick search.
 - **Online calendar, every drive in System, game screenshot fences, the clipboard widget,** and Chinese, Spanish and Russian.
-- **A new welcome screen** shows what's new. It appears once after updating.
+- **A new animated welcome screen** shows what's new: the logo pops in, the title slides in, the four cards rise one after another, and a light sweeps across each. It appears once after updating.
 
 ## 1.20.1
 

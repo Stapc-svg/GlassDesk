@@ -714,9 +714,23 @@ namespace GlassDesk
             Opacity = app.Preview ? 1 : 0;
             fade = new Timer { Interval = 15 };
             fade.Tick += delegate { Opacity = Math.Min(1, Opacity + 0.08); if (Opacity >= 1) fade.Stop(); };
-            Shown += delegate { fade.Start(); };
-            FormClosed += delegate { fade.Dispose(); };
+            // the intro: title slides down, the four cards rise in one after another, the logo keeps a soft glow
+            anim = new Timer { Interval = 16 };
+            anim.Tick += delegate { Invalidate(); if (AnimT > 6f && app.Settings.LowPower) anim.Stop(); };
+            Shown += delegate { fade.Start(); animStart = Environment.TickCount; anim.Start(); };
+            FormClosed += delegate { fade.Dispose(); anim.Dispose(); };
+            if (app.Preview) { float pt; animStart = Environment.TickCount - (float.TryParse(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_ANIM"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out pt) ? (int)(pt * 1000) : 100000); }   // screenshots: the finished screen
         }
+        readonly Timer anim;
+        int animStart = Environment.TickCount;
+        float AnimT { get { return (Environment.TickCount - animStart) / 1000f; } }
+        /// <summary>0..1 progress of a piece of the intro that starts at <paramref name="delay"/> seconds, eased with a little overshoot.</summary>
+        float Step(float delay, float len)
+        {
+            float t = Math.Max(0, Math.Min(1, (AnimT - delay) / len));
+            float c = 1.6f; t -= 1; return 1 + (c + 1) * t * t * t + c * t * t;   // ease-out-back
+        }
+        static float Clamp01(float v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
         int Pad { get { return (int)(34 * k); } }
         Rectangle CloseRect { get { return new Rectangle(Width - (int)(50 * k), (int)(14 * k), (int)(36 * k), (int)(36 * k)); } }
@@ -729,13 +743,24 @@ namespace GlassDesk
             // logo with a glow behind it
             int ls = (int)(64 * k);
             var lr = new Rectangle(Pad, Pad + (int)(6 * k), ls, ls);
-            Gfx.Glow(g, new PointF(lr.X + ls / 2f, lr.Y + ls / 2f), ls * 1.3f, Gfx.WithAlpha(P.Accent, 70));
-            using (var logo = App.LogoBitmap(256, P.Accent)) { g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(logo, lr); }
+            float pulse = 0.5f + 0.5f * (float)Math.Sin(AnimT * 2.2), pop = Step(0f, 0.6f);
+            Gfx.Glow(g, new PointF(lr.X + ls / 2f, lr.Y + ls / 2f), ls * (1.1f + 0.35f * pulse), Gfx.WithAlpha(P.Accent, (int)(Clamp01(pop) * (50 + 50 * pulse))));
+            using (var logo = App.LogoBitmap(256, P.Accent))
+            {
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                float s = Math.Max(0.01f, pop), cx = lr.X + ls / 2f, cy = lr.Y + ls / 2f;
+                var st0 = g.Save(); g.TranslateTransform(cx, cy); g.RotateTransform((1 - Clamp01(pop)) * -25); g.ScaleTransform(s, s); g.TranslateTransform(-cx, -cy);
+                g.DrawImage(logo, lr); g.Restore(st0);
+            }
             float tx = lr.Right + 18 * k;
+            var stT = g.Save(); float tIn = Step(0.15f, 0.55f);
+            g.TranslateTransform((1 - tIn) * 40 * k, 0);
+            if (tIn < 1) g.SetClip(new RectangleF(tx, 0, (Width - tx) * Clamp01(tIn * 1.2f), Height));
             using (var b = new SolidBrush(P.Text))
                 g.DrawString(Lang.L("Welcome to GlassDesk 2.0"), Gfx.F(T.DisplayFont, 28 * k, FontStyle.Bold), b, new RectangleF(tx, lr.Y - 2 * k, Width - tx - 60 * k, 40 * k), Gfx.Left);
             using (var b = new SolidBrush(P.Sub))
                 g.DrawString(Lang.L("Here's what's new — all made from your ideas."), Gfx.F(T.FontName, 14.5f * k, FontStyle.Regular), b, new RectangleF(tx, lr.Y + 38 * k, Width - tx - 40 * k, 24 * k), Gfx.Left);
+            g.Restore(stT);
             Close(g, CloseRect, hotBtn == 0);
 
             // four tips in a 2 x 2 grid
@@ -745,7 +770,26 @@ namespace GlassDesk
             for (int i = 0; i < 4; i++)
             {
                 var r = new RectangleF(Pad + (i % 2) * (tw + gap), top + (i / 2) * (th + gap), tw, th);
+                float ci = Step(0.35f + i * 0.12f, 0.6f);
+                if (ci <= 0.001f) continue;
+                var stC = g.Save();
+                float ccx = r.X + r.Width / 2, ccy = r.Y + r.Height / 2, sc = 0.85f + 0.15f * ci;
+                g.TranslateTransform(ccx, ccy + (1 - ci) * 40 * k); g.ScaleTransform(sc, sc); g.TranslateTransform(-ccx, -ccy);
                 Chip(g, r, 14 * k, false);
+                // a light sweeps across each card once, just after it lands
+                float sw = Clamp01((AnimT - 0.75f - i * 0.12f) / 0.7f);
+                if (sw > 0 && sw < 1)
+                    using (var path = Gfx.Round(r, 14 * k))
+                    {
+                        var stS = g.Save(); g.SetClip(path, CombineMode.Intersect);
+                        float bx = r.X - r.Width * 0.3f + r.Width * 1.6f * sw;
+                        using (var lg = new LinearGradientBrush(new PointF(bx - 40 * k, 0), new PointF(bx + 40 * k, 0), Color.FromArgb(0, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+                        {
+                            var cb = new ColorBlend(3); cb.Colors = new[] { Color.FromArgb(0, 255, 255, 255), Color.FromArgb((int)(60 * (1 - sw)), 255, 255, 255), Color.FromArgb(0, 255, 255, 255) }; cb.Positions = new[] { 0f, 0.5f, 1f };
+                            lg.InterpolationColors = cb; g.FillRectangle(lg, bx - 40 * k, r.Y, 80 * k, r.Height);
+                        }
+                        g.Restore(stS);
+                    }
                 float d = 40 * k;
                 var ic = new RectangleF(r.X + 16 * k, r.Y + 16 * k, d, d);
                 using (var p = Gfx.Round(ic, 11 * k)) using (var b = new LinearGradientBrush(ic, P.Accent, P.Accent2, 45f)) g.FillPath(b, p);
@@ -753,6 +797,7 @@ namespace GlassDesk
                 float x = ic.Right + 14 * k;
                 using (var b = new SolidBrush(P.Text)) g.DrawString(Tips[i][0], fT, b, new RectangleF(x, r.Y + 14 * k, r.Right - x - 12 * k, 22 * k), Gfx.Left);
                 using (var b = new SolidBrush(P.Sub)) g.DrawString(Tips[i][1], fD, b, new RectangleF(x, r.Y + 38 * k, r.Right - x - 14 * k, r.Height - 44 * k), Gfx.TopLeftWrap);
+                g.Restore(stC);
             }
 
             // buttons
@@ -771,7 +816,18 @@ namespace GlassDesk
             using (var pen = new Pen(Color.White, 2f * k) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
             using (var b = new SolidBrush(Color.White))
             {
-                if (i == 0)        // fences: four little boxes
+                i = i == 0 ? 4 : i == 1 ? 3 : i == 3 ? 1 : 2;   // 2.0 cards: liquid drop, palette, search, clock
+                if (i == 4)        // liquid glass: a drop
+                {
+                    using (var p = new GraphicsPath())
+                    {
+                        p.AddBezier(cx, cy - s * 1.25f, cx + s * 0.35f, cy - s * 0.6f, cx + s, cy - s * 0.1f, cx + s, cy + s * 0.35f);
+                        p.AddArc(cx - s, cy - s * 0.65f, 2 * s, 2 * s, 0, 180);
+                        p.AddBezier(cx - s, cy + s * 0.35f, cx - s, cy - s * 0.1f, cx - s * 0.35f, cy - s * 0.6f, cx, cy - s * 1.25f);
+                        g.DrawPath(pen, p);
+                    }
+                }
+                else if (i == 0)        // fences: four little boxes
                     for (int j = 0; j < 4; j++)
                         using (var p = Gfx.Round(new RectangleF(cx - s + (j % 2) * s * 1.1f, cy - s + (j / 2) * s * 1.1f, s * 0.9f, s * 0.9f), 2.5f * k)) g.DrawPath(pen, p);
                 else if (i == 1)   // widgets: a clock
