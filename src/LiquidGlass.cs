@@ -97,7 +97,7 @@ namespace GlassDesk
                     float G = Sample(sx - nx * m, sy - ny * m, 8);
                     float B = Sample(sx - nx * m * 1.14f, sy - ny * m * 1.14f, 0);
                     // the rim glows a little, and the whole pane is lifted very slightly
-                    float lift = (dark ? 6f : 14f) + 26f * e * e;
+                    float lift = (dark ? 6f : 14f) + 8f * e * e;
                     R += (255 - R) * lift / 255f; G += (255 - G) * lift / 255f; B += (255 - B) * lift / 255f;
                     int A = (int)(cover * 255);
                     glass[y * w + x] = (A << 24) | (Cl(R) << 16) | (Cl(G) << 8) | Cl(B);
@@ -105,9 +105,9 @@ namespace GlassDesk
 
                     // light catching the rim: brightest facing the light, a softer glint on the opposite corner
                     float facing = nx * lx + ny * ly;
-                    float rim = (float)Math.Pow(e, 4.5) * (0.22f + 0.78f * Math.Max(0, facing) + 0.5f * Math.Max(0, -facing));
-                    float edge = Math.Max(0f, 1f - depth / (1.6f * scale));                       // a crisp hairline right on the edge
-                    float glow = Math.Min(1f, rim * 0.7f + edge * (0.4f + 0.55f * Math.Abs(facing)));
+                    // only a soft shine inside the glass: no white line around the edge
+                    float rim = (float)Math.Pow(e, 4.5) * (0.6f * Math.Max(0, facing) + 0.25f * Math.Max(0, -facing));
+                    float glow = Math.Min(1f, rim * 0.28f);
                     int la = (int)(glow * cover * 255);
                     if (la > 0) light[y * w + x] = (la << 24) | 0xFFFFFF;
                 }

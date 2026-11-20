@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.17.1
+
+- **No more white borders.** The white line around every widget and fence is gone, in both the Glass and the Liquid glass styles. Liquid glass keeps its bent edges and only a soft shine inside the glass.
+
 ## 1.17.0
 
 - **Real liquid glass.** The macOS style is now called **Liquid glass** and works like a thick, clear pane of glass. Your wallpaper bends around the rounded edges like through a lens, colors split slightly at the rim like a prism, and light catches the edges: brightest at the top left, with a softer glint on the opposite corner. The middle stays clear.

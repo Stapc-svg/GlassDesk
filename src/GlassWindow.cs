@@ -418,7 +418,6 @@ namespace GlassDesk
                 g.SetClip(path, CombineMode.Intersect);
                 PaintMacBack(g, path, pr);
                 g.Restore(st);
-                using (var pen = new Pen(T.Border, 1f)) g.DrawPath(pen, path);
             }
         }
 
@@ -476,9 +475,6 @@ namespace GlassDesk
                     lg.InterpolationColors = cb;
                     g.FillPath(lg, path);
                 }
-                // 4. soft glow just inside the edge, like light trapped in thick glass
-                using (var pen = new Pen(Color.FromArgb(T.Dark ? 10 : 18, 255, 255, 255), T.Sf(8))) g.DrawPath(pen, path);
-                using (var pen = new Pen(Color.FromArgb(T.Dark ? 12 : 22, 255, 255, 255), T.Sf(3))) g.DrawPath(pen, path);
                 g.Restore(st);
             }
             rim:
@@ -486,8 +482,7 @@ namespace GlassDesk
             var br = new RectangleF(pr.X + 0.6f, pr.Y + 0.6f, pr.Width - 1.2f, pr.Height - 1.2f);
             if (T.Flat)
             {
-                using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f))) using (var pen = new Pen(T.Border, 1f)) g.DrawPath(pen, p);
-                return;
+                return;   // no outline: the panels have no white border
             }
             if (T.Neon)
             {
@@ -500,6 +495,7 @@ namespace GlassDesk
                 }
                 return;
             }
+            if (false)   // the white rim around the glass was removed (it read as a border)
             using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
             using (var lg = new LinearGradientBrush(new PointF(br.X - 1, br.Y - 1), new PointF(br.Right + 1, br.Bottom + 1), Color.White, Color.White))
             {
