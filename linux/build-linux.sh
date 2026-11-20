@@ -26,7 +26,7 @@ Section: utils
 Priority: optional
 Architecture: all
 Depends: python3 (>= 3.8), python3-gi, python3-gi-cairo, gir1.2-gtk-3.0
-Recommends: gir1.2-ayatanaappindicator3-0.1, gir1.2-keybinder-3.0, libnotify-bin
+Recommends: python3-numpy, gir1.2-ayatanaappindicator3-0.1, gir1.2-keybinder-3.0, libnotify-bin
 Installed-Size: $SIZE
 Maintainer: Stapc-svg <noreply@github.com>
 Homepage: https://github.com/Stapc-svg/GlassDesk

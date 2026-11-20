@@ -8,7 +8,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import GLib, Gio, Gtk, Gdk, GdkPixbuf
 
-VERSION = "1.9.10"
+VERSION = "2.0.0"
 REPO = "Stapc-svg/GlassDesk"
 APP_ID = "app.glassdesk.GlassDesk"
 
@@ -42,7 +42,8 @@ def log(msg):
 DEFAULTS = {
     "theme": "auto",                # dark / light / auto
     "accent": "#7C9CFF",
-    "glass_style": "frosted",       # frosted / blur / clear / transparent
+    "glass_style": "frosted",       # frosted / blur / clear / transparent / liquid
+    "liquid_kind": "clear",         # liquid glass: regular (a little frosted) or clear
     "opacity": 55,                  # tint strength, %
     "radius": 16,
     "ui_scale": 100,
@@ -242,6 +243,8 @@ class Theme:
         a = s["opacity"] / 100.0
         if self.style == "transparent":
             a *= 0.3
+        if self.style == "liquid":
+            a *= 0.15   # liquid glass is clear: the bending does the work
         if self.solid:
             a = 1.0
         a2 = a if look["id"] == "classic" or self.solid else min(1.0, a + 0.16)

@@ -124,7 +124,7 @@ class GlassDeskApp(Gtk.Application):
             core.set_autostart(self.settings["start_at_login"])
             self.settings.save()
         # the welcome screen shows once ever, and stays gone after updates
-        if not self.settings.get("_welcome_shown"):
+        if not str(self.settings.get("_welcome_shown") or "").startswith("2."):   # first run, and once more for 2.0
             self.settings["_welcome_shown"] = core.VERSION
             self.settings.save()
             GLib.timeout_add(1200, lambda: (self.show_welcome(), False)[1])

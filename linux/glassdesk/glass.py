@@ -5,6 +5,7 @@ import math, os
 import cairo
 from gi.repository import Gtk, Gdk, GdkPixbuf, GLib, Pango, PangoCairo
 
+from . import liquid
 from . import core
 
 
@@ -396,6 +397,14 @@ class GlassWindow(Gtk.Window):
         cr.save()
         rounded(cr, x, y, w, h, r)
         cr.clip()
+        if T.style == "liquid" and not T.solid and self._draw_liquid(cr, x, y, w, h, r):
+            cr.restore()
+            if self.glow_hover > 0.01:
+                rounded(cr, x + 0.5, y + 0.5, w - 1, h - 1, r)
+                cr.set_source_rgba(T.accent[0], T.accent[1], T.accent[2], 0.3 * self.glow_hover)
+                cr.set_line_width(T.s(1.4))
+                cr.stroke()
+            return
         # 1) the blurred wallpaper that is right behind this panel
         drew = False
         win = self.get_window()
@@ -480,6 +489,49 @@ class GlassWindow(Gtk.Window):
             cr.set_source(g)
             cr.set_line_width(T.s(1.8))
             cr.stroke()
+
+    def _draw_liquid(self, cr, x, y, w, h, r):
+        """Liquid glass (see liquid.py): the wallpaper bent through a thick pane, made once per spot and size."""
+        if not liquid.AVAILABLE:
+            return False
+        win = self.get_window()
+        disp = Gdk.Display.get_default()
+        mon = disp.get_monitor_at_window(win) if (disp and win is not None) else None
+        if mon is None:
+            return False
+        T = self.T
+        g = mon.get_geometry()
+        regular = self.S.get("liquid_kind", "clear") == "regular"
+        styles = ("clear", "frosted") if regular else ("transparent", "clear")
+        wx, wy = self.get_position()
+        sx0, sy0 = wx - g.x + x, wy - g.y + y
+        key = (int(sx0), int(sy0), int(w), int(h), int(r), T.dark, regular, Backdrop._path, Backdrop._mtime)
+        if getattr(self, "_liq_key", None) != key:
+            mid = liquid.wall_array(Backdrop.get(g.width, g.height, styles[0]), (g.width, g.height, styles[0]))
+            rim = liquid.wall_array(Backdrop.get(g.width, g.height, styles[1]), (g.width, g.height, styles[1]))
+            if mid is None or rim is None:
+                return False
+            try:
+                self._liq = liquid.build(mid, rim, sx0, sy0, w, h, r, T.s(1), T.dark, 0.35 if regular else 0.18)
+            except Exception as e:
+                core.log("liquid glass: %s" % e)
+                return False
+            self._liq_key = key
+        surf, bright = self._liq
+        cr.set_source_surface(surf, x, y)
+        cr.paint()
+        # a whisper of tint, a little more on bright wallpapers so text stays readable
+        t = T.tint_top
+        need = max(0, bright - 0.45) * 0.67 if T.dark else max(0, 0.6 - bright) * 0.67
+        if regular:
+            need += 0.09
+        cr.set_source_rgba(t[0], t[1], t[2], min(0.47, t[3] + need))
+        cr.paint()
+        if self.panel_color():
+            c = self.panel_color()
+            cr.set_source_rgba(c[0], c[1], c[2], 0.14)
+            cr.paint()
+        return True
 
     def panel_color(self):
         return None

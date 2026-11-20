@@ -175,6 +175,12 @@ Ideas and bug reports from the XDA thread:
 
 - Fixed: stacked fences and widgets sometimes showed no tabs after GlassDesk started, until you rescanned the desktop.
 
+## Linux 2.0.0
+
+- **Liquid glass** comes to Linux: Settings › Appearance › Glass style › **Liquid glass**. The wallpaper bends at each panel's rounded edges like a thick lens, with frost and a thin rainbow fringe at the rim. Liquid glass type lets you choose **Regular** (a little frosted) or **Clear**. Before turning it on, GlassDesk warns that it uses about 100–200 MB more memory. It needs python3-numpy, which the .deb now recommends; without numpy, the option is hidden.
+- **Animated welcome screen** for 2.0, shown once after updating.
+- Includes everything from Linux 1.9.8–1.9.10 (new weather, clock backgrounds, vinyl music, clipboard, fades).
+
 ## Linux 1.9.10
 
 - **New Clipboard widget:** the last things you copied; click one to copy it again. Memory only, never saved; copies marked private by password managers are skipped. Right-click to pause or clear.

@@ -351,8 +351,31 @@ class SettingsWindow(Gtk.Window):
             fb.set_margin_start(14); fb.set_margin_end(14); fb.set_margin_top(12); fb.set_margin_bottom(12)
             self._card.add(fb)
         self.section("Glass")
-        self.row("Glass style", "Frosted is the softest blur; See-through shows the wallpaper clearly.",
-                 self.combo("glass_style", [("frosted", "Frosted"), ("blur", "Light blur"), ("clear", "Clear"), ("transparent", "See-through")]))
+        styles = [("frosted", "Frosted"), ("blur", "Light blur"), ("clear", "Clear"), ("transparent", "See-through")]
+        from . import liquid
+        if liquid.AVAILABLE:
+            styles.append(("liquid", "Liquid glass"))
+        gs = self.combo("glass_style", styles)
+        prev = {"v": S["glass_style"]}
+        def guard(cb):
+            # liquid glass keeps extra copies of the wallpaper in memory: say so before turning it on
+            if cb.get_active_id() == "liquid" and prev["v"] != "liquid":
+                d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO, buttons=Gtk.ButtonsType.YES_NO,
+                                      text="Turn on liquid glass?")
+                d.format_secondary_text("Liquid glass bends and blurs your wallpaper through every panel. To do that, GlassDesk keeps "
+                                        "extra copies of your wallpaper in memory, so it uses more RAM (about 100–200 MB more, "
+                                        "depending on your screen size).")
+                ok = d.run() == Gtk.ResponseType.YES
+                d.destroy()
+                if not ok:
+                    cb.set_active_id(prev["v"])
+                    return
+            prev["v"] = cb.get_active_id()
+        gs.connect("changed", guard)
+        self.row("Glass style", "Frosted is the softest blur; Liquid glass bends the wallpaper at the edges like a thick lens.", gs)
+        if liquid.AVAILABLE:
+            self.row("Liquid glass type", "Regular is a little frosted and easy to read; Clear shows the most of your wallpaper.",
+                     self.combo("liquid_kind", [("regular", "Regular"), ("clear", "Clear")]))
         self.row("Glass tint", "How dark (or light) the glass is.", self.slider("opacity", 0, 100))
         self.row("Corner radius", None, self.slider("radius", 0, 28))
         self.row("Size", "Makes every panel bigger or smaller.", self.slider("ui_scale", 70, 160, 5))
