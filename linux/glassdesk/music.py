@@ -16,7 +16,7 @@ class MusicWidget(Widget):
     SETTING = "show_music"
 
     def __init__(self, app):
-        super().__init__(app, "music", 360, 132)
+        super().__init__(app, "music", 370, 140)
         self.title = self.artist = self.status = ""
         self.pos = self.dur = 0.0
         self.pos_at = 0.0
@@ -37,6 +37,30 @@ class MusicWidget(Widget):
                 pass
         self.every(1.5, self.poll)
         self.every(1, lambda: self.status == "Playing" and self.queue_draw())
+        self.angle = 0.0
+        self._tone_of, self._tone_val = None, None
+        # ~12 fps spin while playing; still in power-saving mode
+        def spin():
+            if self.status == "Playing" and self.get_visible() and not self.app.paused and not self.S.get("low_power") and not core.PREVIEW:
+                self.angle = (self.angle + 2.4) % 360
+                self.queue_draw()
+            return True
+        GLib.timeout_add(80, spin)
+
+    def _tone(self):
+        """Average color of the cover, for the glow behind the record."""
+        pb = self.cover
+        if pb is None:
+            return self.T.accent[:3]
+        if pb is not self._tone_of:
+            try:
+                small = pb.scale_simple(1, 1, GdkPixbuf.InterpType.BILINEAR)
+                px = small.get_pixels()
+                self._tone_val = (px[0] / 255, px[1] / 255, px[2] / 255)
+            except Exception:
+                self._tone_val = self.T.accent[:3]
+            self._tone_of = pb
+        return self._tone_val
 
     def sample(self):
         self._sample = True
@@ -193,27 +217,11 @@ class MusicWidget(Widget):
         artist = self.artist if live else self.S.get("last_artist", "")
         anything = bool(title)
         playing = self.status == "Playing"
-        # cover
-        cs = min(h, T.s(96))
-        cx, cy = x - T.s(2), y + (h - cs) / 2
-        cr.save()
-        rounded(cr, cx, cy, cs, cs, T.s(14))
-        cr.clip()
-        if self.cover is not None and anything:
-            pb = self.cover
-            k = cs / min(pb.get_width(), pb.get_height())
-            cr.translate(cx + (cs - pb.get_width() * k) / 2, cy + (cs - pb.get_height() * k) / 2)
-            cr.scale(k, k)
-            Gdk.cairo_set_source_pixbuf(cr, pb, 0, 0)
-            cr.paint()
-        else:
-            g = cairo.LinearGradient(cx, cy, cx + cs, cy + cs)
-            g.add_color_stop_rgb(0, *T.accent)
-            g.add_color_stop_rgb(1, *T.accent2)
-            cr.set_source(g)
-            cr.paint()
-            self._note(cr, cx + cs / 2, cy + cs / 2, cs * 0.22)
-        cr.restore()
+        # vinyl record with the cover as its label (turns while a song plays)
+        from . import scene
+        cs = min(h + T.s(4), T.s(110))
+        cx, cy = x - T.s(4), y + (h - cs) / 2
+        scene.vinyl(cr, cx, cy, cs, self.cover if anything else None, self.angle, live and playing, self._tone(), T.accent[:3])
         tx = cx + cs + T.s(16)
         tw = x + w - tx
         label = ("NOW PLAYING" if playing else "PAUSED") if live else ("LAST PLAYED" if anything else "MUSIC")

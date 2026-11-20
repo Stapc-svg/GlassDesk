@@ -174,6 +174,30 @@ Ideas and bug reports from the XDA thread:
 ## 1.8.7
 
 - Fixed: stacked fences and widgets sometimes showed no tabs after GlassDesk started, until you rescanned the desktop.
+
+## Linux 1.9.10
+
+- **New Clipboard widget:** the last things you copied; click one to copy it again. Memory only, never saved; copies marked private by password managers are skipped. Right-click to pause or clear.
+
+## Linux 1.9.9
+
+- **Smooth fade-in** of panels and widgets, one after another; **fade-out** before hiding them all.
+- **Hover glow:** the edge lights up softly in your accent color and the shadow deepens under the mouse.
+- Needs a compositor (GNOME, KDE, Cinnamon…); without one, panels simply appear.
+
+## Linux 1.9.8
+
+Everything from Windows 1.9.3–1.9.8, now on Linux:
+
+- **New weather widget:** city with today's high/low, a big glowing icon and temperature, glass chips for humidity, wind and chance of rain, a sunrise-to-sunset arc, and the next 5 hours.
+- **Weather pictures:** a drawn sky that matches the weather (sun, clouds, rain, storm, snow, fog, starry night) covers the top of the widget and fades into the glass. Settings › Widgets › Weather picture.
+- **Weather that works more often:** "City, Country" names are found, it retries every minute after an error, and wttr.in is used when Open-Meteo can't be reached.
+- **Clock backgrounds:** free CC0 photos for morning, day, sunset and night that fade into the glass, or a drawn sky with sun, moon, stars and mountains. Settings › Widgets › Clock background.
+- **Vinyl music widget:** the cover spins on a vinyl record while a song plays, with a tone arm and a glow in the cover's colors.
+- **Glass Settings window:** the blurred wallpaper shows through the Settings window (with a compositor), with a thin glass scroll bar.
+- **Softer theme previews:** see-through bars instead of bright white.
+- **Updates:** the update check finds the newest release that has a Linux download, even when the latest release is for Windows or Android.
+
 ## Linux 1.9.2
 
 - **All your apps in search:** the search window lists every app in your app menu, not only your desktop. Filter with **All**, **Desktop** and **Apps**.

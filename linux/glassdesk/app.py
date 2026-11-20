@@ -149,7 +149,7 @@ class GlassDeskApp(Gtk.Application):
     def make_widgets(self):
         self.widgets = {cls.SETTING: cls(self) for cls in W.ALL}
         if core.PREVIEW:
-            self._fixed_now = datetime.datetime(2026, 10, 22, 9, 41)
+            self._fixed_now = datetime.datetime(2026, 10, 22, int(os.environ.get("GLASSDESK_PREVIEW_HOUR", "9")), 41)
             for wd in self.widgets.values():
                 for fn in ("sample", "set_sample"):
                     if hasattr(wd, fn):
@@ -251,7 +251,7 @@ class GlassDeskApp(Gtk.Application):
             colw = max(colw, pw)
         # widgets: columns from the right
         order = ["show_clock", "show_system", "show_calendar", "show_weather", "show_music", "show_day", "show_github", "show_focus",
-                 "show_network", "show_todo", "show_notes", "show_quote", "show_countdown", "show_photos"]
+                 "show_network", "show_todo", "show_clip", "show_notes", "show_quote", "show_countdown", "show_photos"]
         x, y, colw = wa.x + wa.width - gap, wa.y + gap, 0
         for key in order:
             wd = self.widgets[key]
@@ -290,6 +290,25 @@ class GlassDeskApp(Gtk.Application):
         self.settings.save()
 
     def toggle_all(self):
+        if getattr(self, "_fading", False):
+            return
+        if self.visible_all:
+            # fade everything out together, then hide
+            vis = [w for w in self.all_windows() if w.get_visible()]
+            if vis:
+                self._fading = True
+                left = [len(vis)]
+                def one():
+                    left[0] -= 1
+                    if left[0] == 0:
+                        self._fading = False
+                        self._finish_toggle()
+                for w in vis:
+                    w.fade_to(0.0, 0.17, one)
+                return
+        self._finish_toggle()
+
+    def _finish_toggle(self):
         self.visible_all = not self.visible_all
         for w in self.all_windows():
             if self.visible_all and w.wanted:
@@ -375,21 +394,35 @@ class GlassDeskApp(Gtk.Application):
                 if manual:
                     self.message("Couldn't check for updates", "GitHub couldn't be reached. Try again later.")
                 return
-            tag = (j.get("tag_name") or "").lstrip("vV")
+            # look through recent releases (the newest one may be the Windows or Android release) and take the
+            # newest that has a Linux download; its version comes from the file name, e.g. glassdesk_1.9.8_all.deb
+            import re
             def ver(s):
                 try:
                     return tuple(int(p) for p in s.split("."))
                 except Exception:
                     return (0,)
-            if ver(tag) > ver(core.VERSION):
+            best = None
+            for r in (j if isinstance(j, list) else [j]):
+                if r.get("draft") or r.get("prerelease"):
+                    continue
+                for a in r.get("assets", []):
+                    n = a.get("name", "")
+                    if not re.search(r"\.(deb|AppImage|tar\.gz)$", n):
+                        continue
+                    m = re.search(r"(\d+\.\d+(?:\.\d+)?)", n) or re.search(r"(\d+\.\d+(?:\.\d+)?)", r.get("tag_name", ""))
+                    if m and (best is None or ver(m.group(1)) > ver(best[0])):
+                        best = (m.group(1), r.get("html_url") or "https://github.com/%s/releases" % core.REPO)
+            tag = best[0] if best else ""
+            if best and ver(tag) > ver(core.VERSION):
                 core.notify("GlassDesk %s is available" % tag, "Open Settings → About to download it.")
-                self.update_available = (tag, j.get("html_url") or "https://github.com/%s/releases" % core.REPO)
+                self.update_available = (tag, best[1])
                 if manual:
                     if self.confirm("GlassDesk %s is available" % tag, "Open the download page?"):
                         core.open_path(self.update_available[1])
             elif manual:
                 self.message("You're up to date", "GlassDesk %s is the newest version." % core.VERSION)
-        core.in_background(lambda: core.http_json("https://api.github.com/repos/%s/releases/latest" % core.REPO), done)
+        core.in_background(lambda: core.http_json("https://api.github.com/repos/%s/releases?per_page=30" % core.REPO), done)
 
     # ------------------------------------------------------------ tray + keys
     def make_tray(self):

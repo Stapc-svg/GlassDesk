@@ -95,7 +95,7 @@ class ClockWidget(Widget):
     SETTING = "show_clock"
 
     def __init__(self, app):
-        super().__init__(app, "clock", 320, 132)
+        super().__init__(app, "clock", 320, 140)
         self._schedule()
 
     def _schedule(self):
@@ -108,14 +108,33 @@ class ClockWidget(Widget):
         return False
 
     def paint(self, cr):
+        from . import scene
+        T = self.T
         x, y, w, h = self.inner()
         now = self.app.now()
         hr = now.hour
+        style = self.S["clock_style"]
+        px, py, pw, ph = self.panel_rect()
+        t = self.tab_h()
+        rad = max(2, T.s(self.S["radius"]) - 1.5)
+        if style == "photo":
+            name = scene.photo_for_hour(hr)
+            try:
+                # half picture, half glass: the photo fills the top and fades into the panel
+                scene.draw_faded(cr, px + 1, py + 1 + t, pw - 2, ph - 2 - t, rad, "clock:" + name, scene.paint_photo(name), 0.40, 0.86)
+            except Exception as e:
+                print("GlassDesk: clock photo", e)
+                style = "drawn"
+        if style == "drawn":
+            scene.paint_sky(cr, px + 1, py + 1 + t, pw - 2, ph - 2 - t, rad, now.hour + now.minute / 60)
+        art = style in ("photo", "drawn")
+        ink, sub = ((1, 1, 1, 1), (1, 1, 1, 0.86)) if art else (T.text, T.sub)
+        low, lowsub = (T.text, T.sub) if style == "photo" else (ink, sub)
         greet = "Good morning" if 5 <= hr < 12 else "Good afternoon" if hr < 18 else "Good evening" if hr < 22 else "Good night"
-        self.small(cr, greet, x, y, w, 9.5)
-        self.big(cr, now.strftime("%H:%M"), x - self.T.s(2), y + self.T.s(14), w, 36)
-        self.small(cr, now.strftime("%A, %B ") + str(now.day), x, y + h - self.T.s(16), w, 10, color=self.T.text, bold=True)
-        self.small(cr, "Week %d" % now.isocalendar()[1], x, y + h - self.T.s(16), w, 9, align="right")
+        self.small(cr, greet, x, y, w, 9.5, color=sub)
+        text(cr, now.strftime("%H:%M"), x - T.s(2), y + T.s(14), w, size=T.s(36), color=ink, weight=Pango.Weight.LIGHT, shadow=art)
+        self.small(cr, now.strftime("%A, %B ") + str(now.day), x, y + h - T.s(16), w, 10, color=low, bold=True)
+        self.small(cr, "Week %d" % now.isocalendar()[1], x, y + h - T.s(16), w, 9, color=lowsub, align="right")
 
 
 # ================================================================ system monitor
@@ -400,91 +419,293 @@ class WeatherWidget(Widget):
     SETTING = "show_weather"
 
     def __init__(self, app):
-        super().__init__(app, "weather", 320, 176)
+        super().__init__(app, "weather", 330, 322)
         self.data = None
         self.status = ""
         self.busy = False
-        GLib.timeout_add_seconds(1800, lambda: (self.fetch(), True)[1])
+        self.last_ok = 0
+        # every minute: refresh when the data is 30 minutes old, or retry soon after an error
+        # (e.g. the computer started before Wi-Fi was connected)
+        def tick():
+            if not self.app.paused and self.S["weather_city"]:
+                if self.status and not self.status.startswith("Couldn't find"):
+                    self.fetch()
+                elif time.time() - self.last_ok > 1800:
+                    self.fetch()
+            return True
+        GLib.timeout_add_seconds(60, tick)
         GLib.idle_add(lambda: (self.fetch(), False)[1])
 
     def sample(self):
-        self.data = {"temp": 21, "code": 1, "hi": 24, "lo": 15, "days": [("Fri", 2, 23, 14), ("Sat", 61, 19, 13), ("Sun", 0, 25, 15)]}
+        code = int(os.environ.get("GLASSDESK_PREVIEW_WCODE", "2"))
+        day = os.environ.get("GLASSDESK_PREVIEW_NIGHT") != "1"
+        now = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        self.data = {"temp": 18, "feels": 17, "code": code, "day": day, "hum": 64, "wind": 11, "rain": 12,
+                     "hi": 21, "lo": 14, "sunrise": now.replace(hour=6, minute=38), "sunset": now.replace(hour=17, minute=12),
+                     "hours": [(now + datetime.timedelta(hours=i + 1), t, c) for i, (t, c) in enumerate(((18, 2), (19, 2), (20, 0), (21, 0), (21, 1)))],
+                     "place": "Tel Aviv"}
         self.S["weather_city"] = self.S["weather_city"] or "Tel Aviv"
+
+    # ---- finding the place: Open-Meteo only knows plain names, so "Tel Aviv, Israel" or
+    # "Paris France" is tried as the part before the comma / first words, matching the country.
+    @staticmethod
+    def find_city(text):
+        text = text.strip()
+        tries = [(text, "")]
+        if "," in text:
+            a, b = text.split(",", 1)
+            tries.append((a.strip(), b.strip()))
+        words = text.replace(",", " ").split()
+        for n in range(len(words) - 1, 0, -1):
+            tries.append((" ".join(words[:n]), " ".join(words[n:])))
+        for name, rest in tries:
+            if len(name) < 2:
+                continue
+            j = core.http_json("https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&name=" + urllib.parse.quote(name))
+            res = j.get("results") or []
+            if not res:
+                continue
+            if rest:
+                for r in res:
+                    where = ("%s %s %s" % (r.get("country", ""), r.get("country_code", ""), r.get("admin1", ""))).lower()
+                    if rest.lower() in where:
+                        return r
+            return res[0]
+        return None
 
     def fetch(self):
         if core.PREVIEW or self.busy:
             return
-        lat, lon = self.S["weather_lat"], self.S["weather_lon"]
-        if lat is None:
+        city = self.S["weather_city"]
+        if not city:
             self.status = "Double-click to choose your city"
             self.queue_draw()
             return
         self.busy = True
-        unit = "fahrenheit" if self.S["weather_units"] == "f" else "celsius"
-        url = ("https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current=temperature_2m,weather_code"
-               "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4&temperature_unit=%s" % (lat, lon, unit))
+        f = self.S["weather_units"] == "f"
+        lat, lon = self.S["weather_lat"], self.S["weather_lon"]
 
-        def done(j, err):
+        def work():
+            place = None
+            try:
+                la, lo = lat, lon
+                if la is None:
+                    r = self.find_city(city)
+                    if r is None:
+                        raise LookupError("not found")
+                    la, lo = r["latitude"], r["longitude"]
+                    place = (r.get("name", city), la, lo)
+                url = ("https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
+                       "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m"
+                       "&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max"
+                       "&timezone=auto&forecast_days=2%s" % (la, lo, "&temperature_unit=fahrenheit&wind_speed_unit=mph" if f else ""))
+                return ("om", core.http_json(url), place)
+            except Exception as e:
+                print("GlassDesk: Open-Meteo failed:", e)
+                notfound = isinstance(e, LookupError)
+                # second weather service: wttr.in understands city names directly
+                try:
+                    return ("wttr", core.http_json("https://wttr.in/%s?format=j1" % urllib.parse.quote(city)), None)
+                except Exception as e2:
+                    print("GlassDesk: wttr.in failed:", e2)
+                    raise LookupError("not found") if notfound else e2
+
+        def done(res, err):
             self.busy = False
             if err:
-                self.status = "Can't reach the weather service right now"
+                self.status = ("Couldn't find \"%s\". Double-click to try another city." % city) if isinstance(err, LookupError) \
+                    else "Can't reach the weather service – trying again in a minute"
             else:
-                d = j["daily"]
-                days = []
-                for i in range(1, min(4, len(d["time"]))):
-                    dd = datetime.date.fromisoformat(d["time"][i])
-                    days.append((dd.strftime("%a"), d["weather_code"][i], round(d["temperature_2m_max"][i]), round(d["temperature_2m_min"][i])))
-                self.data = {"temp": round(j["current"]["temperature_2m"]), "code": j["current"]["weather_code"],
-                             "hi": round(d["temperature_2m_max"][0]), "lo": round(d["temperature_2m_min"][0]), "days": days}
-                self.status = ""
+                src, j, place = res
+                try:
+                    self.data = self.from_open_meteo(j, f) if src == "om" else self.from_wttr(j, f)
+                    if place:
+                        self.S["weather_city_found"] = place[0]
+                        self.S["weather_lat"], self.S["weather_lon"] = place[1], place[2]
+                        self.S.save()
+                    self.status = ""
+                    self.last_ok = time.time()
+                except Exception as e:
+                    print("GlassDesk: weather data", e)
+                    self.status = "The weather service sent something unexpected"
             self.queue_draw()
-        core.in_background(lambda: core.http_json(url), done)
+        core.in_background(work, done)
+
+    def from_open_meteo(self, j, f):
+        c, d, hh = j["current"], j["daily"], j.get("hourly", {})
+        iso = datetime.datetime.fromisoformat
+        now = iso(c["time"])
+        hours = []
+        for t, tv, wc in zip(hh.get("time", []), hh.get("temperature_2m", []), hh.get("weather_code", [])):
+            tm = iso(t)
+            if tm > now and tv is not None and len(hours) < 5:
+                hours.append((tm, tv, wc))
+        pp = d.get("precipitation_probability_max") or [None]
+        return {"temp": c["temperature_2m"], "feels": c.get("apparent_temperature", c["temperature_2m"]), "code": c["weather_code"],
+                "day": bool(c.get("is_day", 1)), "hum": c.get("relative_humidity_2m", 0), "wind": c.get("wind_speed_10m", 0),
+                "rain": pp[0], "hi": d["temperature_2m_max"][0], "lo": d["temperature_2m_min"][0],
+                "sunrise": iso(d["sunrise"][0]), "sunset": iso(d["sunset"][0]), "hours": hours,
+                "place": self.S["weather_city_found"] or self.S["weather_city"]}
+
+    @staticmethod
+    def wwo(c):
+        c = int(c)
+        if c == 113: return 0
+        if c == 116: return 2
+        if c in (119, 122): return 3
+        if c in (143, 248, 260): return 45
+        if c in (176, 263, 266, 293, 296, 353): return 61
+        if c in (299, 302, 305, 308, 356, 359): return 63
+        if c in (185, 281, 284, 311, 314, 182, 317, 320, 362, 365, 374, 377, 350): return 66
+        if c in (179, 227, 230, 323, 326, 329, 332, 335, 338, 368, 371): return 73
+        if c in (200, 386, 389, 392, 395): return 95
+        return 3
+
+    def from_wttr(self, j, f):
+        cur = j["current_condition"][0]
+        w = j.get("weather", [])
+        today = datetime.date.today()
+        def hm(s):
+            try:
+                return datetime.datetime.combine(today, datetime.datetime.strptime(s.strip(), "%I:%M %p").time())
+            except Exception:
+                return None
+        ast = (w[0].get("astronomy") or [{}])[0] if w else {}
+        hours, rain = [], None
+        for d in w:
+            date = datetime.date.fromisoformat(d["date"])
+            for h in d.get("hourly", []):
+                tm = datetime.datetime.combine(date, datetime.time()) + datetime.timedelta(hours=int(h["time"]) // 100)
+                if rain is None:
+                    rain = float(h.get("chanceofrain", 0))
+                if tm > datetime.datetime.now() and len(hours) < 5:
+                    hours.append((tm, float(h["tempF" if f else "tempC"]), self.wwo(h["weatherCode"])))
+        area = (j.get("nearest_area") or [{}])[0]
+        place = ((area.get("areaName") or [{}])[0].get("value") or self.S["weather_city"])
+        hr = datetime.datetime.now().hour
+        return {"temp": float(cur["temp_F" if f else "temp_C"]), "feels": float(cur["FeelsLikeF" if f else "FeelsLikeC"]),
+                "code": self.wwo(cur["weatherCode"]), "day": 6 <= hr < 18, "hum": float(cur.get("humidity", 0)),
+                "wind": float(cur["windspeedMiles" if f else "windspeedKmph"]), "rain": rain,
+                "hi": float(w[0]["maxtempF" if f else "maxtempC"]) if w else 0, "lo": float(w[0]["mintempF" if f else "mintempC"]) if w else 0,
+                "sunrise": hm(ast.get("sunrise", "")), "sunset": hm(ast.get("sunset", "")), "hours": hours, "place": place}
 
     def paint(self, cr):
+        from . import scene
         T = self.T
         x, y, w, h = self.inner()
-        self.title(cr, "Weather", x, y, w)
-        self.small(cr, self.S["weather_city"], x, y, w, 9, align="right")
-        if not self.data:
-            self.small(cr, self.status or "Loading…", x, y + T.s(30), w, 10.5, lines=3)
-            return
         d = self.data
-        icon, desc = WMO.get(d["code"], ("☁", ""))
-        text(cr, icon, x, y + T.s(18), T.s(56), size=T.s(30), color=T.text)
-        u = "°"
-        self.big(cr, "%d%s" % (d["temp"], u), x + T.s(60), y + T.s(16), T.s(120), 30)
-        self.small(cr, desc, x + T.s(160), y + T.s(26), w - T.s(160), 10, color=T.text, bold=True)
-        self.small(cr, "H %d%s  L %d%s" % (d["hi"], u, d["lo"], u), x + T.s(160), y + T.s(44), w - T.s(160), 9)
-        cw = w / max(1, len(d["days"]))
-        yy = y + h - T.s(44)
-        cr.rectangle(x, yy - T.s(8), w, 1)
-        cr.set_source_rgba(T.text[0], T.text[1], T.text[2], 0.1)
+        if not d:
+            self.title(cr, "Weather", x, y, w)
+            scene.weather_icon(cr, x, y + T.s(30), T.s(48), 2, True)
+            self.small(cr, self.status or ("Loading…" if self.busy else "Double-click to choose your city"), x + T.s(62), y + T.s(34), w - T.s(62), 10.5, color=T.text, lines=3)
+            return
+        art = self.S["weather_scene"]
+        white, white2 = (1, 1, 1, 1), (1, 1, 1, 0.86)
+        ink, sub = (white, white2) if art else (T.text, T.sub)
+        if art:
+            px, py, pw, ph = self.panel_rect()
+            t = self.tab_h()
+            k = scene.kind(d["code"], d["day"])
+            scene.draw_faded(cr, px + 1, py + 1 + t, pw - 2, ph - 2 - t, max(2, T.s(self.S["radius"]) - 1.5), "weather:" + k, scene.paint_weather(k))
+        unit = "°F" if self.S["weather_units"] == "f" else "°C"
+        # header
+        text(cr, (d.get("place") or "Weather").split(",")[0], x, y - T.s(1), w * 0.62, size=T.s(10.5), bold=True, color=ink)
+        text(cr, "H %d°  L %d°" % (round(d["hi"]), round(d["lo"])), x, y, w, size=T.s(9), color=sub, align="right")
+        # hero
+        hy = y + T.s(26)
+        gl = (0.6, 0.67, 1, 0.3) if not d["day"] else (1, 0.75, 0.3, 0.36) if d["code"] <= 2 else (0.67, 0.78, 1, 0.24)
+        scene.glow(cr, x + T.s(34), hy + T.s(34), T.s(52), gl)
+        scene.weather_icon(cr, x, hy, T.s(68), d["code"], d["day"])
+        tw, _ = text(cr, "%d°" % round(d["temp"]), x + T.s(76), hy - T.s(6), None, size=T.s(38), color=ink, weight=Pango.Weight.LIGHT)
+        x2 = x + T.s(84) + tw
+        text(cr, WMO.get(d["code"], ("", "—"))[1], x2, hy + T.s(10), x + w - x2, size=T.s(11), bold=True, color=ink)
+        text(cr, "Feels %d%s" % (round(d["feels"]), unit), x2, hy + T.s(30), x + w - x2, size=T.s(9.5), color=sub)
+        # three glass chips
+        cy, chh, gap = hy + T.s(78), T.s(46), T.s(8)
+        cw = (w - 2 * gap) / 3
+        chips = (("Humidity", "%d%%" % round(d["hum"])), ("Wind", "%d %s" % (round(d["wind"]), "mph" if unit == "°F" else "km/h")),
+                 ("Rain", "—" if d.get("rain") is None else "%d%%" % round(d["rain"])))
+        for i, (lab, val) in enumerate(chips):
+            cx = x + i * (cw + gap)
+            fill_round(cr, cx, cy, cw, chh, T.s(12), with_alpha(T.text[:3], 0.07 if T.dark else 0.09))
+            rounded(cr, cx + 0.5, cy + 0.5, cw - 1, chh - 1, T.s(12))
+            cr.set_source_rgba(T.text[0], T.text[1], T.text[2], 0.1)
+            cr.set_line_width(1)
+            cr.stroke()
+            text(cr, lab, cx, cy + T.s(5), cw, size=T.s(8.5), color=T.sub, align="center")
+            text(cr, val, cx, cy + T.s(21), cw, size=T.s(10.5), bold=True, color=T.text, align="center")
+        # sun path
+        sy = cy + chh + T.s(12)
+        sr, ss = d.get("sunrise"), d.get("sunset")
+        if sr and ss and ss > sr:
+            text(cr, "Sunrise", x, sy, T.s(60), size=T.s(8.5), color=T.sub)
+            text(cr, sr.strftime("%H:%M"), x, sy + T.s(14), T.s(60), size=T.s(9.5), bold=True, color=T.text)
+            text(cr, "Sunset", x + w - T.s(60), sy, T.s(60), size=T.s(8.5), color=T.sub, align="right")
+            text(cr, ss.strftime("%H:%M"), x + w - T.s(60), sy + T.s(14), T.s(60), size=T.s(9.5), bold=True, color=T.text, align="right")
+            ax, aw, ah = x + T.s(62), w - T.s(124), T.s(52)
+            acx, acy = ax + aw / 2, sy + T.s(4) + ah / 2
+            cr.save()
+            cr.translate(acx, acy)
+            cr.scale(aw / 2, ah / 2)
+            cr.arc(0, 0, 1, math.pi, 2 * math.pi)
+            cr.restore()
+            cr.set_source_rgba(T.text[0], T.text[1], T.text[2], 0.16)
+            cr.set_line_width(T.s(1.5))
+            cr.set_dash([T.s(4), T.s(3)])
+            cr.stroke()
+            cr.set_dash([])
+            now = self.app.now()
+            mins = lambda t: t.hour * 60 + t.minute
+            fr = max(0.0, min(1.0, (mins(now) - mins(sr)) / max(1, mins(ss) - mins(sr))))
+            if fr > 0.01:
+                cr.save()
+                cr.translate(acx, acy)
+                cr.scale(aw / 2, ah / 2)
+                cr.arc(0, 0, 1, math.pi, math.pi + math.pi * fr)
+                cr.restore()
+                cr.set_source_rgba(1, 0.77, 0.35, 0.9)
+                cr.set_line_width(T.s(2.2))
+                cr.set_line_cap(1)
+                cr.stroke()
+            ang = math.pi * (1 - fr)
+            spx, spy = acx + math.cos(ang) * aw / 2, acy - math.sin(ang) * ah / 2
+            up = 0 < fr < 1
+            scene.glow(cr, spx, spy, T.s(12), (1, 0.78, 0.35, 0.63 if up else 0.24))
+            cr.set_source_rgba(*((1, 0.82, 0.43, 1) if up else with_alpha(T.text[:3], 0.35)))
+            cr.arc(spx, spy, T.s(4.5), 0, 2 * math.pi)
+            cr.fill()
+            sy += T.s(40)
+        # next hours
+        hy2 = sy + T.s(4)
+        if y + h - hy2 < T.s(60) or not d.get("hours"):
+            return
+        cr.rectangle(x, hy2, w, 1)
+        cr.set_source_rgba(T.text[0], T.text[1], T.text[2], 0.09)
         cr.fill()
-        for i, (name, code, hi, lo) in enumerate(d["days"]):
-            cx = x + i * cw
-            text(cr, name, cx, yy, cw, size=T.s(8.5), color=T.sub, align="center", bold=True)
-            text(cr, WMO.get(code, ("☁", ""))[0] + "  %d° / %d°" % (hi, lo), cx, yy + T.s(18), cw, size=T.s(9), color=T.text, align="center")
+        hy2 += T.s(8)
+        hours = d["hours"][:5]
+        colw = w / len(hours)
+        for i, (tm, tv, wc) in enumerate(hours):
+            hx = x + i * colw
+            if i == 0:
+                fill_round(cr, hx + T.s(3), hy2 - T.s(2), colw - T.s(6), T.s(66), T.s(12), with_alpha(T.accent, 0.18))
+            text(cr, tm.strftime("%H:%M"), hx, hy2 + T.s(2), colw, size=T.s(8.5), color=T.sub, align="center")
+            day = not (sr and ss) or sr.time() < tm.time() < ss.time()
+            scene.weather_icon(cr, hx + colw / 2 - T.s(12), hy2 + T.s(19), T.s(24), wc, day)
+            text(cr, "%d°" % round(tv), hx, hy2 + T.s(44), colw, size=T.s(9.5), bold=True, color=T.text, align="center")
 
     def on_double_click(self, x, y):
-        city = self.app.ask_text("Weather", "Your city", self.S["weather_city"])
+        city = self.app.ask_text("Weather", "Your city (you can add the country, e.g. Paris, France)", self.S["weather_city"])
         if not city:
             return
+        self.S["weather_city"] = city.strip()
+        self.S["weather_lat"] = self.S["weather_lon"] = None
+        self.S["weather_city_found"] = ""
+        self.S.save()
         self.status = "Looking up %s…" % city
         self.data = None
         self.queue_draw()
-
-        def done(j, err):
-            res = (j or {}).get("results") if not err else None
-            if not res:
-                self.status = "Couldn't find \"%s\". Double-click to try again." % city
-                self.queue_draw()
-                return
-            r = res[0]
-            self.S["weather_city"] = r.get("name", city)
-            self.S["weather_lat"], self.S["weather_lon"] = r["latitude"], r["longitude"]
-            self.S.save()
-            self.fetch()
-        core.in_background(lambda: core.http_json("https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + urllib.parse.quote(city)), done)
+        self.fetch()
 
     def extra_menu(self):
         f = self.S["weather_units"] == "f"
@@ -942,7 +1163,9 @@ from .music import MusicWidget, DayWidget
 NAMES = {"show_clock": "Clock", "show_system": "System", "show_calendar": "Calendar", "show_notes": "Notes",
          "show_todo": "To-do", "show_weather": "Weather", "show_photos": "Photos", "show_countdown": "Countdown",
          "show_quote": "Quote", "show_github": "GitHub", "show_network": "Network", "show_focus": "Focus",
-         "show_music": "Music", "show_day": "Today"}
+         "show_music": "Music", "show_day": "Today", "show_clip": "Clipboard"}
 
 ALL = [ClockWidget, SystemWidget, CalendarWidget, NotesWidget, TodoWidget, WeatherWidget, PhotoWidget,
        CountdownWidget, QuoteWidget, GitHubWidget, NetworkWidget, FocusWidget, MusicWidget, DayWidget]
+from .clip import ClipWidget
+ALL.append(ClipWidget)
