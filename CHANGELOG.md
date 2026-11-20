@@ -175,6 +175,12 @@ Ideas and bug reports from the XDA thread:
 
 - Fixed: stacked fences and widgets sometimes showed no tabs after GlassDesk started, until you rescanned the desktop.
 
+## Android 2.0
+
+- **New Liquid glass design:** clear, thick glass like iOS 26. It's nearly see-through, brighter toward the rounded edge like a lens, with a soft shade inside the bottom edge and a faint prism fringe on the rim. Pick **Clear** or **Regular** (a little frosted, easier to read on busy wallpapers) under Appearance › Glass type, with the iOS accent colors.
+- A **"New in GlassDesk 2.0"** card at the top of the Widgets tab, until you tap it.
+- Android doesn't let home-screen widgets see the wallpaper behind them, so the widgets can't bend it like on Windows and Linux. The glass is drawn to look thick and clear instead.
+
 ## Linux 2.0.0
 
 - **Liquid glass** comes to Linux: Settings › Appearance › Glass style › **Liquid glass**. The wallpaper bends at each panel's rounded edges like a thick lens, with frost and a thin rainbow fringe at the rim. Liquid glass type lets you choose **Regular** (a little frosted) or **Clear**. Before turning it on, GlassDesk warns that it uses about 100–200 MB more memory. It needs python3-numpy, which the .deb now recommends; without numpy, the option is hidden.

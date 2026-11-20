@@ -63,7 +63,7 @@ import java.util.Map;
 
 /** The GlassDesk app, laid out like iOS Settings. */
 public class MainActivity extends Activity {
-    static final String VERSION = "1.7.2";
+    static final String VERSION = "2.0";
     static final String[] TABS = {"widgets", "look", "content", "fences", "about"};
     static final String[] TAB_NAMES = {"Widgets", "Appearance", "Content", "Fences", "About"};
     static final int[] TAB_ICONS = {Sym.GRID, Sym.APPEARANCE, Sym.DOC, Sym.FOLDER, Sym.INFO};
@@ -572,6 +572,26 @@ public class MainActivity extends Activity {
 
     void widgetsPage() {
         largeTitle("Widgets", "Tap Add to put a widget on your Home Screen. You can also touch and hold the Home Screen, then choose Widgets.");
+        if (!sp.getBoolean("seen_2_0", false)) {
+            // what's new in 2.0, until it is opened once
+            LinearLayout nb = group();
+            LinearLayout r = new LinearLayout(this);
+            r.setGravity(Gravity.CENTER_VERTICAL);
+            r.setPadding(dp(16), dp(14), dp(16), dp(14));
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(34), dp(34));
+            blp.rightMargin = dp(14);
+            r.addView(badge(Sym.APPEARANCE, accent), blp);
+            LinearLayout col = column();
+            col.addView(tv("New in GlassDesk 2.0", 16, G.SEMI, LABEL));
+            col.addView(tv("Liquid glass: a clear glass design like iOS 26, in Clear or Regular. Tap to try it.", 13, G.REGULAR, SECOND));
+            r.addView(col, new LinearLayout.LayoutParams(0, -2, 1));
+            nb.addView(r);
+            tappable(nb, new Runnable() {
+                public void run() { sp.edit().putBoolean("seen_2_0", true).apply(); show(1, null); }
+            });
+            LinearLayout.LayoutParams nlp = (LinearLayout.LayoutParams) nb.getLayoutParams();
+            if (nlp != null) nlp.bottomMargin = dp(14);
+        }
         int[] order = {Draw.CLOCK, Draw.WEATHER, Draw.CAL, Draw.TODO, Draw.NOTES, Draw.SYS, Draw.QUOTE, Draw.COUNT, Draw.FENCE_A, Draw.FENCE_B, Draw.FENCE_C};
         int inner = contentW - dp(28);
         for (int k : order) {
@@ -626,9 +646,9 @@ public class MainActivity extends Activity {
 
         // Design chooser: two big cards, like picking a wallpaper.
         LinearLayout pair = new LinearLayout(this);
-        int cw = (contentW - dp(12)) / 2;
-        String[] subs = {"Frosted glass with a soft glow", "Bright, simple and rounded"};
-        for (int dsn = 0; dsn < 2; dsn++) {
+        int cw = (contentW - dp(12) * 2) / 3;
+        String[] subs = {"Frosted glass with a soft glow", "Bright, simple and rounded", "Clear glass like iOS 26 · New"};
+        for (int dsn = 0; dsn < 3; dsn++) {
             final int D = dsn;
             boolean sel = P.design(this) == D;
             FrameLayout holder = new FrameLayout(this);
@@ -641,13 +661,14 @@ public class MainActivity extends Activity {
             if (!gdUi && !dark) c.setElevation(dp(sel ? 4 : 1.5f));
             FrameLayout stage = new FrameLayout(this);
             GradientDrawable wall = new GradientDrawable(GradientDrawable.Orientation.TL_BR, D == Style.GLASSDESK
-                    ? new int[]{0xFF1B2A6B, 0xFF3B1E6E, 0xFF6A2056} : new int[]{0xFF8EC5FC, 0xFFC7B8FB, 0xFFF5B6D2});
+                    ? new int[]{0xFF1B2A6B, 0xFF3B1E6E, 0xFF6A2056} : D == Style.LIQUID ? new int[]{0xFF0F6E5A, 0xFF2E86C1, 0xFFE67E22}
+                    : new int[]{0xFF8EC5FC, 0xFFC7B8FB, 0xFFF5B6D2});
             wall.setCornerRadius(dp(16));
             stage.setBackground(wall);
             int iw = cw - dp(20) - dp(20);
             ImageView iv = new ImageView(this);
-            Style st = new Style(D, D == Style.GLASSDESK ? sp.getInt("gd_theme", Style.GLASS) : sp.getInt("cl_theme", Style.AUTO),
-                    P.systemDark(this), sp.getInt(D == Style.GLASSDESK ? "gd_accent" : "cl_accent", 0), P.tint(this));
+            Style st = new Style(D, sp.getInt(Style.themeKey(D), Style.defaultTheme(D)),
+                    P.systemDark(this), sp.getInt(Style.accentKey(D), 0), P.tint(this));
             Data data = P.data(this, Draw.TODO);
             iv.setImageBitmap(W.render(this, Draw.TODO, Math.max(150, Math.round(iw / d)), Math.max(150, Math.round(iw / d)), st, data));
             FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(iw, iw, Gravity.CENTER);
@@ -657,7 +678,7 @@ public class MainActivity extends Activity {
             TextView n = tv(Style.DESIGN_NAMES[D], 17, G.SEMI, LABEL);
             n.setPadding(dp(4), dp(12), 0, dp(2));
             c.addView(n);
-            TextView sb = tv(D == Style.GLASSDESK ? subs[0] + " · Default" : subs[1], 12, G.REGULAR, SECOND);
+            TextView sb = tv(D == Style.GLASSDESK ? subs[0] + " · Default" : subs[D], 12, G.REGULAR, SECOND);
             sb.setPadding(dp(4), 0, dp(4), 0);
             c.addView(sb);
             holder.addView(c, new FrameLayout.LayoutParams(-1, -2));
@@ -680,7 +701,7 @@ public class MainActivity extends Activity {
                 }
             });
             LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(0, -2, 1);
-            if (D == 0) hl.rightMargin = dp(12);
+            if (D < 2) hl.rightMargin = dp(12);
             pair.addView(holder, hl);
         }
         page.addView(pair);
@@ -706,17 +727,18 @@ public class MainActivity extends Activity {
         page.addView(stage);
 
         // Theme
-        final boolean gdD = P.gd(this);
-        header("Theme", null);
+        final boolean gdD = P.gd(this), lqD = P.liquid(this);
+        header(lqD ? "Glass type" : "Theme", null);
         LinearLayout g = group();
-        final int[] map = gdD ? new int[]{Style.GLASS, Style.DARK, Style.LIGHT} : new int[]{Style.AUTO, Style.LIGHT, Style.DARK};
-        String[] names = gdD ? new String[]{"Glass", "Dark", "Light"} : new String[]{"Automatic", "Light", "Dark"};
+        final int[] map = gdD ? new int[]{Style.GLASS, Style.DARK, Style.LIGHT} : lqD ? new int[]{Style.GLASS, Style.DARK} : new int[]{Style.AUTO, Style.LIGHT, Style.DARK};
+        String[] names = gdD ? new String[]{"Glass", "Dark", "Light"} : lqD ? new String[]{"Clear", "Regular"} : new String[]{"Automatic", "Light", "Dark"};
         int cur = 0;
         for (int i = 0; i < map.length; i++) if (map[i] == P.theme(this)) cur = i;
         padded(g, segmented(names, cur, new Pick() {
             public void pick(int i) { sp.edit().putInt(P.themeKey(MainActivity.this), map[i]).apply(); changed(); }
         }));
         footer(gdD ? "Glass lets your wallpaper show through. Dark and Light are solid panels with the same glow."
+                : lqD ? "Clear shows the most of your wallpaper. Regular is a little frosted, so text is easier to read on busy wallpapers."
                 : "Automatic follows your phone's light and dark mode the next time widgets refresh.");
 
         // Accent color

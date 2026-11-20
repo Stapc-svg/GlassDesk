@@ -67,6 +67,20 @@ public final class Draw {
     // ---------------------------------------------------------------- panel
 
     void panel() {
+        if (s.liquid) {
+            // Liquid glass: nearly clear, thicker and brighter toward the rounded edge like a lens,
+            // a soft shade inside the bottom edge, and a faint prism fringe on the rim
+            g.fillSquircleV(0, 0, w, h, r, s.bg, s.bg2);
+            g.save();
+            g.clipSquircle(0, 0, w, h, r);
+            g.fillSquircleV(0, 0, w, h * 0.45f, r, 0x21FFFFFF, 0x00FFFFFF);
+            g.strokeSquircleV(d * 4f, d * 4f, w - d * 8f, h - d * 8f, r - d * 4f, d * 8f, 0x1CFFFFFF, 0x1A000000);
+            g.strokeSquircleV(d * 1.6f, d * 1.6f, w - d * 3.2f, h - d * 3.2f, r - d * 1.6f, d * 2.4f, 0x26FFFFFF, 0x0DFFFFFF);
+            g.restore();
+            g.strokeSquircleV(d * 1.1f, d * 1.4f, w - d * 2.2f, h - d * 2.6f, r - d * 1.1f, d * .9f, 0x33FF6A8A, 0x336A8AFF);
+            g.strokeSquircleV(d * .6f, d * .6f, w - d * 1.2f, h - d * 1.2f, r - d * .6f, d * 1.1f, s.rimTop, s.rimBottom);
+            return;
+        }
         if (s.gd) {
             // GlassDesk: frosted glass tinted with the accent, a soft glow in the corner and a bright rim.
             g.fillSquircleV(0, 0, w, h, r, s.bg, s.bg2);
