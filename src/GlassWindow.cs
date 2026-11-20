@@ -421,6 +421,22 @@ namespace GlassDesk
             }
         }
 
+        /// <summary>Glass style "Liquid glass" for every panel (fences too): the wallpaper bent through clear glass.</summary>
+        void DrawLiquidChrome(Graphics g, RectangleF pr, float r)
+        {
+            using (var path = Gfx.Round(pr, r))
+            {
+                var st = g.Save();
+                g.SetClip(path, CombineMode.Intersect);
+                LiquidBack(g);
+                using (var b = new SolidBrush(LiquidTint)) g.FillPath(b, path);
+                if (!PanelColor.IsEmpty) using (var b = new SolidBrush(Color.FromArgb(T.Dark ? 40 : 34, PanelColor))) g.FillPath(b, path);
+                if (liquid.Light != null) g.DrawImageUnscaled(liquid.Light, Panel.X, Panel.Y);
+                g.Restore(st);
+                if (hover > 0.01f) using (var pen = new Pen(Color.FromArgb((int)(70 * hover), T.Accent), T.Sf(1.4f))) g.DrawPath(pen, path);
+            }
+        }
+
         void DrawChrome(Graphics g)
         {
             float r = T.S(PanelRadius);
@@ -437,6 +453,7 @@ namespace GlassDesk
             }
             var pr = new RectangleF(Panel.X, Panel.Y, Panel.Width, Panel.Height);
             if (pr.Width < 4 || pr.Height < 4) return;
+            if (Cfg.GlassStyle == "liquid" && !T.Solid) { DrawLiquidChrome(g, pr, r); return; }
             bool glass = Cfg.GlassOn;
             using (var path = Gfx.Round(pr, r))
             {
@@ -511,8 +528,8 @@ namespace GlassDesk
             if (hover > 0.01f)
                 using (var p = Gfx.Round(br, Math.Max(0, r - 0.6f)))
                 using (var pen = new Pen(Color.FromArgb((int)(70 * hover), T.Accent), T.Sf(1.4f))) g.DrawPath(pen, p);
-            // 6. a hairline highlight along the top edge, just inside the rim
-            if (r < pr.Width / 2 - 2)
+            // 6. (the white hairline along the top edge was removed with the other white borders)
+            if (false && r < pr.Width / 2 - 2)
                 using (var lg = new LinearGradientBrush(new PointF(pr.X + r, 0), new PointF(pr.Right - r, 0), Color.FromArgb(90, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
                 using (var pen = new Pen(lg, 1f))
                     g.DrawLine(pen, pr.X + r * 0.8f, pr.Y + 1.8f, pr.Right - r, pr.Y + 1.8f);
@@ -843,7 +860,7 @@ namespace GlassDesk
                 return;
             }
             var f = Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold);
-            if (Cfg.GlassStyle == "transparent")
+            if ((Cfg.GlassStyle == "transparent" || Cfg.GlassStyle == "liquid"))
                 using (var sh = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
                     g.DrawString(text.ToUpperInvariant(), f, sh, new RectangleF(r.X, r.Y + T.Sf(1.2f), r.Width, r.Height), Gfx.Left);
             using (var b = new SolidBrush(T.SubText))

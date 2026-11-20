@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.17.2
+
+- **Liquid glass for everything.** Settings › Appearance › Glass style now has a fifth choice, **Liquid**. It turns every panel into clear liquid glass that bends the wallpaper at its edges, fences included. Before, Liquid glass could only be picked per widget, from right-click › Style.
+- The last thin white line along the top edge of panels is gone too.
+
 ## 1.17.1
 
 - **No more white borders.** The white line around every widget and fence is gone, in both the Glass and the Liquid glass styles. Liquid glass keeps its bent edges and only a soft shine inside the glass.

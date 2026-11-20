@@ -367,7 +367,7 @@ namespace GlassDesk
                 else g.FillEllipse(b, titleR.X, titleR.Y + (TitleH - dot) / 2, dot, dot);
             }
             var capR = new Rectangle(titleR.X + T.S(16), titleR.Y, titleR.Width - T.S(70), TitleH);
-            if (Cfg.GlassStyle == "transparent")
+            if ((Cfg.GlassStyle == "transparent" || Cfg.GlassStyle == "liquid"))
                 using (var sh = new SolidBrush(Color.FromArgb(150, 0, 0, 0)))
                     g.DrawString(Lang.L(Caption), Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), sh, new Rectangle(capR.X, capR.Y + 1, capR.Width, capR.Height), Gfx.Left);
             if (App.GroupMembers(Id).Count < 2)
@@ -417,7 +417,7 @@ namespace GlassDesk
                 else if (icon != null) { var im = g.InterpolationMode; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(icon, ir); g.InterpolationMode = im; }
                 else DrawFallbackIcon(g, ir, Tiles[i]);
                 var lr = new RectangleF(r.X + T.S(4), ir.Bottom + T.S(4), r.Width - T.S(8), T.Sf(32));
-                if (T.Dark || Cfg.GlassStyle == "transparent")
+                if (T.Dark || Cfg.GlassStyle == "transparent" || Cfg.GlassStyle == "liquid")
                     using (var sb = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
                         g.DrawString(Tiles[i].Name, label, sb, new RectangleF(lr.X, lr.Y + 1, lr.Width, lr.Height), Gfx.TopCenterWrap);
                 using (var b = new SolidBrush(T.Text)) g.DrawString(Tiles[i].Name, label, b, lr, Gfx.TopCenterWrap);

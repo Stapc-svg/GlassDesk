@@ -33,7 +33,7 @@ namespace GlassDesk
         public Color Accent = Color.FromArgb(124, 156, 255);
         public bool Blur = true;                 // kept for older settings files; GlassStyle decides
         public string GlassStyle = "frosted";    // frosted | blur | clear
-        public bool GlassOn { get { return GlassStyle != "clear" && GlassStyle != "transparent"; } }
+        public bool GlassOn { get { return GlassStyle != "clear" && GlassStyle != "transparent" && GlassStyle != "liquid"; } }
         public int Opacity = 30;                 // 5..95 (%) tint over the glass
         public int Radius = 16;                  // 0..28 px
         public int UiScale = 100;                // 80..150 (%)
@@ -121,7 +121,7 @@ namespace GlassDesk
                 s.GlassStyle = s.Blur ? "frosted" : "clear";
                 if (s.Opacity == 55) s.Opacity = 30;
             }
-            if (s.GlassStyle != "frosted" && s.GlassStyle != "blur" && s.GlassStyle != "clear" && s.GlassStyle != "transparent") s.GlassStyle = "frosted";
+            if (s.GlassStyle != "frosted" && s.GlassStyle != "blur" && s.GlassStyle != "clear" && s.GlassStyle != "transparent" && s.GlassStyle != "liquid") s.GlassStyle = "frosted";
             s.Blur = s.GlassOn;
             if (s.anyKey && !s.lookSeen) s.Look = "classic";   // 1.8: people updating keep the look they had
             if (Themes.Find(s.Look) == null) s.Look = "glassdesk";
@@ -344,7 +344,7 @@ namespace GlassDesk
             t.Scale = dpiScale * s.UiScale / 100f;
             t.Accent = s.Accent;
             int a = (int)(255 * s.Opacity / 100f);
-            if (s.GlassStyle == "transparent") a = (int)(a * 0.3f);   // see-through: only a whisper of tint
+            if (s.GlassStyle == "transparent" || s.GlassStyle == "liquid") a = (int)(a * 0.3f);   // see-through: only a whisper of tint
             var look = Themes.Find(s.Look) ?? Themes.Find("classic");
             t.LookId = look.Id; t.Solid = look.Solid; t.Flat = look.Flat; t.Neon = look.Neon;
             if (t.Solid) a = 255;

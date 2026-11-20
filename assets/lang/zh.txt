@@ -415,3 +415,5 @@ Updates as you change things — point at a panel to see its name	更改设置�
 Click a widget to add or remove it	点击小组件即可添加或移除
 No widget matches	没有匹配的小组件
 Liquid glass	液态玻璃
+Liquid	液态
+Liquid: clear glass that bends the wallpaper at its edges	液态：透明玻璃，边缘会弯曲壁纸

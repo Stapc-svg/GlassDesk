@@ -330,11 +330,10 @@ namespace GlassDesk
             Row(Lang.L("Match my wallpaper"), "Picks the accent color from your wallpaper, and changes with it", Toggle(S.WallAccent, v => S.WallAccent = v));
 
             Section(Lang.L("Glass"));
-            string[] styles = { "frosted", "blur", "clear", "transparent" };
-            var gs = new Segmented(P, k, new[] { Lang.L("Frosted"), Lang.L("Blur"), Lang.L("Clear"), Lang.L("See-through") }, Math.Max(0, Array.IndexOf(styles, S.GlassStyle))) { Font = fSmall };
-            gs.Width = (int)(gs.Width * 1.1);
+            string[] styles = { "frosted", "blur", "clear", "transparent", "liquid" };
+            var gs = new Segmented(P, k, new[] { Lang.L("Frosted"), Lang.L("Blur"), Lang.L("Clear"), Lang.L("See-through"), Lang.L("Liquid") }, Math.Max(0, Array.IndexOf(styles, S.GlassStyle))) { Font = fSmall };
             gs.SelectionChanged += delegate { S.GlassStyle = styles[gs.SelectedIndex]; S.Blur = S.GlassOn; S.Save(); app.ApplySettings(); };
-            Row(Lang.L("Glass style"), Native.AcrylicSupported || !Native.IsWindows ? "Real blurred glass, like the Start menu" : "Frosted needs Windows 10 1803+", gs);
+            Row(Lang.L("Glass style"), S.GlassStyle == "liquid" ? "Liquid: clear glass that bends the wallpaper at its edges" : Native.AcrylicSupported || !Native.IsWindows ? "Real blurred glass, like the Start menu" : "Frosted needs Windows 10 1803+", gs);
             SliderRow(Lang.L("Glass tint"), "{0}%  ·  lower is clearer glass", 5, 95, 5, S.Opacity, v => S.Opacity = v);
             SliderRow(Lang.L("Corner radius"), "{0} px", 0, 28, 2, S.Radius, v => S.Radius = v);
             SliderRow(Lang.L("Panel size"), "{0}%  ·  scales text, icons and widgets", 80, 150, 5, S.UiScale, v => S.UiScale = v);

@@ -127,7 +127,7 @@ namespace GlassDesk
         }
         protected void Txt(Graphics g, string s, Font f, Color c, RectangleF r, StringFormat sf)
         {
-            if (Cfg.GlassStyle == "transparent" || MacLook && T.Dark)
+            if (Cfg.GlassStyle == "transparent" || (MacLook || Cfg.GlassStyle == "liquid") && T.Dark)
                 using (var sh = new SolidBrush(Color.FromArgb(T.Dark ? 150 : 110, 0, 0, 0)))
                     g.DrawString(s, f, sh, new RectangleF(r.X, r.Y + T.Sf(1.2f), r.Width, r.Height), sf);
             using (var b = new SolidBrush(c)) g.DrawString(s, f, b, r, sf);

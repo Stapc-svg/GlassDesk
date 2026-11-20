@@ -415,3 +415,5 @@ Updates as you change things — point at a panel to see its name	Se actualiza a
 Click a widget to add or remove it	Haz clic en un widget para añadirlo o quitarlo
 No widget matches	Ningún widget coincide
 Liquid glass	Vidrio líquido
+Liquid	Líquido
+Liquid: clear glass that bends the wallpaper at its edges	Líquido: vidrio transparente que curva el fondo en los bordes

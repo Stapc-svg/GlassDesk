@@ -415,3 +415,5 @@ Updates as you change things — point at a panel to see its name	Обновля
 Click a widget to add or remove it	Щёлкните виджет, чтобы добавить или убрать его
 No widget matches	Нет подходящих виджетов
 Liquid glass	Жидкое стекло
+Liquid	Жидкое
+Liquid: clear glass that bends the wallpaper at its edges	Жидкое: прозрачное стекло, которое изгибает обои по краям
