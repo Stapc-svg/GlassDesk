@@ -286,6 +286,25 @@ namespace GlassDesk
         }
 
         /// <summary>Liquid glass keeps full-size copies of the wallpaper in memory; ask before turning it on.</summary>
+        /// <summary>Asks for a folder of your own photos for the clock, and switches the clock to them.</summary>
+        /// <summary>Rolls every widget up to a small bar, or opens them all again.</summary>
+        public void RollAll(bool up)
+        {
+            foreach (var w in Windows.ToArray()) { var wd = w as Widget; if (wd != null && !wd.IsDisposed) wd.Roll(up); }
+        }
+
+        public bool ChooseClockPhotos()
+        {
+            using (var fb = new FolderBrowserDialog { Description = Lang.L("Choose a folder with your photos for the clock") })
+            {
+                if (!string.IsNullOrEmpty(Settings.ClockPhotos)) fb.SelectedPath = Settings.ClockPhotos;
+                else fb.SelectedPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                if (fb.ShowDialog() != DialogResult.OK) return false;
+                Settings.ClockPhotos = fb.SelectedPath; Settings.ClockStyle = "mine"; Settings.Save(); ApplySettings();
+                return true;
+            }
+        }
+
         public bool ConfirmLiquid()
         {
             if (Settings.GlassStyle == "liquid") return true;
@@ -1136,6 +1155,9 @@ namespace GlassDesk
             }
             if (w == quote) m.Items.Add(Lang.L("Another quote"), null, delegate { quote.Next(); });
             if (w == github) { m.Items.Add(Lang.L("Open profile"), null, delegate { github.OpenProfile(); }); m.Items.Add(Lang.L("Change username…"), null, delegate { github.ChooseUser(); }); m.Items.Add(Lang.L("Refresh now"), null, delegate { github.Fetch(); }); }
+            m.Items.Add(Lang.L(w.IsRolled ? "Expand" : "Roll up"), null, delegate { w.Roll(!w.IsRolled); });
+            m.Items.Add(Lang.L("Roll up all widgets"), null, delegate { RollAll(true); });
+            m.Items.Add(Lang.L("Expand all widgets"), null, delegate { RollAll(false); });
             AddGroupItems(m, w);
             if (w == music) { m.Items.Add(Lang.L("Play / pause"), null, delegate { music.PlayPause(); }); m.Items.Add(Lang.L("Next song"), null, delegate { music.Next(); }); m.Items.Add(Lang.L("Previous song"), null, delegate { music.Previous(); }); m.Items.Add(Lang.L("Volume mixer"), null, delegate { music.OpenMixer(); }); }
             if (w == clip) { m.Items.Add(clip.Paused ? "Resume" : "Pause (don't remember copies)", null, delegate { clip.TogglePause(); }); m.Items.Add(Lang.L("Clear history"), null, delegate { clip.Clear(); }); }
@@ -1152,6 +1174,7 @@ namespace GlassDesk
             {
                 m.Items.Add((Settings.ShowSeconds ? "Hide" : "Show") + " seconds", null, delegate { Settings.ShowSeconds = !Settings.ShowSeconds; Settings.Save(); ApplySettings(); });
                 m.Items.Add(Settings.Clock24 ? "Use 12-hour time" : "Use 24-hour time", null, delegate { Settings.Clock24 = !Settings.Clock24; Settings.Save(); ApplySettings(); });
+                m.Items.Add(Lang.L("Choose my clock photos…"), null, delegate { ChooseClockPhotos(); });
             }
             // each widget picks its own look
             var style = new ToolStripMenuItem(Lang.L("Style"));
@@ -1165,11 +1188,11 @@ namespace GlassDesk
             if (w == clock && Settings.StyleOf("clock") != "mac")
             {
                 style.DropDownItems.Add(new ToolStripSeparator());
-                foreach (var opt in new[] { new[] { "photo", "Photos" }, new[] { "drawn", "Drawn sky" }, new[] { "off", "No picture" } })
+                foreach (var opt in new[] { new[] { "photo", "Photos" }, new[] { "mine", "My photos" }, new[] { "drawn", "Drawn sky" }, new[] { "off", "No picture" } })
                 {
                     string id = opt[0];
                     var it = new ToolStripMenuItem(Lang.L(opt[1])) { Checked = Settings.ClockStyle == id };
-                    it.Click += delegate { Settings.ClockStyle = id; Settings.Save(); ApplySettings(); };
+                    it.Click += delegate { if (id == "mine" && string.IsNullOrEmpty(Settings.ClockPhotos) && !ChooseClockPhotos()) return; Settings.ClockStyle = id; Settings.Save(); ApplySettings(); };
                     style.DropDownItems.Add(it);
                 }
             }
@@ -1308,6 +1331,10 @@ namespace GlassDesk
             Settings.ShowWeather = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WEATHER") == "1"; Settings.ShowPhotos = false;
             if (Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_MAC") == "1") foreach (var wid in AllWidgetIds()) Settings.WidgetStyles[wid] = "mac";
             Settings.LiquidKind = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LIQUID") ?? Settings.LiquidKind;
+            string cp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_CLOCKPHOTOS");
+            if (!string.IsNullOrEmpty(cp)) { Settings.ClockPhotos = cp; Settings.ClockStyle = "mine"; }
+            string rl = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_ROLL");
+            if (!string.IsNullOrEmpty(rl)) foreach (var id in rl.Split(',')) Settings.Collapsed.Add("w:" + id);
             Settings.ShowPhotos = true;
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote

@@ -388,7 +388,8 @@ namespace GlassDesk
                 }
                 DrawChrome(g);
                 float t = AnimProgress;
-                if (t >= 1f) PaintContent(g);
+                if (RolledUp) PaintRolled(g);
+                else if (t >= 1f) PaintContent(g);
                 else
                 {
                     // switching inside a stack: the new content slides in and fades up.
@@ -792,6 +793,10 @@ namespace GlassDesk
         protected virtual bool IsDragArea(Point p) { return true; }
         protected virtual void OnClickAt(Point p, MouseButtons b) { }
         protected virtual void OnDoubleClickAt(Point p) { }
+        /// <summary>True while a widget is rolled up to a small bar; it then draws PaintRolled instead of its content.</summary>
+        protected virtual bool RolledUp { get { return false; } }
+        protected virtual void PaintRolled(Graphics g) { }
+        protected virtual void OnRolledClick() { }
         protected virtual void OnHover(Point p) { }
         protected virtual void OnWheel(int delta) { }
         protected virtual void OnResized() { }
@@ -871,7 +876,7 @@ namespace GlassDesk
             Cursor = zn == 1 ? Cursors.SizeWE : zn == 2 ? Cursors.SizeNS : zn == 3 ? Cursors.SizeNWSE : Cursors.Default;
             if (Resizable && !hoverPanel) { hoverPanel = true; hoverGrip = g; Redraw(); }
             else if (g != hoverGrip) { hoverGrip = g; Redraw(); }
-            OnHover(e.Location);
+            if (!RolledUp) OnHover(e.Location);
         }
 
         Rectangle Snap(Rectangle r)
@@ -904,13 +909,14 @@ namespace GlassDesk
             armed = dragging = resizing = false;
             Capture = false;
             if (wasDragging) App.DragEnded(this);
-            if (!wasMoving && !(e.Button == MouseButtons.Left && OnPreClick(e.Location))) OnClickAt(e.Location, e.Button);
+            if (!wasMoving && RolledUp && e.Button == MouseButtons.Left) OnRolledClick();
+            else if (!wasMoving && !(e.Button == MouseButtons.Left && OnPreClick(e.Location))) OnClickAt(e.Location, e.Button);
         }
 
         protected override void OnMouseDoubleClick(MouseEventArgs e)
         {
             base.OnMouseDoubleClick(e);
-            if (e.Button == MouseButtons.Left) OnDoubleClickAt(e.Location);
+            if (e.Button == MouseButtons.Left && !RolledUp) OnDoubleClickAt(e.Location);
         }
 
         protected override void OnMouseLeave(EventArgs e)

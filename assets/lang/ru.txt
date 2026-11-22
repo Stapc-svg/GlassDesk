@@ -432,3 +432,11 @@ Smarter widgets	Умнее виджеты
 Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.	Онлайн-календарь, все диски в мониторе системы, папки скриншотов игр, буфер обмена и 3 новых языка.
 Welcome to GlassDesk 2.0	Добро пожаловать в GlassDesk 2.0
 Here's what's new — all made from your ideas.	Вот что нового — всё по вашим идеям.
+My photos	Мои фото
+My clock photos	Мои фото для часов
+Pick a folder with your own pictures	Выберите папку со своими картинками
+Choose a folder with your photos for the clock	Выберите папку с фото для часов
+Choose my clock photos…	Выбрать мои фото для часов…
+Roll up all widgets	Свернуть все виджеты
+Expand all widgets	Развернуть все виджеты
+Your own photos — a new one every 30 minutes	Ваши фото — новое каждые 30 минут

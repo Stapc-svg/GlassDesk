@@ -432,3 +432,11 @@ Smarter widgets	Widgets más listos
 Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.	Calendario en línea, todos los discos en Sistema, grupos de capturas de juegos, portapapeles y 3 idiomas nuevos.
 Welcome to GlassDesk 2.0	Bienvenido a GlassDesk 2.0
 Here's what's new — all made from your ideas.	Esto es lo nuevo — todo nació de vuestras ideas.
+My photos	Mis fotos
+My clock photos	Mis fotos del reloj
+Pick a folder with your own pictures	Elige una carpeta con tus propias imágenes
+Choose a folder with your photos for the clock	Elige una carpeta con tus fotos para el reloj
+Choose my clock photos…	Elegir mis fotos del reloj…
+Roll up all widgets	Contraer todos los widgets
+Expand all widgets	Expandir todos los widgets
+Your own photos — a new one every 30 minutes	Tus propias fotos — una nueva cada 30 minutos
