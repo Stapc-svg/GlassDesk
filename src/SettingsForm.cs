@@ -432,10 +432,16 @@ namespace GlassDesk
             Section(Lang.L("Clock"));
             thumbFor = "clock"; Row(Lang.L("Clock"), "Time, date and a friendly greeting", Toggle(S.ShowClock, v => S.ShowClock = v));
             Row(Lang.L("Show seconds"), "Updates every second (otherwise once a minute)", Toggle(S.ShowSeconds, v => S.ShowSeconds = v));
-            string[] cstyles = { "photo", "drawn", "off" };
-            var cs = new Segmented(P, k, new[] { Lang.L("Photos"), Lang.L("Drawn sky"), Lang.L("Off") }, Math.Max(0, Array.IndexOf(cstyles, S.ClockStyle))) { Font = fSmall };
-            cs.SelectionChanged += delegate { S.ClockStyle = cstyles[cs.SelectedIndex]; S.Save(); app.ApplySettings(); };
-            Row(Lang.L("Clock background"), "Changes with the time of day: morning, day, sunset and night", cs);
+            string[] cstyles = { "photo", "mine", "drawn", "off" };
+            var cs = new Segmented(P, k, new[] { Lang.L("Photos"), Lang.L("My photos"), Lang.L("Drawn sky"), Lang.L("Off") }, Math.Max(0, Array.IndexOf(cstyles, S.ClockStyle))) { Font = fSmall };
+            cs.SelectionChanged += delegate
+            {
+                if (cstyles[cs.SelectedIndex] == "mine" && string.IsNullOrEmpty(S.ClockPhotos) && !app.ChooseClockPhotos()) { cs.SelectedIndex = Math.Max(0, Array.IndexOf(cstyles, S.ClockStyle)); return; }
+                S.ClockStyle = cstyles[cs.SelectedIndex]; S.Save(); app.ApplySettings(); Refresh(0);
+            };
+            Row(Lang.L("Clock background"), S.ClockStyle == "mine" ? "Your own photos — a new one every 30 minutes" : "Changes with the time of day: morning, day, sunset and night", cs);
+            Row(Lang.L("My clock photos"), string.IsNullOrEmpty(S.ClockPhotos) ? Lang.L("Pick a folder with your own pictures") : S.ClockPhotos,
+                Button(Lang.L("Choose…"), false, delegate { if (app.ChooseClockPhotos()) Refresh(0); }));
             Row(Lang.L("24-hour time"), "Turn off for 12-hour time with AM / PM", Toggle(S.Clock24, v => S.Clock24 = v));
             Section(Lang.L("More widgets"));
             thumbFor = "system"; Row(Lang.L("System monitor"), "CPU, memory, disk and battery", Toggle(S.ShowSystem, v => S.ShowSystem = v));

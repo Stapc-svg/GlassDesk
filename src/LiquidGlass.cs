@@ -50,7 +50,7 @@ namespace GlassDesk
                 for (int y = 0; y < n.H; y++) Marshal.Copy(data.Scan0 + y * data.Stride, n.Px, y * n.W, n.W);
                 b.UnlockBits(data);
                 cache.Add(n);
-                if (cache.Count > 3) cache.RemoveAt(0);   // an old wallpaper
+                if (cache.Count > 5) cache.RemoveAt(0);   // an old picture
                 return n;
             }
             // bilinear sample of one color channel (shift 16 = red, 8 = green, 0 = blue)

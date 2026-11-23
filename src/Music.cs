@@ -34,7 +34,7 @@ namespace GlassDesk
         {
             try { string f = CoverFile; if (File.Exists(f)) cover = Load(f); } catch { }
         }
-        protected override Size BaseSize { get { return new Size(370, 140); } }
+        protected override Size BaseSize { get { return new Size(400, 140); } }
         bool Playing { get { return status == "Playing"; } }
         static string CoverFile { get { return Path.Combine(Settings.Folder, "music-cover.png"); } }
 
@@ -178,6 +178,28 @@ namespace GlassDesk
             return coverTone;
         }
 
+        /// <summary>The album cover as a square sleeve with rounded corners, a soft shadow and a gloss.</summary>
+        void DrawSleeve(Graphics g, RectangleF r, Bitmap art)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float rad = T.Sf(8);
+            for (int i = 6; i >= 1; i--)
+                using (var p = Gfx.Round(new RectangleF(r.X + i * 0.5f, r.Y + i, r.Width, r.Height), rad + i))
+                using (var b = new SolidBrush(Color.FromArgb(10, 0, 0, 0))) g.FillPath(b, p);
+            using (var p = Gfx.Round(r, rad))
+            {
+                var st = g.Save();
+                g.SetClip(p, CombineMode.Intersect);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                float s = Math.Min(art.Width, art.Height);
+                g.DrawImage(art, r, new RectangleF((art.Width - s) / 2, (art.Height - s) / 2, s, s), GraphicsUnit.Pixel);
+                using (var lg = new LinearGradientBrush(new PointF(r.X, r.Y), new PointF(r.Right, r.Bottom), Color.FromArgb(46, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)))
+                    g.FillRectangle(lg, r.X, r.Y, r.Width, r.Height * 0.6f);
+                g.Restore(st);
+                using (var pen = new Pen(Color.FromArgb(40, 255, 255, 255), 1f)) g.DrawPath(pen, p);
+            }
+        }
+
         /// <summary>A black vinyl disc: grooves, a still light reflection, the cover turning in the middle, and a tone arm.</summary>
         void DrawRecord(Graphics g, RectangleF d, Bitmap art, bool playing)
         {
@@ -248,12 +270,25 @@ namespace GlassDesk
             string showTitle = live ? title : Cfg.LastSong, showArtist = live ? artist : Cfg.LastArtist;
             bool any = !string.IsNullOrEmpty(showTitle);
 
-            // vinyl record with the cover as its label
+            // the album: its real cover as a sleeve, with the vinyl record sliding out of it while it plays
             float cs = Math.Min(r.Height + T.Sf(4), T.Sf(110));
             var cr = new RectangleF(r.X - T.Sf(4), r.Y + (r.Height - cs) / 2, cs, cs);
-            DrawRecord(g, cr, any ? cover : null, live && Playing);
-
-            float x = cr.Right + T.Sf(16), w = r.Right - x;
+            Bitmap art = any ? cover : null;
+            float x;
+            if (art != null)
+            {
+                float out1 = cs * (live && Playing ? 0.42f : 0.22f);
+                var rec = new RectangleF(cr.X + out1, cr.Y + cs * 0.04f, cs * 0.92f, cs * 0.92f);
+                DrawRecord(g, rec, art, live && Playing);
+                DrawSleeve(g, cr, art);
+                x = rec.Right + T.Sf(14);
+            }
+            else
+            {
+                DrawRecord(g, cr, null, live && Playing);
+                x = cr.Right + T.Sf(16);
+            }
+            float w = r.Right - x;
             // status line
             string label = Lang.L(live ? (Playing ? "NOW PLAYING" : "PAUSED") : any ? "LAST PLAYED" : "MUSIC");
             Color lc = live && Playing ? T.Accent : T.SubText;
@@ -362,7 +397,8 @@ function Await($op, [Type]$type) { $t = $asTask.MakeGenericMethod($type).Invoke(
 $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
 $null = [Windows.Storage.Streams.IRandomAccessStreamWithContentType, Windows.Storage.Streams, ContentType = WindowsRuntime]
 $mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-$last = '#'
+$last = '#'; $tries = 0; $lastHash = ''
+$md5 = [System.Security.Cryptography.MD5]::Create()
 function Clean($s) { if ($s -eq $null) { return '' } return ($s -replace ""[`t`r`n]"", ' ') }
 while ($true) {
   if (-not (Get-Process -Id $owner -ErrorAction SilentlyContinue)) { exit }
@@ -379,17 +415,25 @@ while ($true) {
       if ($pos -gt $dur -and $dur -gt 0) { $pos = $dur }
       $key = $p.Title + '|' + $p.Artist
       $art = '0'
-      if ($key -ne $last) {
-        $last = $key; $art = '-'
+      # a new song: apps often send the picture a few seconds after the title, so keep looking for a while
+      if ($key -ne $last) { $last = $key; $tries = 8; $art = '-'; $lastHash = '' }
+      if ($tries -gt 0) {
+        $tries--
         if ($p.Thumbnail -ne $null) {
           try {
             $st = Await ($p.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
             $in = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($st)
-            $tmp = $cover + '.tmp'
-            $fs = [System.IO.File]::Create($tmp); $in.CopyTo($fs); $fs.Close(); $in.Close()
-            Move-Item -Force $tmp $cover
-            $art = '1'
-          } catch { $art = '-' }
+            $ms = New-Object System.IO.MemoryStream; $in.CopyTo($ms); $in.Close()
+            $bytes = $ms.ToArray()
+            $h = [BitConverter]::ToString($md5.ComputeHash($bytes))
+            if ($bytes.Length -gt 100 -and $h -ne $lastHash) {
+              $lastHash = $h
+              $tmp = $cover + '.tmp'
+              [System.IO.File]::WriteAllBytes($tmp, $bytes)
+              Move-Item -Force $tmp $cover
+              $art = '1'
+            }
+          } catch { }
         }
       }
       [Console]::Out.WriteLine('S' + ""`t"" + $status + ""`t"" + (Clean $p.Title) + ""`t"" + (Clean $p.Artist) + ""`t"" + [int][Math]::Max(0, $pos) + ""`t"" + [int][Math]::Max(0, $dur) + ""`t"" + $art)

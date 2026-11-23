@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0
+
+- **Quick search in liquid glass.** When you use liquid glass, the search window (Ctrl + Alt + F) is liquid glass too, and every app sits on its own little lens of glass. While the list scrolls, the tiles use the plain look so scrolling stays smooth on slower PCs.
+- **The real album cover in the music widget.** The cover of the song or video that's playing (Spotify, YouTube in your browser, any player) now shows as a square sleeve, with the vinyl record sliding out of it while it plays. Many apps send the cover a few seconds after the title, so GlassDesk now keeps checking for a few seconds instead of giving up straight away.
+- **Your own clock photos.** Clock background › **My photos**, then pick a folder. The clock shows one of your pictures and changes to the next every 30 minutes. You can also right-click the clock › Choose my clock photos….
+- **Roll up widgets.** Right-click any widget › **Roll up** shrinks it to a small bar with its name (the clock bar still shows the time). Click the bar to open it again. **Roll up all widgets** and **Expand all widgets** do every widget at once.
+
 ## 2.0.0
 
 GlassDesk 2.0 brings together everything since 1.9:

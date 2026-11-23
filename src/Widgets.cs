@@ -99,6 +99,7 @@ namespace GlassDesk
             int pct;
             Zoom = Cfg.WidgetZoom.TryGetValue(Id, out pct) ? pct / 100f : 1f;
             Size gs = App.GroupSize(Id);   // stacked widgets all take the size of the biggest one
+            if (IsRolled) return new Size(gs.IsEmpty ? T.S(BaseSize.Width) : gs.Width, RolledH);
             if (!gs.IsEmpty) return new Size(gs.Width, gs.Height + TabH);
             return new Size(T.S(BaseSize.Width), T.S(BaseSize.Height) + TabH);
         }
@@ -134,8 +135,38 @@ namespace GlassDesk
         }
         protected override void OnClickAt(Point p, MouseButtons b)
         {
-            if (b == MouseButtons.Right) App.ShowWidgetMenu(this);
+            if (b == MouseButtons.Right) { App.ShowWidgetMenu(this); return; }
         }
+
+        // ---- roll up: shrink a widget to a small bar with its name, like a fence ----
+        public bool IsRolled { get { return Cfg.Collapsed.Contains("w:" + Id); } }
+        protected override bool RolledUp { get { return IsRolled; } }
+        protected override void OnRolledClick() { Roll(false); }   // a rolled-up widget opens with one click
+        public void Roll(bool up)
+        {
+            if (up == IsRolled) return;
+            if (up) Cfg.Collapsed.Add("w:" + Id); else Cfg.Collapsed.Remove("w:" + Id);
+            Cfg.Save();
+            App.PlaceWindow(this);
+            Redraw();
+        }
+        int RolledH { get { return T.S(46); } }
+        protected override void PaintRolled(Graphics g)
+        {
+            var r = new RectangleF(Panel.X + T.S(16), Panel.Y, Panel.Width - T.S(32), Panel.Height);
+            Color c = MacLook && !MacColor.IsEmpty ? MacColor : T.Accent;
+            float d = T.Sf(10);
+            using (var b = new SolidBrush(c)) g.FillEllipse(b, r.X, r.Y + (r.Height - d) / 2, d, d);
+            Txt(g, App.PanelName(this), Gfx.F(T.FontName, T.Sf(13), FontStyle.Bold), T.Text, new RectangleF(r.X + d + T.Sf(10), r.Y, r.Width - T.Sf(60), r.Height), Gfx.Left);
+            string hint = RolledHint();
+            Txt(g, hint, Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width - T.Sf(22), r.Height), Gfx.Right);
+            // a small "open" chevron
+            float cx = r.Right - T.Sf(6), cy = r.Y + r.Height / 2;
+            using (var pen = new Pen(T.SubText, T.Sf(1.6f)) { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round })
+                g.DrawLines(pen, new[] { new PointF(cx - T.Sf(5), cy - T.Sf(2.5f)), new PointF(cx, cy + T.Sf(2.5f)), new PointF(cx + T.Sf(5), cy - T.Sf(2.5f)) });
+        }
+        /// <summary>A tiny summary shown on the rolled-up bar (the clock shows the time, others nothing).</summary>
+        protected virtual string RolledHint() { return ""; }
 
     }
 
@@ -145,6 +176,7 @@ namespace GlassDesk
         protected override Color MacColor { get { return Color.FromArgb(255, 255, 149, 0); } }
         public ClockWidget(App app) : base(app, "clock") { }
         protected override Size BaseSize { get { return new Size(320, 150); } }
+        protected override string RolledHint() { return App.Now.ToString(Cfg.Clock24 ? "HH:mm" : "h:mm tt", CultureInfo.CurrentCulture); }
 
         static readonly System.Collections.Generic.Dictionary<string, Bitmap> photos = new System.Collections.Generic.Dictionary<string, Bitmap>();
         static Bitmap Photo(string name)
@@ -161,12 +193,58 @@ namespace GlassDesk
             return b;
         }
 
-        /// <summary>A free (CC0) photo behind the clock that matches the time of day.</summary>
+        // ---- your own photos: one picture from your folder, changing every 30 minutes ----
+        static string mineFile; static Bitmap mineImg;
+        static string MyPhoto(string folder, DateTime now)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(folder) || !System.IO.Directory.Exists(folder)) return null;
+                var files = new System.Collections.Generic.List<string>();
+                foreach (var f in System.IO.Directory.GetFiles(folder))
+                {
+                    string e = System.IO.Path.GetExtension(f).ToLowerInvariant();
+                    if (e == ".jpg" || e == ".jpeg" || e == ".png" || e == ".bmp" || e == ".gif") files.Add(f);
+                }
+                if (files.Count == 0) return null;
+                files.Sort(StringComparer.OrdinalIgnoreCase);
+                int slot = now.DayOfYear * 48 + now.Hour * 2 + now.Minute / 30;
+                return files[slot % files.Count];
+            }
+            catch { return null; }
+        }
+        static Bitmap LoadMine(string f)
+        {
+            if (f == mineFile && mineImg != null) return mineImg;
+            try
+            {
+                Bitmap b;
+                using (var fs = new System.IO.FileStream(f, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite))
+                using (var img = Image.FromStream(fs))
+                {
+                    // keep it small: a clock never needs more than about 900 pixels across
+                    float k = Math.Min(1f, 900f / Math.Max(img.Width, img.Height));
+                    b = new Bitmap(img, Math.Max(1, (int)(img.Width * k)), Math.Max(1, (int)(img.Height * k)));
+                }
+                if (mineImg != null) mineImg.Dispose();
+                mineImg = b; mineFile = f;
+                return b;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>A free (CC0) photo behind the clock that matches the time of day, or one of your own photos.</summary>
         bool PaintPhoto(Graphics g, DateTime now)
         {
             int h = now.Hour;
             string name = h >= 5 && h < 10 ? "morning" : h >= 10 && h < 17 ? "day" : h >= 17 && h < 20 ? "sunset" : "night";
-            var img = Photo(name);
+            Bitmap img = null;
+            if (Cfg.ClockStyle == "mine")
+            {
+                string f = MyPhoto(Cfg.ClockPhotos, now);
+                if (f != null) { img = LoadMine(f); name = "mine:" + f; }
+            }
+            if (img == null) img = Photo(name.StartsWith("mine:") ? "day" : name);
             if (img == null) return false;
             int t = TabH;
             var pr = new RectangleF(Panel.X + 1, Panel.Y + 1 + t, Panel.Width - 2, Panel.Height - 2 - t);
@@ -323,8 +401,8 @@ namespace GlassDesk
             DateTime now = App.Now;
             if (MacLook) { PaintMac(g, now); return; }
             Rectangle r = Inner;
-            bool scene = Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "drawn";
-            if (Cfg.ClockStyle == "photo") { if (!PaintPhoto(g, now)) PaintScene(g, now); }
+            bool scene = Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "mine" || Cfg.ClockStyle == "drawn";
+            if (Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "mine") { if (!PaintPhoto(g, now)) PaintScene(g, now); }
             else if (scene) PaintScene(g, now);
             string greet = Lang.L(now.Hour < 5 ? "Good night" : now.Hour < 12 ? "Good morning" : now.Hour < 18 ? "Good afternoon" : "Good evening");
             Color ink = scene ? Color.White : T.Text, sub = scene ? Color.FromArgb(225, 255, 255, 255) : T.SubText;
@@ -346,7 +424,8 @@ namespace GlassDesk
                     g.DrawString(extra.Trim(), sm, b, new PointF(r.X + ts.Width + T.Sf(6), y + ts.Height - T.Sf(32)), StringFormat.GenericTypographic);
             }
             string date = now.ToString("dddd, MMMM d", CultureInfo.CurrentCulture);
-            Color low = Cfg.ClockStyle == "photo" ? T.Text : ink, lowSub = Cfg.ClockStyle == "photo" ? T.SubText : sub;
+            bool ph = Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "mine";
+            Color low = ph ? T.Text : ink, lowSub = ph ? T.SubText : sub;
             Txt(g, date, Gfx.F(T.FontName, T.Sf(14.5f), FontStyle.Bold), low, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Left);
             Txt(g, string.Format(Lang.L("Week {0}"), CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday)),
                 Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), lowSub, new RectangleF(r.X, r.Bottom - T.Sf(22), r.Width, T.Sf(22)), Gfx.Right);

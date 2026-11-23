@@ -432,3 +432,11 @@ Smarter widgets	更聪明的小组件
 Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.	在线日历、系统中的所有磁盘、游戏截图分区、剪贴板和 3 种新语言。
 Welcome to GlassDesk 2.0	欢迎使用 GlassDesk 2.0
 Here's what's new — all made from your ideas.	这些是新功能 — 都来自你们的想法。
+My photos	我的照片
+My clock photos	我的时钟照片
+Pick a folder with your own pictures	选择一个装有你自己图片的文件夹
+Choose a folder with your photos for the clock	为时钟选择一个照片文件夹
+Choose my clock photos…	选择我的时钟照片…
+Roll up all widgets	收起所有小组件
+Expand all widgets	展开所有小组件
+Your own photos — a new one every 30 minutes	你自己的照片 — 每 30 分钟换一张

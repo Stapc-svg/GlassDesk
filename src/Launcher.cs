@@ -54,11 +54,49 @@ namespace GlassDesk
             }
             g.DrawImageUnscaled(glassCache, 0, 0);
         }
-        protected override void OnFormClosed(FormClosedEventArgs e) { if (glassCache != null) { glassCache.Dispose(); glassCache = null; } base.OnFormClosed(e); }
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (glassCache != null) { glassCache.Dispose(); glassCache = null; }
+            winGlass.Dispose(); foreach (var v in chipGlass.Values) v.Dispose(); chipGlass.Clear();
+            base.OnFormClosed(e);
+        }
+        // ---- liquid glass for the search window (and its tiles) when you use liquid glass on the desktop ----
+        protected bool Liquid
+        {
+            get
+            {
+                if (T.Solid) return false;
+                if (app.Settings.GlassStyle == "liquid") return true;
+                foreach (var v in app.Settings.WidgetStyles.Values) if (v == "mac") return true;
+                return false;
+            }
+        }
+        readonly LiquidGlass winGlass = new LiquidGlass();
+        readonly Dictionary<string, LiquidGlass> chipGlass = new Dictionary<string, LiquidGlass>();
+        /// <summary>While the list glides, tiles use the plain look; liquid tiles are worked out once they stop.</summary>
+        protected virtual bool Moving { get { return false; } }
+
         void PaintGlassNow(Graphics g)
         {
             var r = new Rectangle(0, 0, Width, Height);
             using (var b = new SolidBrush(P.Bg)) g.FillRectangle(b, r);
+            if (Liquid)
+                try
+                {
+                    Rectangle scr = app.Preview ? new Rectangle(0, 0, 1920, 1080) : Screen.FromControl(this).Bounds;
+                    bool regular = app.Settings.LiquidKind == "regular";
+                    winGlass.Update(Backdrop.For(scr, regular ? -2 : -1), Backdrop.For(scr, regular ? 1 : -2), new Rectangle(Left - scr.X, Top - scr.Y, Width, Height),
+                        Width, Height, Radius, k, T.Dark, regular ? 0.45f : 0.3f);
+                    if (winGlass.Glass != null)
+                    {
+                        g.DrawImageUnscaled(winGlass.Glass, 0, 0);
+                        // enough tint that the names stay easy to read, more on bright wallpapers
+                        int la = (T.Dark ? 96 : 100) + (int)(Math.Max(0, T.Dark ? winGlass.Brightness - 0.4f : 0.6f - winGlass.Brightness) * 160) + (regular ? 20 : 0);
+                        using (var b = new SolidBrush(Color.FromArgb(Math.Min(170, la), T.Dark ? Color.FromArgb(14, 16, 24) : Color.White))) g.FillRectangle(b, r);
+                        return;
+                    }
+                }
+                catch (Exception ex) { Program.Log(ex); }
             if (!T.Solid)
                 try
                 {
@@ -86,9 +124,38 @@ namespace GlassDesk
         /// <summary>A soft rounded "chip": the search field, buttons and tiles.</summary>
         protected void Chip(Graphics g, RectangleF r, float radius, bool hot)
         {
+            if (Liquid && !Moving && glassCache != null && r.Width >= 24 && r.Height >= 24 && TryLiquidChip(g, r, radius, hot)) return;
             Color fill = T.Dark ? Color.FromArgb(hot ? 34 : 20, 255, 255, 255) : Color.FromArgb(hot ? 150 : 110, 255, 255, 255);
             Color line = T.Dark ? Color.FromArgb(hot ? 50 : 28, 255, 255, 255) : Color.FromArgb(hot ? 34 : 20, 0, 0, 0);
             using (var p = Gfx.Round(r, radius)) { using (var b = new SolidBrush(fill)) g.FillPath(b, p); using (var pen = new Pen(line, 1f)) g.DrawPath(pen, p); }
+        }
+
+        /// <summary>A tile or field made of a small lens of liquid glass over the window's own glass.</summary>
+        bool TryLiquidChip(Graphics g, RectangleF r, float radius, bool hot)
+        {
+            try
+            {
+                var ri = Rectangle.Round(r);
+                if (ri.X < 0 || ri.Y < 0 || ri.Right > glassCache.Width || ri.Bottom > glassCache.Height) return false;
+                string key = ri.ToString();
+                LiquidGlass lg;
+                if (!chipGlass.TryGetValue(key, out lg))
+                {
+                    if (chipGlass.Count > 60) { foreach (var v in chipGlass.Values) v.Dispose(); chipGlass.Clear(); }
+                    lg = new LiquidGlass();
+                    chipGlass[key] = lg;
+                }
+                lg.Update(glassCache, glassCache, ri, ri.Width, ri.Height, radius, k * 0.6f, T.Dark, 0.1f);
+                if (lg.Glass == null) return false;
+                g.DrawImageUnscaled(lg.Glass, ri.X, ri.Y);
+                using (var p = Gfx.Round(r, radius))
+                {
+                    using (var b = new SolidBrush(T.Dark ? Color.FromArgb(hot ? 34 : 16, 255, 255, 255) : Color.FromArgb(hot ? 90 : 50, 255, 255, 255))) g.FillPath(b, p);
+                    using (var pen = new Pen(T.Dark ? Color.FromArgb(hot ? 60 : 30, 255, 255, 255) : Color.FromArgb(hot ? 40 : 22, 0, 0, 0), 1f)) g.DrawPath(pen, p);
+                }
+                return true;
+            }
+            catch { return false; }
         }
 
         protected void AccentButton(Graphics g, RectangleF r, string text, Font f, bool hot)
@@ -135,6 +202,7 @@ namespace GlassDesk
         int sel, hot = -1, scroll;
         float scrollTarget, scrollPos;                    // smooth scrolling: the grid glides to scrollTarget
         readonly Timer glide, preload;
+        protected override bool Moving { get { return (glide != null && glide.Enabled) || draggingThumb; } }
         int preloadAt;
         bool draggingThumb; int thumbGrab;
         readonly List<GlassWindow> wshown = new List<GlassWindow>();   // the Widgets tab
@@ -361,7 +429,13 @@ namespace GlassDesk
             {
                 var c = Cell(i);
                 var box = new RectangleF(c.X + 3 * k, c.Y + 3 * k, c.Width - 6 * k, c.Height - 6 * k);
-                if (i == sel)
+                if (Liquid && !Moving)
+                {
+                    // liquid glass: every app sits on its own little lens of glass
+                    Chip(g, box, 12 * k, i == hot || i == sel);
+                    if (i == sel) using (var p = Gfx.Round(box, 12 * k)) using (var pen = new Pen(Gfx.WithAlpha(P.Accent, 170), 1.4f * k)) g.DrawPath(pen, p);
+                }
+                else if (i == sel)
                     using (var p = Gfx.Round(box, 12 * k))
                     {
                         using (var b = new LinearGradientBrush(box, Gfx.WithAlpha(P.Accent, T.Dark ? 70 : 55), Gfx.WithAlpha(P.Accent2, T.Dark ? 40 : 30), 45f)) g.FillPath(b, p);
@@ -455,7 +529,7 @@ namespace GlassDesk
                 var box = new RectangleF(c.X + 3 * k, c.Y + 3 * k, c.Width - 6 * k, c.Height - 6 * k);
                 var w = wshown[i];
                 bool on = app.WantsShown(w);
-                if (i == sel || i == hot) Chip(g, box, 12 * k, i == sel);
+                if (Liquid && !Moving || i == sel || i == hot) Chip(g, box, 12 * k, i == sel || i == hot);
                 // a small live picture of the widget
                 Bitmap th;
                 if (!thumbs.TryGetValue(w, out th))
