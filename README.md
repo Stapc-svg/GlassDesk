@@ -39,7 +39,7 @@
 
 <p align="center"><sub>Windows 10 &amp; 11 · Linux · Android &nbsp;|&nbsp; Thousands of downloads &nbsp;|&nbsp; If you like it, a ⭐ helps a lot!</sub></p>
 
-## 🤩 Why people try it
+
 
 <table>
   <tr>
