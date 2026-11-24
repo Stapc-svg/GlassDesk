@@ -70,6 +70,51 @@
 </p>
 <p align="center"><sub>Press <b>Ctrl + Alt + F</b> to find anything · your own photos on the clock · the real album cover · roll widgets up into small bars</sub></p>
 
+## 🎬 See it in action
+
+<p align="center">
+  <img src="docs/screenshots/styles.gif" width="100%" alt="The same desktop switching between Frosted glass, Liquid glass Clear and Liquid glass Regular (animated)">
+</p>
+<p align="center"><sub>One click in Settings switches between <b>Frosted</b>, <b>Liquid · Clear</b> and <b>Liquid · Regular</b></sub></p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/windows-demo.gif" alt="Fences and widgets appearing on the desktop (animated)"><p align="center"><sub>Your desktop sorting itself</sub></p></td>
+    <td width="50%"><img src="docs/screenshots/welcome-2.gif" alt="The animated GlassDesk 2.0 welcome screen"><p align="center"><sub>The welcome screen that shows you around</sub></p></td>
+  </tr>
+</table>
+
+## 📸 Gallery
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/liquid-glass-clear.jpg" alt="Liquid glass widgets on a city wallpaper"><p align="center"><sub>Liquid glass bends the city at every edge</sub></p></td>
+    <td><img src="docs/screenshots/weather-1.9.jpg" alt="Weather widget with a drawn sky and hourly forecast"><p align="center"><sub>Weather with a live sky and the next 5 hours</sub></p></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/themes.jpg" alt="Theme gallery in Settings"><p align="center"><sub>26 themes, from glass to Mica and Acrylic</sub></p></td>
+    <td><img src="docs/screenshots/organize.jpg" alt="The organizer showing where each file will go"><p align="center"><sub>See where every file goes before anything moves</sub></p></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/stacks.jpg" alt="Similar files stacked together in a fence"><p align="center"><sub>Similar files stack up neatly</sub></p></td>
+    <td><img src="docs/screenshots/android-liquid.jpg" alt="Android widgets in the Liquid glass design"><p align="center"><sub>And on your Android home screen</sub></p></td>
+  </tr>
+</table>
+
+## 🪶 How light is it?
+
+GlassDesk is built to stay out of your way, even on an old or slow PC.
+
+| | |
+|---|---|
+| 📦 **Download** | about **0.8 MB**: smaller than one phone photo |
+| 💾 **The app** | **one small .exe** (about 1 MB) using the .NET Framework that is already in Windows. No browser engine, no background services |
+| 🧠 **CPU when idle** | **close to 0%**. Panels redraw only when something actually changes, and Windows tells GlassDesk when files change, so it never keeps scanning |
+| 🎮 **While you game** | it **pauses itself** during full-screen games and videos |
+| 🧹 **Memory** | gives unused memory back to Windows every few minutes |
+| 🔋 **Low power mode** | one switch makes the system monitor refresh less often, for laptops on battery |
+| 💧 **Liquid glass** | the one heavier option: it keeps extra copies of your wallpaper, so it uses about 100–200 MB more memory. GlassDesk tells you before you turn it on, and Frosted glass stays light |
+
 ## 🆚 GlassDesk vs. a normal desktop
 
 | | Normal Windows desktop | **GlassDesk** |
