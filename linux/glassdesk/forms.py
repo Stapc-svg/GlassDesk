@@ -67,6 +67,10 @@ class GlassForm(Gtk.Window):
         rounded(cr, 0, 0, w, h, r)
         cr.clip()
         drew = False
+        if self.liquid and self._paint_liquid(cr, w, h, r):
+            cr.restore()
+            self.paint(cr)
+            return
         if not T.solid and not core.PREVIEW_NO_BACKDROP:
             disp = Gdk.Display.get_default()
             mon = disp.get_primary_monitor() or disp.get_monitor(0)
@@ -113,6 +117,75 @@ class GlassForm(Gtk.Window):
     def paint(self, cr):
         pass
 
+    # ---- liquid glass: the window, and each tile on it, as thick glass that bends what is behind
+    @property
+    def liquid(self):
+        from . import liquid
+        return liquid.AVAILABLE and not self.T.solid and self.app.settings.get("glass_style") == "liquid"
+
+    def _paint_liquid(self, cr, w, h, r):
+        from . import liquid
+        T = self.T
+        disp = Gdk.Display.get_default()
+        mon = disp.get_primary_monitor() or disp.get_monitor(0)
+        g = mon.get_geometry()
+        x, y = self.fixed_pos or self.get_position()
+        regular = self.app.settings.get("liquid_kind", "clear") == "regular"
+        key = (x - g.x, y - g.y, w, h, regular, T.dark)
+        if getattr(self, "_lq_key", None) != key:
+            styles = ("clear", "frosted") if regular else ("transparent", "clear")
+            mid = liquid.wall_array(Backdrop.get(g.width, g.height, styles[0]), (g.width, g.height, styles[0]))
+            rim = liquid.wall_array(Backdrop.get(g.width, g.height, styles[1]), (g.width, g.height, styles[1]))
+            if mid is None or rim is None:
+                return False
+            try:
+                surf, bright = liquid.build(mid, rim, x - g.x, y - g.y, w, h, r, self.s(1), T.dark, 0.45 if regular else 0.3)
+            except Exception as e:
+                core.log("liquid search: %s" % e)
+                return False
+            # the window's own glass, with enough tint that names stay easy to read
+            done = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(w), int(h))
+            c2 = cairo.Context(done)
+            c2.set_source_surface(surf, 0, 0)
+            c2.paint()
+            a = (0.38 if T.dark else 0.4) + max(0, (bright - 0.4) if T.dark else (0.6 - bright)) * 0.6 + (0.08 if regular else 0)
+            c2.set_source_rgba(*(((0.055, 0.063, 0.094) if T.dark else (1, 1, 1)) + (min(0.67, a),)))
+            c2.set_operator(cairo.OPERATOR_ATOP)
+            c2.paint()
+            self._lq = done
+            self._lq_arr = liquid.surface_array(done)
+            self._lq_key = key
+            self._lq_tiles = {}
+        cr.set_source_surface(self._lq, 0, 0)
+        cr.paint()
+        return True
+
+    def _liquid_chip(self, cr, x, y, w, h, rad, hot):
+        from . import liquid
+        arr = getattr(self, "_lq_arr", None)
+        if arr is None or w < 24 or h < 24 or x < 0 or y < 0 or x + w > arr.shape[1] or y + h > arr.shape[0]:
+            return False
+        k = (int(x), int(y), int(w), int(h))
+        lens = self._lq_tiles.get(k)
+        if lens is None:
+            if len(self._lq_tiles) > 80:
+                self._lq_tiles.clear()
+            try:
+                lens = liquid.build(arr, arr, k[0], k[1], k[2], k[3], rad, self.s(0.6), self.T.dark, 0.1)[0]
+            except Exception:
+                return False
+            self._lq_tiles[k] = lens
+        cr.set_source_surface(lens, k[0], k[1])
+        cr.paint()
+        T = self.T
+        rounded(cr, k[0], k[1], k[2], k[3], rad)
+        cr.set_source_rgba(*((1, 1, 1, 0.13 if hot else 0.06) if T.dark else (1, 1, 1, 0.35 if hot else 0.2)))
+        cr.fill_preserve()
+        cr.set_source_rgba(*((1, 1, 1, 0.24 if hot else 0.12) if T.dark else (0, 0, 0, 0.14 if hot else 0.08)))
+        cr.set_line_width(1)
+        cr.stroke()
+        return True
+
     @property
     def text_c(self):
         return self.T.ui_text + (1,)
@@ -122,6 +195,8 @@ class GlassForm(Gtk.Window):
         return self.T.ui_sub + (1,)
 
     def chip(self, cr, x, y, w, h, rad, hot=False):
+        if self.liquid and self._liquid_chip(cr, x, y, w, h, rad, hot):
+            return
         T = self.T
         rounded(cr, x, y, w, h, rad)
         cr.set_source_rgba(*((1, 1, 1, 0.13 if hot else 0.08) if T.dark else (1, 1, 1, 0.6 if hot else 0.45)))
@@ -485,7 +560,15 @@ class Launcher(GlassForm):
             if y0 + ch < gy or y0 > gy + gh:
                 continue
             bx, by, bw, bh = x0 + self.s(3), y0 + self.s(3), cw - self.s(6), ch - self.s(6)
-            if i == self.sel:
+            if self.liquid and by >= gy and by + bh <= gy + gh:
+                # liquid glass: every app sits on its own little lens of glass
+                self.chip(cr, bx, by, bw, bh, self.s(12), i == self.sel or self.hot(bx, by, bw, bh))
+                if i == self.sel:
+                    rounded(cr, bx, by, bw, bh, self.s(12))
+                    cr.set_source_rgba(*(T.accent + (0.7,)))
+                    cr.set_line_width(1.4)
+                    cr.stroke()
+            elif i == self.sel:
                 self.accent_fill(cr, bx, by, bw, bh, self.s(12), 0.28)
                 rounded(cr, bx, by, bw, bh, self.s(12))
                 cr.set_source_rgba(*(T.accent + (0.6,)))

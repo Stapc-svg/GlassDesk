@@ -16,7 +16,7 @@ class MusicWidget(Widget):
     SETTING = "show_music"
 
     def __init__(self, app):
-        super().__init__(app, "music", 370, 140)
+        super().__init__(app, "music", 400, 140)
         self.title = self.artist = self.status = ""
         self.pos = self.dur = 0.0
         self.pos_at = 0.0
@@ -221,8 +221,17 @@ class MusicWidget(Widget):
         from . import scene
         cs = min(h + T.s(4), T.s(110))
         cx, cy = x - T.s(4), y + (h - cs) / 2
-        scene.vinyl(cr, cx, cy, cs, self.cover if anything else None, self.angle, live and playing, self._tone(), T.accent[:3])
-        tx = cx + cs + T.s(16)
+        art = self.cover if anything else None
+        if art is not None:
+            # the real album cover as a sleeve, with the record sliding out of it while it plays
+            out = cs * (0.42 if live and playing else 0.22)
+            rs = cs * 0.92
+            scene.vinyl(cr, cx + out, cy + cs * 0.04, rs, art, self.angle, live and playing, self._tone(), T.accent[:3])
+            scene.sleeve(cr, cx, cy, cs, art)
+            tx = cx + out + rs + T.s(14)
+        else:
+            scene.vinyl(cr, cx, cy, cs, None, self.angle, live and playing, self._tone(), T.accent[:3])
+            tx = cx + cs + T.s(16)
         tw = x + w - tx
         label = ("NOW PLAYING" if playing else "PAUSED") if live else ("LAST PLAYED" if anything else "MUSIC")
         lc = with_alpha(T.accent, 1) if live and playing else T.sub

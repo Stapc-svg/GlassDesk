@@ -36,6 +36,14 @@ def wall_array(pb, key):
     return arr
 
 
+def surface_array(surf):
+    """A cairo ARGB32 surface as a float array (h, w, 3) of straight RGB, so it can be looked through again."""
+    w, h, st = surf.get_width(), surf.get_height(), surf.get_stride()
+    a = np.ndarray(shape=(h, st // 4, 4), dtype=np.uint8, buffer=surf.get_data())[:, :w, :].astype(np.float32)
+    al = np.maximum(a[..., 3:4], 1) / 255.0
+    return np.ascontiguousarray(np.concatenate([a[..., 2:3], a[..., 1:2], a[..., 0:1]], axis=2) / al)
+
+
 def _sdf(px, py, hw, hh, r):
     qx = np.abs(px) - (hw - r)
     qy = np.abs(py) - (hh - r)

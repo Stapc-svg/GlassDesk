@@ -73,6 +73,36 @@ def photo(name, w, h):
     return pb.new_subpixbuf((sw - w) // 2, (sh - h) // 2, w, h)
 
 
+def photo_file(path, w, h):
+    """Cover-crops any picture file into a w x h pixbuf (loaded at a small size, so big photos stay light)."""
+    pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, max(w, h) * 2, max(w, h) * 2, True)
+    sc = max(w / pb.get_width(), h / pb.get_height())
+    sw, sh = int(pb.get_width() * sc + 1), int(pb.get_height() * sc + 1)
+    pb = pb.scale_simple(sw, sh, GdkPixbuf.InterpType.BILINEAR)
+    return pb.new_subpixbuf((sw - w) // 2, (sh - h) // 2, w, h)
+
+
+def paint_file(path):
+    def p(cr, w, h):
+        Gdk.cairo_set_source_pixbuf(cr, photo_file(path, w, h), 0, 0)
+        cr.paint()
+    return p
+
+
+def my_photo(folder, now):
+    """One of your own photos for the clock: a new one every 30 minutes."""
+    try:
+        if not folder or not os.path.isdir(folder):
+            return None
+        files = sorted((f for f in os.listdir(folder) if f.lower().endswith((".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"))), key=str.lower)
+        if not files:
+            return None
+        slot = now.timetuple().tm_yday * 48 + now.hour * 2 + now.minute // 30
+        return os.path.join(folder, files[slot % len(files)])
+    except Exception:
+        return None
+
+
 def paint_photo(name):
     def p(cr, w, h):
         Gdk.cairo_set_source_pixbuf(cr, photo(name, w, h), 0, 0)
@@ -334,6 +364,31 @@ def paint_sky(cr, x, y, w, h, radius, hour):
 
 
 # ------------------------------------------------------------------ vinyl record
+def sleeve(cr, x, y, d, cover):
+    """The album cover as a square sleeve with rounded corners, a soft shadow and a gloss."""
+    rad = d * 0.08
+    for i in range(6, 0, -1):
+        rounded(cr, x + i * 0.5, y + i, d, d, rad + i)
+        cr.set_source_rgba(0, 0, 0, 0.04)
+        cr.fill()
+    cr.save()
+    rounded(cr, x, y, d, d, rad)
+    cr.clip()
+    s = min(cover.get_width(), cover.get_height())
+    sc = d / s
+    cr.translate(x, y)
+    cr.scale(sc, sc)
+    Gdk.cairo_set_source_pixbuf(cr, cover, -(cover.get_width() - s) / 2, -(cover.get_height() - s) / 2)
+    cr.paint()
+    cr.restore()
+    g = cairo.LinearGradient(x, y, x + d, y + d * 0.6)
+    g.add_color_stop_rgba(0, 1, 1, 1, 0.18)
+    g.add_color_stop_rgba(1, 1, 1, 1, 0)
+    rounded(cr, x, y, d, d * 0.6, rad)
+    cr.set_source(g)
+    cr.fill()
+
+
 def vinyl(cr, x, y, d, cover, angle, playing, tone, accent):
     """A black record with grooves, a still reflection, the cover turning in the middle and a tone arm."""
     cx, cy, r = x + d / 2, y + d / 2, d / 2

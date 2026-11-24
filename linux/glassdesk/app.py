@@ -692,6 +692,25 @@ class GlassDeskApp(Gtk.Application):
         return r == Gtk.ResponseType.YES
 
     # ------------------------------------------------------------ windows
+    def choose_clock_photos(self):
+        """Pick a folder of your own photos for the clock, and switch the clock to them."""
+        d = Gtk.FileChooserDialog(title="Choose a folder with your photos for the clock", action=Gtk.FileChooserAction.SELECT_FOLDER)
+        d.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "Choose", Gtk.ResponseType.OK)
+        start = self.settings.get("clock_photos") or GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) or os.path.expanduser("~")
+        try:
+            d.set_current_folder(start)
+        except Exception:
+            pass
+        ok = d.run() == Gtk.ResponseType.OK
+        folder = d.get_filename() if ok else None
+        d.destroy()
+        if folder:
+            self.settings["clock_photos"] = folder
+            self.settings["clock_style"] = "mine"
+            self.settings.save()
+            self.widgets["show_clock"].queue_draw()
+        return bool(folder)
+
     def show_settings(self):
         from .settings_ui import SettingsWindow
         if self.settings_win is None:

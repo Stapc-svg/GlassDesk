@@ -32,7 +32,49 @@ class Widget(GlassWindow):
     def panel_size(self):
         gs = self.app.group_size(self.key)
         w, h = gs if gs else self.natural_size()
+        if self.rolled:
+            return w, int(self.T.s(46))
         return w, h + self.tab_h()
+
+    # ---- roll up: shrink to a small bar with the widget's name, like a fence
+    @property
+    def rolled(self):
+        return self.key in self.S.get("rolled", [])
+
+    def roll(self, up):
+        lst = list(self.S.get("rolled", []))
+        if up and self.key not in lst:
+            lst.append(self.key)
+        elif not up and self.key in lst:
+            lst.remove(self.key)
+        else:
+            return
+        self.S["rolled"] = lst
+        self.S.save()
+        self.apply_size()
+
+    def rolled_hint(self):
+        return ""
+
+    def paint_body(self, cr):
+        if not self.rolled:
+            return self.paint(cr)
+        T = self.T
+        x, y, w, h = self.panel_rect()
+        d = T.s(10)
+        cr.set_source_rgba(*T.accent[:3], 1)
+        cr.arc(x + T.s(16) + d / 2, y + h / 2, d / 2, 0, 6.2832)
+        cr.fill()
+        name = self.app.panel_name(self)
+        text(cr, name, x + T.s(16) + d + T.s(10), y, w - T.s(110), size=T.s(10), bold=True, color=T.text, h=h, valign="middle")
+        hint = self.rolled_hint()
+        if hint:
+            text(cr, hint, x, y, w - T.s(40), size=T.s(9), color=T.sub, align="right", h=h, valign="middle")
+        cx, cy = x + w - T.s(22), y + h / 2
+        cr.set_source_rgba(*T.sub[:3], T.sub[3] if len(T.sub) > 3 else 1)
+        cr.set_line_width(T.s(1.6)); cr.set_line_cap(1)
+        cr.move_to(cx - T.s(5), cy - T.s(2.5)); cr.line_to(cx, cy + T.s(2.5)); cr.line_to(cx + T.s(5), cy - T.s(2.5))
+        cr.stroke()
 
     def inner(self):
         x, y, w, h = super().inner()
@@ -69,6 +111,9 @@ class Widget(GlassWindow):
         items = self.extra_menu() + [None] + self.app.stack_menu(self)
         if self.zoom != 1.0:
             items.append(("Reset size", self.reset_zoom))
+        items.append(("Expand" if self.rolled else "Roll up", lambda: self.roll(not self.rolled)))
+        items.append(("Roll up all widgets", lambda: [wd.roll(True) for wd in self.app.widgets.values()]))
+        items.append(("Expand all widgets", lambda: [wd.roll(False) for wd in self.app.widgets.values()]))
         return items + [("Hide this widget", lambda: self.app.hide_widget(self.SETTING)),
                         ("GlassDesk settings", self.app.show_settings)]
 
@@ -98,6 +143,12 @@ class ClockWidget(Widget):
         super().__init__(app, "clock", 320, 140)
         self._schedule()
 
+    def rolled_hint(self):
+        return self.app.now().strftime("%H:%M")
+
+    def extra_menu(self):
+        return [("Choose my clock photos…", self.app.choose_clock_photos)]
+
     def _schedule(self):
         now = datetime.datetime.now()
         GLib.timeout_add(int((60 - now.second) * 1000 - now.microsecond / 1000 + 30), self._tick)
@@ -117,11 +168,17 @@ class ClockWidget(Widget):
         px, py, pw, ph = self.panel_rect()
         t = self.tab_h()
         rad = max(2, T.s(self.S["radius"]) - 1.5)
+        mine = scene.my_photo(self.S.get("clock_photos", ""), now) if style == "mine" else None
+        if style == "mine":
+            style = "photo"
         if style == "photo":
             name = scene.photo_for_hour(hr)
             try:
                 # half picture, half glass: the photo fills the top and fades into the panel
-                scene.draw_faded(cr, px + 1, py + 1 + t, pw - 2, ph - 2 - t, rad, "clock:" + name, scene.paint_photo(name), 0.40, 0.86)
+                if mine:
+                    scene.draw_faded(cr, px + 1, py + 1 + t, pw - 2, ph - 2 - t, rad, "mine:" + mine, scene.paint_file(mine), 0.40, 0.86)
+                else:
+                    scene.draw_faded(cr, px + 1, py + 1 + t, pw - 2, ph - 2 - t, rad, "clock:" + name, scene.paint_photo(name), 0.40, 0.86)
             except Exception as e:
                 print("GlassDesk: clock photo", e)
                 style = "drawn"

@@ -419,8 +419,10 @@ class SettingsWindow(Gtk.Window):
                  self.button("Change…", lambda: self.app.widgets["show_github"].choose_user()))
         self.row("Weather city", "You can add the country, e.g. Paris, France", self.button("Change…", lambda: self.app.widgets["show_weather"].on_double_click(0, 0)))
         self.row("Weather picture", "A sky that matches the weather (sun, clouds, rain, storm, snow, fog, night) fading into the glass", self.toggle("weather_scene"))
-        self.row("Clock background", "Changes with the time of day: morning, day, sunset and night",
-                 self.combo("clock_style", [("photo", "Photos"), ("drawn", "Drawn sky"), ("off", "Off")]))
+        self.row("Clock background", "Photos change with the time of day; My photos shows your own pictures, a new one every 30 minutes",
+                 self.combo("clock_style", [("photo", "Photos"), ("mine", "My photos"), ("drawn", "Drawn sky"), ("off", "Off")]))
+        self.row("My clock photos", self.S.get("clock_photos") or "Pick a folder with your own pictures",
+                 self.button("Choose…", self.app.choose_clock_photos))
         self.row("Focus minutes", None, self.spin("focus_minutes", 1, 120))
         self.row("Break minutes", None, self.spin("break_minutes", 1, 60))
         self.row("Photo folder", None, self.button("Choose…", lambda: self.app.widgets["show_photos"].on_double_click(0, 0)))
