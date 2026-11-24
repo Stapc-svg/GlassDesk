@@ -272,7 +272,7 @@ class GlassWindow(Gtk.Window):
         try:
             t = self._anim_progress()
             if t >= 1:
-                self.paint(cr)
+                self.paint_body(cr)
             else:
                 # switching inside a stack: the new content slides in and fades up
                 e = 1 - (1 - t) ** 4
@@ -280,14 +280,14 @@ class GlassWindow(Gtk.Window):
                 cr.save()
                 cr.rectangle(x, y, w, top - y)
                 cr.clip()
-                self.paint(cr)
+                self.paint_body(cr)
                 cr.restore()
                 cr.save()
                 cr.rectangle(x, top, w, y + h - top)
                 cr.clip()
                 cr.translate(0, (1 - e) * self.T.s(28))     # the new content rises up into place
                 cr.push_group()
-                self.paint(cr)
+                self.paint_body(cr)
                 cr.pop_group_to_source()
                 cr.paint_with_alpha(0.15 + 0.85 * e)
                 cr.restore()
@@ -539,6 +539,10 @@ class GlassWindow(Gtk.Window):
     def paint(self, cr):
         pass
 
+    def paint_body(self, cr):
+        """Widgets draw a small bar instead of their content while rolled up."""
+        self.paint(cr)
+
     def title(self, cr, s, x, y, w):
         text(cr, s.upper(), x, y, w, size=self.T.s(8.2), bold=True, color=self.T.sub)
 
@@ -658,6 +662,9 @@ class GlassWindow(Gtk.Window):
             if key is not None:
                 if key != self.key:
                     self.app.switch_to(self, key)
+                return True
+            if getattr(self, "rolled", False):
+                self.roll(False)      # a rolled-up widget opens with one click
                 return True
             self.on_click(px, py, 1, e)
         return True

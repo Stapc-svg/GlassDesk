@@ -182,6 +182,15 @@ Ideas and bug reports from the XDA thread:
 
 - Fixed: stacked fences and widgets sometimes showed no tabs after GlassDesk started, until you rescanned the desktop.
 
+## Linux 2.1.0
+
+Everything from GlassDesk 2.1 for Windows, now on Linux:
+
+- **Quick search in liquid glass.** With Glass style › Liquid glass, the search window is liquid glass, and every app sits on its own little lens of glass.
+- **The real album cover in the music widget**, as a sleeve with the vinyl record sliding out of it while a song plays. It works with any player that shares the song (Spotify, Firefox, Chrome, VLC, Rhythmbox).
+- **Your own clock photos.** Clock background › **My photos**, then choose a folder (Settings, or right-click the clock › Choose my clock photos…). A new photo shows every 30 minutes.
+- **Roll up widgets.** Right-click a widget › **Roll up** shrinks it to a small bar (the clock's bar shows the time). Click the bar to open it again. **Roll up all widgets** and **Expand all widgets** are in the same menu.
+
 ## Android 2.0
 
 - **New Liquid glass design:** clear, thick glass like iOS 26. It's nearly see-through, brighter toward the rounded edge like a lens, with a soft shade inside the bottom edge and a faint prism fringe on the rim. Pick **Clear** or **Regular** (a little frosted, easier to read on busy wallpapers) under Appearance › Glass type, with the iOS accent colors.

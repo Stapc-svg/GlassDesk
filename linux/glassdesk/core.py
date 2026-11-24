@@ -8,7 +8,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import GLib, Gio, Gtk, Gdk, GdkPixbuf
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 REPO = "Stapc-svg/GlassDesk"
 APP_ID = "app.glassdesk.GlassDesk"
 
@@ -81,6 +81,8 @@ DEFAULTS = {
     "groups": [],                   # stacked panels: [[key, key, ...]], the first one shows
     "wall_accent": False,           # accent color from the wallpaper
     "zoom": {},                     # widget key -> size in %
+    "rolled": [],                   # widgets rolled up to a small bar
+    "clock_photos": "",             # folder of your own clock photos (clock_style "mine")
 }
 
 
