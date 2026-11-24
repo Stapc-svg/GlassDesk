@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.0-7C9CFF" alt="Version 2.0">
+  <img src="https://img.shields.io/badge/version-2.1-7C9CFF" alt="Version 2.1">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/Linux-beta-FCC624" alt="Linux beta">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84" alt="Android 8+">
@@ -27,10 +27,69 @@
   <a href="#help"><b>Info &amp; help</b></a>
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/hero-light.jpg">
-  <img src="docs/screenshots/hero-dark.jpg" alt="GlassDesk on a desktop with a purple wallpaper: glass fences on the left and widgets on the right">
-</picture>
+<h3 align="center">Your messy desktop, sorted in one click and wrapped in real liquid glass.<br>Free. No account. No ads. Under 1 MB.</h3>
+
+<p align="center">
+  <img src="docs/screenshots/hero-liquid.jpg" width="100%" alt="GlassDesk in liquid glass on a city wallpaper at night: fences on the left and widgets on the right, with the city bending at the glass edges">
+</p>
+
+<p align="center">
+  <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇%20%20Get%20GlassDesk%20free-7C9CFF?style=for-the-badge" height="44" alt="Get GlassDesk free"></a>
+</p>
+
+<p align="center"><sub>Windows 10 &amp; 11 · Linux · Android &nbsp;|&nbsp; Thousands of downloads &nbsp;|&nbsp; If you like it, a ⭐ helps a lot!</sub></p>
+
+## 🤩 Why people try it
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🧹 A clean desktop in 10 seconds</h3>
+      Install it, and your icons sort themselves into glass boxes: Apps, Folders, Documents, Images and more. New files find their box on their own. Nothing is moved or deleted. It just looks tidy.
+    </td>
+    <td width="50%" valign="top">
+      <h3>💧 Glass that actually bends light</h3>
+      Not a blurry box. Your wallpaper curves at the rounded edges like through a thick lens, with a thin rainbow at the rim, the way Apple's Liquid Glass does it. On Windows.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🧩 Widgets you'll actually use</h3>
+      Weather with a live sky, a clock with your own photos, music with the real album cover, calendar with your Google or Outlook events, to-dos, notes, clipboard history and 8 more.
+    </td>
+    <td valign="top">
+      <h3>🪶 Lighter than a browser tab</h3>
+      One tiny app with no browser engine inside. It uses almost no CPU while nothing changes, and it pauses itself while you play games.
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/search-liquid.jpg" width="62%" alt="Quick search in liquid glass: every app on its own glass tile">
+  <img src="docs/screenshots/widgets-2.1.jpg" width="34%" alt="Clock with your own photo, music with the album cover and a vinyl record, and two rolled-up widgets">
+</p>
+<p align="center"><sub>Press <b>Ctrl + Alt + F</b> to find anything · your own photos on the clock · the real album cover · roll widgets up into small bars</sub></p>
+
+## 🆚 GlassDesk vs. a normal desktop
+
+| | Normal Windows desktop | **GlassDesk** |
+|---|:---:|:---:|
+| Icons sort themselves | ❌ | ✅ |
+| Find any file or app instantly (Ctrl + Alt + F) | ❌ | ✅ |
+| Weather, calendar, music and notes right on the desktop | ❌ | ✅ |
+| Real liquid glass look | ❌ | ✅ |
+| Undo everything by uninstalling | — | ✅ your icons come right back |
+| Price | — | **Free and open source** |
+
+## 🚀 Try it in 30 seconds
+
+1. Download **`GlassDesk-Setup-<version>.msi`** from [Releases](../../releases/latest).
+2. Double-click it. No admin password needed.
+3. That's it. Your desktop sorts itself, and the welcome screen shows you around.
+
+Linux: [.deb, AppImage or Snap](#linux) · Android: [APK](#android)
+
+<details><summary><b>All features at a glance</b></summary>
 
 <table>
   <tr>
@@ -45,6 +104,8 @@
   </tr>
 </table>
 
+</details>
+
 <a id="windows"></a>
 
 ## 🪟 GlassDesk for Windows
@@ -54,6 +115,13 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 <p align="center">
   <img src="docs/screenshots/windows-demo.gif" width="100%" alt="GlassDesk fences and widgets appearing on the desktop (animated)">
 </p>
+
+### ✨ New in 2.1
+
+- **🔍 Quick search in liquid glass:** every app sits on its own little glass tile.
+- **💿 The real album cover:** the music widget shows the cover of what's playing (Spotify, YouTube, any player) as a sleeve, with the vinyl record sliding out.
+- **🖼️ Your own clock photos:** Clock background › **My photos**. A new one every 30 minutes.
+- **⬆️ Roll up widgets:** right-click › **Roll up** shrinks a widget to a small bar. Click it to open again.
 
 ### ✨ New in 2.0
 
@@ -70,6 +138,8 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 - **🧹 Fixes:** the Recycle Bin icon updates right away, Settings and quick search scroll smoothly, and the white borders around panels are gone.
 - **🌍 Languages:** English, 简体中文, Español, Русский.
 - **🎬 A new animated welcome screen** that shows what's new.
+
+<details><summary><b>What was new in 1.8 and 1.9</b></summary>
 
 ### ✨ New in 1.9
 - **New weather widget:** your city with today's high and low, a big glowing icon, glass chips for humidity, wind and chance of rain, a **sunrise-to-sunset arc** that shows where the sun is now, and the **next 5 hours**.
@@ -176,6 +246,9 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
     </td>
   </tr>
 </table>
+
+
+</details>
 
 ### Organizer
 - **Auto-sorting fences:** desktop items go into *Apps & Shortcuts, Folders, Documents, Images, Music & Video, Archives* and *Other files*. New files appear in the right fence on their own.
@@ -429,6 +502,10 @@ Android: see [android/README.md](android/README.md).
 ### Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+### ⭐ Like GlassDesk?
+
+GlassDesk is made by one person in their free time. If it made your desktop nicer, **[give it a star](../../stargazers)**. It takes one click and helps other people find it. Found a bug or have an idea? **[Open an issue](../../issues)**. Every one gets read.
 
 ### Credits
 - Clock photos: from the [Budgie Desktop backgrounds](https://github.com/BuddiesOfBudgie/budgie-backgrounds), public domain (CC0). Weather pictures are drawn by GlassDesk itself.
