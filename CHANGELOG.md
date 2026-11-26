@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.1
+
+- **No more false virus warnings.** Microsoft Defender and some other antivirus apps flagged 2.1.0 as malware. It wasn't: the music widget used a small hidden PowerShell script to read which song is playing, and antivirus apps treat hidden PowerShell scripts as suspicious. GlassDesk now reads the song and its cover itself, with no script and no extra program running. The music widget works the same as before.
+- The old `music-helper.ps1` file is deleted from GlassDesk's settings folder the first time 2.1.1 runs.
+
 ## 2.1.0
 
 - **Quick search in liquid glass.** When you use liquid glass, the search window (Ctrl + Alt + F) is liquid glass too, and every app sits on its own little lens of glass. While the list scrolls, the tiles use the plain look so scrolling stays smooth on slower PCs.
