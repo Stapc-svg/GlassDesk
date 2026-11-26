@@ -496,3 +496,31 @@ Nothing moves until you say yes. Click to see them.	Ничего не перем
 {0} weeks old	{0} нед. назад
 {0} days old	{0} дн. назад
 Double-click the desktop	Двойной щелчок по рабочему столу
+GlassDesk {0} is here	GlassDesk {0} уже здесь
+What's new since version {0}, the one you had.	Что нового с версии {0}, которая у вас была.
+Got it	Понятно
+Welcome to GlassDesk {0}	Добро пожаловать в GlassDesk {0}
+A few things to try first.	С чего начать.
+Double-click to hide all	Двойной щелчок — скрыть всё
+Double-click an empty spot on the desktop for a clean wallpaper. Again to bring it back.	Дважды щёлкните по пустому месту — останутся только обои. Ещё раз — всё вернётся.
+Peek at your desktop	Взгляд на рабочий стол
+Ctrl + Alt + Space brings your fences and widgets over your apps. Esc puts them back.	Ctrl + Alt + Пробел показывает панели и виджеты поверх приложений. Esc — обратно.
+Quick settings widget	Виджет быстрых настроек
+Volume, brightness, Wi-Fi, Bluetooth, dark mode and mute, right on the desktop.	Громкость, яркость, Wi-Fi, Bluetooth, тёмная тема и без звука прямо на рабочем столе.
+Game stats widget	Виджет игровой статистики
+GPU load, graphics memory, temperatures and CPU. Turn it on in Settings › Widgets.	Загрузка GPU, видеопамять, температуры и CPU. Включите в Настройки › Виджеты.
+Tray icon › Tidy up old files. Nothing moves until you press Tidy, and Undo puts it back.	Значок в трее › Убрать старые файлы. Ничего не перемещается, пока вы не нажмёте «Убрать», а «Отменить» всё вернёт.
+No more false virus warnings	Больше никаких ложных предупреждений о вирусах
+The music widget no longer uses a hidden script, so antivirus apps stop flagging GlassDesk.	Виджет музыки больше не использует скрытый скрипт, поэтому антивирусы не трогают GlassDesk.
+Quick search in liquid glass	Быстрый поиск в жидком стекле
+Every app sits on its own little glass tile (Ctrl + Alt + F).	Каждое приложение на своей стеклянной плитке (Ctrl + Alt + F).
+The real album cover	Настоящая обложка альбома
+The music widget shows the cover of what's playing, with the record sliding out.	Виджет музыки показывает обложку того, что играет, с выезжающей пластинкой.
+Your own clock photos	Ваши фото для часов
+Clock background › My photos. A new picture every 30 minutes.	Фон часов › Мои фото. Новое фото каждые 30 минут.
+Roll up widgets	Сворачивание виджетов
+Right-click a widget › Roll up to shrink it to a small bar.	Правый щелчок по виджету › Свернуть — он станет маленькой полоской.
+And also	А ещё
+What's new	Что нового
+See what the last updates added	Что добавили последние обновления
+Show	Показать

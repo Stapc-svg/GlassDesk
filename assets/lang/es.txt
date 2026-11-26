@@ -496,3 +496,31 @@ Nothing moves until you say yes. Click to see them.	Nada se mueve hasta que diga
 {0} weeks old	hace {0} semanas
 {0} days old	hace {0} días
 Double-click the desktop	Doble clic en el escritorio
+GlassDesk {0} is here	GlassDesk {0} ya está aquí
+What's new since version {0}, the one you had.	Novedades desde la versión {0}, la que tenías.
+Got it	Entendido
+Welcome to GlassDesk {0}	Bienvenido a GlassDesk {0}
+A few things to try first.	Algunas cosas para probar primero.
+Double-click to hide all	Doble clic para ocultar todo
+Double-click an empty spot on the desktop for a clean wallpaper. Again to bring it back.	Doble clic en un espacio vacío del escritorio para ver solo el fondo. Otra vez para volver.
+Peek at your desktop	Mira tu escritorio
+Ctrl + Alt + Space brings your fences and widgets over your apps. Esc puts them back.	Ctrl + Alt + Espacio trae tus cercas y widgets sobre tus apps. Esc los devuelve.
+Quick settings widget	Widget de ajustes rápidos
+Volume, brightness, Wi-Fi, Bluetooth, dark mode and mute, right on the desktop.	Volumen, brillo, Wi-Fi, Bluetooth, modo oscuro y silencio, en el escritorio.
+Game stats widget	Estadísticas de juego
+GPU load, graphics memory, temperatures and CPU. Turn it on in Settings › Widgets.	Carga de GPU, memoria gráfica, temperaturas y CPU. Actívalo en Ajustes › Widgets.
+Tray icon › Tidy up old files. Nothing moves until you press Tidy, and Undo puts it back.	Icono de la bandeja › Ordenar archivos viejos. Nada se mueve hasta que pulses Ordenar, y Deshacer lo devuelve.
+No more false virus warnings	Sin más falsas alertas de virus
+The music widget no longer uses a hidden script, so antivirus apps stop flagging GlassDesk.	El widget de música ya no usa un script oculto, así que los antivirus dejan de marcar GlassDesk.
+Quick search in liquid glass	Búsqueda rápida en cristal líquido
+Every app sits on its own little glass tile (Ctrl + Alt + F).	Cada app tiene su propia baldosa de cristal (Ctrl + Alt + F).
+The real album cover	La portada real del álbum
+The music widget shows the cover of what's playing, with the record sliding out.	El widget de música muestra la portada de lo que suena, con el disco saliendo.
+Your own clock photos	Tus propias fotos en el reloj
+Clock background › My photos. A new picture every 30 minutes.	Fondo del reloj › Mis fotos. Una foto nueva cada 30 minutos.
+Roll up widgets	Contraer widgets
+Right-click a widget › Roll up to shrink it to a small bar.	Clic derecho en un widget › Contraer para hacerlo una barra pequeña.
+And also	Y además
+What's new	Novedades
+See what the last updates added	Mira lo que trajeron las últimas actualizaciones
+Show	Mostrar

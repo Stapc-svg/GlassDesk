@@ -146,6 +146,14 @@ namespace GlassDesk
             var w = new WelcomeForm(app); w.Location = new System.Drawing.Point(640, 290);
             using (var b = w.Render()) b.Save(Path.Combine(dir, "welcome.png"), ImageFormat.Png);
             {
+                var from = new Version(2, 0, 0);
+                var wn = new WelcomeForm(app, string.Format(Lang.L("GlassDesk {0} is here"), App.Version), string.Format(Lang.L("What's new since version {0}, the one you had."), WhatsNew.Short(from)), WhatsNew.Since(from, App.VersionNumber), Lang.L("Got it"));
+                using (var b = wn.Render()) b.Save(Path.Combine(dir, "whatsnew.png"), ImageFormat.Png);
+                var from2 = new Version(2, 1, 1);
+                var wn2 = new WelcomeForm(app, string.Format(Lang.L("GlassDesk {0} is here"), App.Version), string.Format(Lang.L("What's new since version {0}, the one you had."), WhatsNew.Short(from2)), WhatsNew.Since(from2, App.VersionNumber), Lang.L("Got it"));
+                using (var b = wn2.Render()) b.Save(Path.Combine(dir, "whatsnew-from-2.1.1.png"), ImageFormat.Png);
+            }
+            {
                 var items = new List<CleanItem>();
                 Func<string, string, string, int, long, CleanItem> it = (n, rule, target, days, size) => new CleanItem { Path = Path.Combine(Path.GetTempPath(), n), Rule = rule, Target = target, When = DateTime.Now.AddDays(-days), Size = size };
                 items.Add(it("Screenshot 2026-09-02 181455.png", "shots", "x", 85, 412000)); items.Add(it("Screenshot 2026-10-11 092210.png", "shots", "x", 46, 1210000));

@@ -63,6 +63,8 @@ namespace GlassDesk
         // =============================================================== start
         public void Start()
         {
+            string settingsBefore = "";   // read before anything saves it again: tells which version wrote it
+            try { string sf = Path.Combine(Settings.Folder, "settings.ini"); if (File.Exists(sf)) settingsBefore = File.ReadAllText(sf); } catch { }
             Settings = Settings.Load();
             Lang.Init(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LANG") ?? Settings.Language);
             try { using (var g = Graphics.FromHwnd(IntPtr.Zero)) DpiScale = g.DpiX / 96f; } catch { DpiScale = 1f; }
@@ -102,17 +104,25 @@ namespace GlassDesk
             Wallpaper = new WallpaperChanger(this);
             Safe("backup", delegate { Backup.Daily(this); });
             Cleanup = new CleanupWatch(this);
-            Safe("what's new", ShowWhatsNew);
 
             // the welcome screen shows once ever: the marker file stays when GlassDesk is updated
             string mark = Path.Combine(Settings.Folder, "welcome-screen-shown");
             string seen = ""; try { if (File.Exists(mark)) seen = File.ReadAllText(mark).Trim(); } catch { }
             // shown on first run, and once more after updating to 2.0 to show what's new
+            Version updatedFrom = WhatsNew.JustUpdatedFrom(mark, settingsBefore);
             if (!File.Exists(mark) || !seen.StartsWith("2."))
             {
                 try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(mark, Version); } catch { }
                 var wt = new Timer { Interval = 1200 };
                 wt.Tick += delegate { wt.Stop(); wt.Dispose(); ShowWelcome(); };
+                wt.Start();
+            }
+            else if (updatedFrom != null)
+            {
+                // you updated: show what's new since the version you had (people new to GlassDesk get the welcome screen instead)
+                var from = updatedFrom;
+                var wt = new Timer { Interval = 1500 };
+                wt.Tick += delegate { wt.Stop(); wt.Dispose(); ShowWhatsNew(from); };
                 wt.Start();
             }
         }
@@ -141,22 +151,14 @@ namespace GlassDesk
             game = new GameWidget(this); Windows.Add(game);
         }
 
-        /// <summary>After updating to 2.2: one notification about what's new (new users get the welcome screen instead).</summary>
-        void ShowWhatsNew()
+        /// <summary>The "What's new" window after an update.</summary>
+        public void ShowWhatsNew(Version from)
         {
-            if (preview) return;
-            string mark = Path.Combine(Settings.Folder, "whats-new-2.2");
-            if (File.Exists(mark)) return;
-            bool updated = File.Exists(Path.Combine(Settings.Folder, "welcome-screen-shown"));
-            try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(mark, Version); } catch { }
-            if (!updated) return;
-            var t = new Timer { Interval = 6000 };
-            t.Tick += delegate
-            {
-                t.Stop(); t.Dispose();
-                Notify("GlassDesk 2.2", Lang.L("Double-click the desktop to hide everything. Ctrl + Alt + Space to peek. New: Quick settings and Game stats widgets, and smart cleanup."), delegate { ShowSettings(); });
-            };
-            t.Start();
+            var tips = WhatsNew.Since(from, VersionNumber);
+            if (tips.Count == 0) return;
+            var w = new WelcomeForm(this, string.Format(Lang.L("GlassDesk {0} is here"), Version),
+                string.Format(Lang.L("What's new since version {0}, the one you had."), WhatsNew.Short(from)), tips, Lang.L("Got it"));
+            w.Show(); w.Activate();
         }
 
         /// <summary>The list of old files GlassDesk could tidy. Nothing moves until you press Tidy.</summary>

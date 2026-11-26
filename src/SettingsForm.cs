@@ -655,6 +655,7 @@ namespace GlassDesk
 
             Section(Lang.L("Updates"));
             Row(Lang.L("Version"), "GlassDesk " + App.Version, Button(Lang.L("Check now"), true, delegate { app.Updates.Check(true); }));
+            Row(Lang.L("What's new"), "See what the last updates added", Button(Lang.L("Show"), false, delegate { app.ShowWhatsNew(new Version(2, 0, 0)); }));
             Row(Lang.L("Check automatically"), "Look for a new version once a day and let you know", Toggle(S.AutoUpdate, v => S.AutoUpdate = v));
             Row(Lang.L("Updates come from"), "github.com/" + App.DefaultRepo + " — the official GlassDesk page", Button(Lang.L("Open"), false, delegate { try { System.Diagnostics.Process.Start("https://github.com/" + App.DefaultRepo + "/releases"); } catch { } }));
 
