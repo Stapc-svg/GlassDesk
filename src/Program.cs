@@ -1,5 +1,6 @@
 // GlassDesk - entry point
 using System;
+using System.Collections.Generic;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
@@ -9,7 +10,7 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("GlassDesk")]
 [assembly: System.Reflection.AssemblyProduct("GlassDesk")]
 [assembly: System.Reflection.AssemblyDescription("Glass desktop organizer with widgets")]
-[assembly: System.Reflection.AssemblyVersion("2.1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("2.2.0.0")]
 [assembly: System.Reflection.AssemblyFileVersion("1.9.2.0")]
 
 namespace GlassDesk
@@ -144,6 +145,25 @@ namespace GlassDesk
             using (var b = o.Render()) b.Save(Path.Combine(dir, "organize.png"), ImageFormat.Png);
             var w = new WelcomeForm(app); w.Location = new System.Drawing.Point(640, 290);
             using (var b = w.Render()) b.Save(Path.Combine(dir, "welcome.png"), ImageFormat.Png);
+            {
+                var from = new Version(2, 0, 0);
+                var wn = new WelcomeForm(app, string.Format(Lang.L("GlassDesk {0} is here"), App.Version), string.Format(Lang.L("What's new since version {0}, the one you had."), WhatsNew.Short(from)), WhatsNew.Since(from, App.VersionNumber), Lang.L("Got it"));
+                using (var b = wn.Render()) b.Save(Path.Combine(dir, "whatsnew.png"), ImageFormat.Png);
+                var from2 = new Version(2, 1, 1);
+                var wn2 = new WelcomeForm(app, string.Format(Lang.L("GlassDesk {0} is here"), App.Version), string.Format(Lang.L("What's new since version {0}, the one you had."), WhatsNew.Short(from2)), WhatsNew.Since(from2, App.VersionNumber), Lang.L("Got it"));
+                using (var b = wn2.Render()) b.Save(Path.Combine(dir, "whatsnew-from-2.1.1.png"), ImageFormat.Png);
+            }
+            {
+                var items = new List<CleanItem>();
+                Func<string, string, string, int, long, CleanItem> it = (n, rule, target, days, size) => new CleanItem { Path = Path.Combine(Path.GetTempPath(), n), Rule = rule, Target = target, When = DateTime.Now.AddDays(-days), Size = size };
+                items.Add(it("Screenshot 2026-09-02 181455.png", "shots", "x", 85, 412000)); items.Add(it("Screenshot 2026-10-11 092210.png", "shots", "x", 46, 1210000));
+                items.Add(it("Screenshot 2026-10-28 204512.png", "shots", "x", 29, 880000)); items.Add(it("Capture.PNG", "shots", "x", 21, 230000));
+                items.Add(it("SteamSetup.exe", "installers", "x", 120, 2400000)); items.Add(it("ChromeSetup.exe", "installers", "x", 64, 1350000)); items.Add(it("python-3.13.0-amd64.exe", "installers", "x", 40, 27300000)); items.Add(it("GlassDesk-Setup-2.0.0.msi", "installers", "x", 16, 814000));
+                items.Add(it("old notes.txt", "desktop", "x", 140, 4000)); items.Add(it("Report draft v1.docx", "desktop", "x", 95, 61000));
+                items.Add(it("ubuntu-26.04-desktop-amd64.iso", "big", null, 62, 6482409472));
+                var c = new CleanupForm(app, items);
+                using (var b = c.Render()) b.Save(Path.Combine(dir, "cleanup.png"), ImageFormat.Png);
+            }
             return 0;
         }
 

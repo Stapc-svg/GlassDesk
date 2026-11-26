@@ -11,13 +11,14 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.1-7C9CFF" alt="Version 2.1">
+  <img src="https://img.shields.io/badge/version-2.2-7C9CFF" alt="Version 2.2">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/Linux-beta-FCC624" alt="Linux beta">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84" alt="Android 8+">
   <img src="https://img.shields.io/badge/size-~0.8%20MB-B57BFF" alt="About 0.8 MB">
   <a href="../../stargazers"><img src="https://img.shields.io/github/stars/Stapc-svg/GlassDesk?style=flat&color=FFD60A&logo=github" alt="GitHub stars"></a>
   <img src="https://img.shields.io/github/downloads/Stapc-svg/GlassDesk/total?color=5BD68A&label=downloads" alt="Total downloads">
+  <a href="https://www.virustotal.com/gui/file/ac345f6ae3abb6da50193f62c0e4d3b6e7fc721892111b60e7ac87ae73a26c3e"><img src="https://img.shields.io/badge/VirusTotal-scan%20results-394EFF?logo=virustotal&logoColor=white" alt="VirusTotal scan of GlassDesk-Setup-2.2.0.msi"></a>
 </p>
 
 <p align="center">
@@ -37,7 +38,7 @@
   <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇%20%20Get%20GlassDesk%20free-7C9CFF?style=for-the-badge" height="44" alt="Get GlassDesk free"></a>
 </p>
 
-<p align="center"><sub>Windows 10 &amp; 11 · Linux · Android &nbsp;|&nbsp; Thousands of downloads &nbsp;|&nbsp; If you like it, a ⭐ helps a lot!</sub></p>
+<p align="center"><sub>Open source · <a href="https://www.virustotal.com/gui/file/ac345f6ae3abb6da50193f62c0e4d3b6e7fc721892111b60e7ac87ae73a26c3e">Checked on VirusTotal</a> · Windows 10 &amp; 11 · Linux · Android &nbsp;|&nbsp; Thousands of downloads &nbsp;|&nbsp; If you like it, a ⭐ helps a lot!</sub></p>
 
 
 
@@ -159,6 +160,25 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
 
 <p align="center">
   <img src="docs/screenshots/windows-demo.gif" width="100%" alt="GlassDesk fences and widgets appearing on the desktop (animated)">
+</p>
+
+### ✨ New in 2.2
+
+<p align="center">
+  <img src="docs/screenshots/widgets-2.2.jpg" width="100%" alt="The new Quick settings and Game stats widgets, in Glass and Liquid glass">
+</p>
+
+- **🫥 Double-click to hide everything:** double-click an empty spot on the desktop for a clean wallpaper. Double-click again to bring it back.
+- **👀 Peek (Ctrl + Alt + Space):** your fences and widgets come up over your open apps. Esc puts them back.
+- **🎛️ Quick settings widget:** volume, brightness, Wi-Fi, Bluetooth, dark mode and mute.
+- **🎮 Game stats widget:** GPU load, graphics memory, CPU and temperatures.
+- **🆕 What's new after updates:** when GlassDesk updates, you see what changed since your version.
+- **🛡️ No false virus warnings:** the music widget no longer uses a hidden PowerShell script (fixed in 2.1.1).
+- **🧹 Smart cleanup:** finds old screenshots, installers and forgotten files. Nothing moves until you press **Tidy**, and **Undo** puts it all back.
+
+<p align="center">
+  <img src="docs/screenshots/peek-2.2.jpg" width="49%" alt="Peek: fences and widgets over a dimmed app window">
+  <img src="docs/screenshots/cleanup-2.2.jpg" width="49%" alt="The Tidy up old files window">
 </p>
 
 ### ✨ New in 2.1

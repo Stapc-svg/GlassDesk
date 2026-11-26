@@ -128,7 +128,7 @@ namespace GlassDesk
         readonly App app;
         System.Windows.Forms.Timer timer;
         bool checking;
-        public class Release { public Version Version; public string Tag, Notes, Page, MsiUrl, MsiName; }
+        public class Release { public Version Version; public string Tag, Notes, Page, MsiUrl, MsiName; public bool Urgent; }
         Release pending;
 
         public Updater(App app) { this.app = app; }
@@ -145,7 +145,7 @@ namespace GlassDesk
             timer.Tick += delegate
             {
                 timer.Interval = 60 * 60 * 1000;                                // then hourly, but only checks once a day
-                if (S.AutoUpdate && DateTime.UtcNow.Ticks - S.LastUpdateCheck > TimeSpan.TicksPerDay) Check(false);
+                if (S.AutoUpdate && DateTime.UtcNow.Ticks - S.LastUpdateCheck > TimeSpan.TicksPerHour * 8) Check(false);   // 3 times a day, so an important fix arrives quickly
             };
             timer.Start();
         }
@@ -191,7 +191,11 @@ namespace GlassDesk
                     if (!name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) || !IsGitHubUrl(url)) continue;
                     var v = VersionFromName(name) ?? ParseVersion(Json.Str(j, "tag_name"));
                     if (v == null || (best != null && v <= best.Version)) continue;
-                    best = new Release { Tag = Json.Str(j, "tag_name"), Notes = Json.Str(j, "body"), Page = Json.Str(j, "html_url"), MsiUrl = url, MsiName = name, Version = v };
+                    string notes = Json.Str(j, "body");
+                    // an important fix: the release's title says "important update" (or contains [urgent])
+                    string title = Json.Str(j, "name");
+                    bool urgent = title.IndexOf("important update", StringComparison.OrdinalIgnoreCase) >= 0 || title.IndexOf("[urgent]", StringComparison.OrdinalIgnoreCase) >= 0;
+                    best = new Release { Tag = Json.Str(j, "tag_name"), Notes = notes, Page = Json.Str(j, "html_url"), MsiUrl = url, MsiName = name, Version = v, Urgent = urgent };
                 }
             }
             if (best == null) throw new Exception("no Windows installer was found in the releases");
@@ -233,9 +237,10 @@ namespace GlassDesk
                 if (manual) MessageBox.Show("You have the latest version (" + App.Version + ").", "GlassDesk updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            if (!manual && S.SkipVersion == rel.Version.ToString()) return;
+            if (!manual && !rel.Urgent && S.SkipVersion == rel.Version.ToString()) return;
             pending = rel;
-            if (manual) ShowOffer();
+            // an important fix pops up straight away (and can't be skipped); a normal update is a quiet notification
+            if (manual || rel.Urgent) ShowOffer();
             else app.Notify("GlassDesk " + Short(rel.Version) + " is available", "Click here to see what's new and update.", ShowOffer);
         }
 
@@ -270,7 +275,7 @@ namespace GlassDesk
                 Font = Gfx.SafeFont(t.FontName, 13.5f * k, FontStyle.Regular);
                 Color sub = t.Dark ? Color.FromArgb(150, 156, 172) : Color.FromArgb(104, 110, 124);
                 int pad = (int)(22 * k);
-                var head = new Label { Text = "GlassDesk " + Short(rel.Version) + " is ready", AutoSize = false, Location = new Point(pad, pad), Size = new Size(ClientSize.Width - 2 * pad, (int)(30 * k)), Font = Gfx.SafeFont(t.FontName, 20 * k, FontStyle.Bold) };
+                var head = new Label { Text = rel.Urgent ? "Important update: GlassDesk " + Short(rel.Version) : "GlassDesk " + Short(rel.Version) + " is ready", ForeColor = rel.Urgent ? Color.FromArgb(255, 255, 90, 80) : ForeColor, AutoSize = false, Location = new Point(pad, pad), Size = new Size(ClientSize.Width - 2 * pad, (int)(30 * k)), Font = Gfx.SafeFont(t.FontName, 20 * k, FontStyle.Bold) };
                 var cur = new Label { Text = "You have " + App.Version + ". The update keeps your fences, widgets and settings.", AutoSize = false, Location = new Point(pad, head.Bottom + (int)(4 * k)), Size = new Size(ClientSize.Width - 2 * pad, (int)(22 * k)), ForeColor = sub };
                 string notes = string.IsNullOrEmpty(rel.Notes) ? "No release notes." : rel.Notes.Replace("\r\n", "\n").Replace("\n", "\r\n");
                 if (notes.Length > 1200) notes = notes.Substring(0, 1200) + "…";
@@ -281,12 +286,13 @@ namespace GlassDesk
                     Text = rel.MsiUrl == null ? "This release has no installer attached, so it will open on GitHub." : "" };
                 int bh = (int)(36 * k), by = ClientSize.Height - pad - bh;
                 go = Btn(rel.MsiUrl == null ? "Open on GitHub" : "Update now", true, t, k); go.Location = new Point(ClientSize.Width - pad - go.Width, by);
-                later = Btn("Later", false, t, k); later.Location = new Point(go.Left - (int)(10 * k) - later.Width, by);
+                later = Btn(rel.Urgent ? "Remind me later" : "Later", false, t, k); later.Location = new Point(go.Left - (int)(10 * k) - later.Width, by);
                 skip = Btn("Skip this version", false, t, k); skip.Location = new Point(pad, by);
                 go.Click += delegate { Start(); };
                 later.Click += delegate { DialogResult = DialogResult.Cancel; };
                 skip.Click += delegate { DialogResult = DialogResult.Ignore; };
                 Controls.AddRange(new Control[] { head, cur, box, bar, state, go, later, skip });
+                if (rel.Urgent) { skip.Visible = false; cur.Text = "Please install this update. It keeps your fences, widgets and settings."; }
                 Load += delegate { Native.ThemeTitleBar(Handle, t.Dark, BackColor, ForeColor); };
                 FormClosing += (s, e) => { if (dl != null) { dl.CancelAsync(); } };
             }

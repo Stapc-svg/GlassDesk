@@ -770,20 +770,29 @@ namespace GlassDesk
         int hotBtn = -1;   // 0 close, 1 settings, 2 get started
         readonly Timer fade;
         Point dragFrom; bool dragging;
-        static readonly string[][] Tips =
-        {
-            new[] { Lang.L("Liquid glass"), Lang.L("Real bending, frosted glass like Apple's. Settings → Appearance → Glass style → Liquid.") },
-            new[] { Lang.L("A style for each widget"), Lang.L("Right-click a widget → Style. Notes, Reminders, rings, gauges and more.") },
-            new[] { Lang.L("See it before you add it"), Lang.L("Live desktop preview in Settings, and a Widgets tab in quick search (Ctrl + Alt + F).") },
-            new[] { Lang.L("Smarter widgets"), Lang.L("Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.") },
-        };
+        /// <summary>One card: an icon name (see DrawTipIcon), a title and a sentence.</summary>
+        public class Tip { public string Icon, Title, Text; public Tip(string icon, string title, string text) { Icon = icon; Title = title; Text = text; } }
+        readonly List<Tip> Tips;
+        readonly string head, sub, okText;
 
-        public WelcomeForm(App app) : base(app)
+        public WelcomeForm(App app) : this(app, string.Format(Lang.L("Welcome to GlassDesk {0}"), App.Version), Lang.L("A few things to try first."), new List<Tip>
         {
+            new Tip("drop", Lang.L("Liquid glass"), Lang.L("Real bending, frosted glass like Apple's. Settings → Appearance → Glass style → Liquid.")),
+            new Tip("palette", Lang.L("A style for each widget"), Lang.L("Right-click a widget → Style. Notes, Reminders, rings, gauges and more.")),
+            new Tip("search", Lang.L("See it before you add it"), Lang.L("Live desktop preview in Settings, and a Widgets tab in quick search (Ctrl + Alt + F).")),
+            new Tip("clock", Lang.L("Smarter widgets"), Lang.L("Online calendar, every drive in System, game screenshot fences, clipboard and 3 new languages.")),
+        }, Lang.L("Get started")) { }
+
+        /// <summary>The same window, used after an update to show what's new since the version you had.</summary>
+        public WelcomeForm(App app, string head, string sub, List<Tip> tips, string okText) : base(app)
+        {
+            this.head = head; this.sub = sub; Tips = tips; this.okText = okText;
             ShowInTaskbar = true; TopMost = true;
             if (app.AppIcon != null) Icon = app.AppIcon;
-            int w = (int)(640 * k), h = (int)(500 * k);
+            int rows = Math.Max(2, (tips.Count + 1) / 2);
+            int w = (int)(640 * k), h = (int)((500 + (rows - 2) * 120) * k);
             Rectangle wa = Screen.PrimaryScreen.WorkingArea;
+            h = Math.Min(h, wa.Height - 20);
             Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
             Opacity = app.Preview ? 1 : 0;
             fade = new Timer { Interval = 15 };
@@ -809,7 +818,15 @@ namespace GlassDesk
         int Pad { get { return (int)(34 * k); } }
         Rectangle CloseRect { get { return new Rectangle(Width - (int)(50 * k), (int)(14 * k), (int)(36 * k), (int)(36 * k)); } }
         Rectangle StartRect { get { int bw = (int)(150 * k), bh = (int)(42 * k); return new Rectangle(Width - Pad - bw, Height - Pad - bh, bw, bh); } }
-        Rectangle SettingsRect { get { var s = StartRect; int bw = (int)(140 * k); return new Rectangle(s.X - bw - (int)(12 * k), s.Y, bw, s.Height); } }
+        int settingsW;
+        Rectangle SettingsRect
+        {
+            get
+            {
+                if (settingsW == 0) using (var bm = new Bitmap(1, 1)) using (var mg = Graphics.FromImage(bm)) settingsW = (int)Math.Max(140 * k, mg.MeasureString(Lang.L("Open Settings"), Gfx.F(T.FontName, 13.5f * k, FontStyle.Bold)).Width + 36 * k);
+                var s = StartRect; return new Rectangle(s.X - settingsW - (int)(12 * k), s.Y, settingsW, s.Height);
+            }
+        }
 
         protected override void PaintAll(Graphics g)
         {
@@ -831,17 +848,18 @@ namespace GlassDesk
             g.TranslateTransform((1 - tIn) * 40 * k, 0);
             if (tIn < 1) g.SetClip(new RectangleF(tx, 0, (Width - tx) * Clamp01(tIn * 1.2f), Height));
             using (var b = new SolidBrush(P.Text))
-                g.DrawString(Lang.L("Welcome to GlassDesk 2.0"), Gfx.F(T.DisplayFont, 28 * k, FontStyle.Bold), b, new RectangleF(tx, lr.Y - 2 * k, Width - tx - 60 * k, 40 * k), Gfx.Left);
+                g.DrawString(head, Gfx.F(T.DisplayFont, 28 * k, FontStyle.Bold), b, new RectangleF(tx, lr.Y - 2 * k, Width - tx - 60 * k, 40 * k), Gfx.Left);
             using (var b = new SolidBrush(P.Sub))
-                g.DrawString(Lang.L("Here's what's new — all made from your ideas."), Gfx.F(T.FontName, 14.5f * k, FontStyle.Regular), b, new RectangleF(tx, lr.Y + 38 * k, Width - tx - 40 * k, 24 * k), Gfx.Left);
+                g.DrawString(sub, Gfx.F(T.FontName, 14.5f * k, FontStyle.Regular), b, new RectangleF(tx, lr.Y + 38 * k, Width - tx - 40 * k, 24 * k), Gfx.Left);
             g.Restore(stT);
             Close(g, CloseRect, hotBtn == 0);
 
-            // four tips in a 2 x 2 grid
+            // the tips, two in a row
+            int rows = Math.Max(2, (Tips.Count + 1) / 2);
             float gap = 14 * k, top = lr.Bottom + 30 * k;
-            float tw = (Width - 2 * Pad - gap) / 2f, th = (StartRect.Y - 26 * k - top - gap) / 2f;
+            float tw = (Width - 2 * Pad - gap) / 2f, th = (StartRect.Y - 26 * k - top - gap * (rows - 1)) / rows;
             var fT = Gfx.F(T.FontName, 15 * k, FontStyle.Bold); var fD = Gfx.F(T.FontName, 12.5f * k, FontStyle.Regular);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < Tips.Count; i++)
             {
                 var r = new RectangleF(Pad + (i % 2) * (tw + gap), top + (i / 2) * (th + gap), tw, th);
                 float ci = Step(0.35f + i * 0.12f, 0.6f);
@@ -867,10 +885,13 @@ namespace GlassDesk
                 float d = 40 * k;
                 var ic = new RectangleF(r.X + 16 * k, r.Y + 16 * k, d, d);
                 using (var p = Gfx.Round(ic, 11 * k)) using (var b = new LinearGradientBrush(ic, P.Accent, P.Accent2, 45f)) g.FillPath(b, p);
-                DrawTipIcon(g, i, ic);
+                DrawTipIcon(g, Tips[i].Icon, ic);
                 float x = ic.Right + 14 * k;
-                using (var b = new SolidBrush(P.Text)) g.DrawString(Tips[i][0], fT, b, new RectangleF(x, r.Y + 14 * k, r.Right - x - 12 * k, 22 * k), Gfx.Left);
-                using (var b = new SolidBrush(P.Sub)) g.DrawString(Tips[i][1], fD, b, new RectangleF(x, r.Y + 38 * k, r.Right - x - 14 * k, r.Height - 44 * k), Gfx.TopLeftWrap);
+                // long titles (other languages) get a slightly smaller font instead of being cut off
+                var ft = fT; float avail = r.Right - x - 12 * k;
+                for (float sz = 15; sz > 11 && g.MeasureString(Tips[i].Title, ft).Width > avail; sz -= 0.5f) ft = Gfx.F(T.FontName, sz * k, FontStyle.Bold);
+                using (var b = new SolidBrush(P.Text)) g.DrawString(Tips[i].Title, ft, b, new RectangleF(x, r.Y + 14 * k, avail, 22 * k), Gfx.Left);
+                using (var b = new SolidBrush(P.Sub)) g.DrawString(Tips[i].Text, fD, b, new RectangleF(x, r.Y + 38 * k, r.Right - x - 14 * k, r.Height - 44 * k), Gfx.TopLeftWrap);
                 g.Restore(stC);
             }
 
@@ -881,16 +902,17 @@ namespace GlassDesk
             var sr = SettingsRect;
             Chip(g, sr, sr.Height / 2f, hotBtn == 1);
             using (var b = new SolidBrush(P.Text)) g.DrawString(Lang.L("Open Settings"), fB, b, sr, Gfx.Center);
-            AccentButton(g, StartRect, Lang.L("Get started"), fB, hotBtn == 2);
+            AccentButton(g, StartRect, okText, fB, hotBtn == 2);
         }
 
-        void DrawTipIcon(Graphics g, int i, RectangleF r)
+        void DrawTipIcon(Graphics g, string icon, RectangleF r)
         {
             float cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2, s = r.Width * 0.24f;
             using (var pen = new Pen(Color.White, 2f * k) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
             using (var b = new SolidBrush(Color.White))
             {
-                i = i == 0 ? 4 : i == 1 ? 3 : i == 3 ? 1 : 2;   // 2.0 cards: liquid drop, palette, search, clock
+                int i = icon == "drop" ? 4 : icon == "palette" ? 3 : icon == "clock" ? 1 : icon == "search" ? 2 : icon == "fences" ? 0 : 5;
+                if (i == 5) { MoreIcons(g, icon, cx, cy, s, pen, b); return; }
                 if (i == 4)        // liquid glass: a drop
                 {
                     using (var p = new GraphicsPath())
@@ -921,6 +943,66 @@ namespace GlassDesk
                     using (var b2 = new SolidBrush(Color.FromArgb(200, 255, 255, 255))) g.FillEllipse(b2, cx, cy - d * 0.9f, d, d);
                     using (var b3 = new SolidBrush(Color.FromArgb(150, 255, 255, 255))) g.FillEllipse(b3, cx - d / 2, cy - d * 0.05f, d, d);
                 }
+            }
+        }
+
+        /// <summary>Icons for the cards of newer versions.</summary>
+        void MoreIcons(Graphics g, string icon, float cx, float cy, float s, Pen pen, Brush b)
+        {
+            switch (icon)
+            {
+                case "peek":      // an eye
+                case "hide":      // an eye with a line through it
+                    using (var p = new GraphicsPath())
+                    {
+                        p.AddBezier(cx - s * 1.2f, cy, cx - s * 0.6f, cy - s * 0.9f, cx + s * 0.6f, cy - s * 0.9f, cx + s * 1.2f, cy);
+                        p.AddBezier(cx + s * 1.2f, cy, cx + s * 0.6f, cy + s * 0.9f, cx - s * 0.6f, cy + s * 0.9f, cx - s * 1.2f, cy);
+                        g.DrawPath(pen, p);
+                    }
+                    g.FillEllipse(b, cx - s * 0.35f, cy - s * 0.35f, s * 0.7f, s * 0.7f);
+                    if (icon == "hide") g.DrawLine(pen, cx - s, cy + s, cx + s, cy - s);
+                    break;
+                case "sliders":   // two sliders
+                    g.DrawLine(pen, cx - s, cy - s * 0.45f, cx + s, cy - s * 0.45f); g.FillEllipse(b, cx + s * 0.1f, cy - s * 0.8f, s * 0.7f, s * 0.7f);
+                    g.DrawLine(pen, cx - s, cy + s * 0.55f, cx + s, cy + s * 0.55f); g.FillEllipse(b, cx - s * 0.75f, cy + s * 0.2f, s * 0.7f, s * 0.7f);
+                    break;
+                case "game":      // a gamepad
+                    using (var p = Gfx.Round(new RectangleF(cx - s * 1.2f, cy - s * 0.6f, s * 2.4f, s * 1.3f), s * 0.6f)) g.DrawPath(pen, p);
+                    g.DrawLine(pen, cx - s * 0.75f, cy, cx - s * 0.25f, cy); g.DrawLine(pen, cx - s * 0.5f, cy - s * 0.25f, cx - s * 0.5f, cy + s * 0.25f);
+                    g.FillEllipse(b, cx + s * 0.35f, cy - s * 0.25f, s * 0.3f, s * 0.3f); g.FillEllipse(b, cx + s * 0.65f, cy + s * 0.02f, s * 0.3f, s * 0.3f);
+                    break;
+                case "broom":     // a sparkle: things made tidy
+                    using (var p = new GraphicsPath())
+                    {
+                        p.AddLines(new[] { new PointF(cx, cy - s * 1.1f), new PointF(cx + s * 0.28f, cy - s * 0.28f), new PointF(cx + s * 1.1f, cy), new PointF(cx + s * 0.28f, cy + s * 0.28f),
+                            new PointF(cx, cy + s * 1.1f), new PointF(cx - s * 0.28f, cy + s * 0.28f), new PointF(cx - s * 1.1f, cy), new PointF(cx - s * 0.28f, cy - s * 0.28f) });
+                        p.CloseFigure(); g.FillPath(b, p);
+                    }
+                    break;
+                case "shield":    // a shield with a tick
+                    using (var p = new GraphicsPath())
+                    {
+                        p.AddLines(new[] { new PointF(cx, cy - s * 1.15f), new PointF(cx + s, cy - s * 0.7f), new PointF(cx + s * 0.85f, cy + s * 0.3f), new PointF(cx, cy + s * 1.15f),
+                            new PointF(cx - s * 0.85f, cy + s * 0.3f), new PointF(cx - s, cy - s * 0.7f) });
+                        p.CloseFigure(); g.DrawPath(pen, p);
+                    }
+                    g.DrawLines(pen, new[] { new PointF(cx - s * 0.4f, cy), new PointF(cx - s * 0.08f, cy + s * 0.32f), new PointF(cx + s * 0.45f, cy - s * 0.3f) });
+                    break;
+                case "vinyl":     // a record
+                    g.DrawEllipse(pen, cx - s, cy - s, 2 * s, 2 * s); g.FillEllipse(b, cx - s * 0.3f, cy - s * 0.3f, s * 0.6f, s * 0.6f);
+                    break;
+                case "photo":     // a picture: a sun over hills
+                    using (var p = Gfx.Round(new RectangleF(cx - s * 1.1f, cy - s * 0.85f, s * 2.2f, s * 1.7f), 3 * k)) g.DrawPath(pen, p);
+                    g.DrawLines(pen, new[] { new PointF(cx - s * 0.9f, cy + s * 0.6f), new PointF(cx - s * 0.2f, cy - s * 0.1f), new PointF(cx + s * 0.3f, cy + s * 0.35f), new PointF(cx + s * 0.9f, cy - s * 0.2f) });
+                    g.FillEllipse(b, cx + s * 0.35f, cy - s * 0.65f, s * 0.4f, s * 0.4f);
+                    break;
+                case "roll":      // a bar with an arrow up
+                    using (var p = Gfx.Round(new RectangleF(cx - s * 1.1f, cy + s * 0.4f, s * 2.2f, s * 0.6f), 3 * k)) g.DrawPath(pen, p);
+                    g.DrawLine(pen, cx, cy + s * 0.1f, cx, cy - s * 1.1f); g.DrawLines(pen, new[] { new PointF(cx - s * 0.45f, cy - s * 0.65f), new PointF(cx, cy - s * 1.1f), new PointF(cx + s * 0.45f, cy - s * 0.65f) });
+                    break;
+                default:          // a star
+                    g.FillEllipse(b, cx - s * 0.5f, cy - s * 0.5f, s, s);
+                    break;
             }
         }
 

@@ -110,7 +110,7 @@ namespace GlassDesk
         // ---------- Window placement ----------
         [StructLayout(LayoutKind.Sequential)]
         public struct WINDOWPOS { public IntPtr hwnd, hwndInsertAfter; public int x, y, cx, cy; public uint flags; }
-        public static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
+        public static readonly IntPtr HWND_BOTTOM = new IntPtr(1), HWND_TOPMOST = new IntPtr(-1), HWND_NOTOPMOST = new IntPtr(-2);
         public const uint SWP_NOSIZE = 0x1, SWP_NOMOVE = 0x2, SWP_NOZORDER = 0x4, SWP_NOACTIVATE = 0x10;
         [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string name);
@@ -155,6 +155,18 @@ namespace GlassDesk
             }
             if (defView == IntPtr.Zero) return IntPtr.Zero;
             return FindWindowEx(defView, IntPtr.Zero, "SysListView32", null);
+        }
+        /// <summary>True when an icon on the Windows desktop is selected (so a double-click there opened it).</summary>
+        public static bool DesktopIconSelected()
+        {
+            if (!IsWindows) return false;
+            try
+            {
+                IntPtr defView; IntPtr lv = DesktopListView(out defView);
+                if (lv == IntPtr.Zero || !IsWindowVisible(lv)) return false;
+                return SendMessage(lv, 0x1032 /* LVM_GETSELECTEDCOUNT */, IntPtr.Zero, IntPtr.Zero).ToInt64() > 0;
+            }
+            catch { return false; }
         }
         public static void SetDesktopIconsVisible(bool visible)
         {

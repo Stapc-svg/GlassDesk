@@ -1,6 +1,6 @@
 // GlassDesk 1.8 - the music widget: what's playing right now, or the last song you heard.
-// Windows tells every app which song is playing (the same info as the volume flyout). A small hidden
-// PowerShell helper reads it every 1.5 seconds and prints one line; the widget only draws it.
+// Windows tells every app which song is playing (the same info as the volume flyout). MediaNow reads it
+// every 1.5 seconds inside GlassDesk (no PowerShell since 2.1.1); the widget only draws it.
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -20,8 +20,7 @@ namespace GlassDesk
         DateTime posAt = DateTime.Now;
         Bitmap cover;
         bool sample, started;
-        Process helper;
-        int restarts;
+        MediaNow reader;
         System.Windows.Forms.Timer tick, spin;
         float angle;                       // the record turns while a song plays
         Color coverTone = Color.Empty;     // average color of the cover, for the glow behind the record
@@ -81,34 +80,17 @@ namespace GlassDesk
             try
             {
                 Directory.CreateDirectory(Settings.Folder);
-                string script = Path.Combine(Settings.Folder, "music-helper.ps1");
-                File.WriteAllText(script, Script, Encoding.UTF8);
-                var psi = new ProcessStartInfo("powershell.exe",
-                    "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"" + script + "\" " + Process.GetCurrentProcess().Id + " \"" + CoverFile + "\"")
-                { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, StandardOutputEncoding = Encoding.UTF8 };
-                helper = new Process { StartInfo = psi, EnableRaisingEvents = true };
-                helper.OutputDataReceived += (s, ev) => { string line = ev.Data; if (line == null) return; try { BeginInvoke(new Action(delegate { OnLine(line); })); } catch { } };
-                helper.Exited += delegate
-                {
-                    try { BeginInvoke(new Action(delegate { started = false; helper = null; if (Visible && ++restarts <= 3) StartHelperLater(); })); } catch { }
-                };
-                helper.Start();
-                helper.BeginOutputReadLine();
+                // the script older versions left behind is not needed any more
+                try { File.Delete(Path.Combine(Settings.Folder, "music-helper.ps1")); } catch { }
+                reader = new MediaNow(CoverFile, line => { try { BeginInvoke(new Action(delegate { OnLine(line); })); } catch { } });
+                reader.Start();
             }
-            catch (Exception ex) { Program.Log(ex); started = false; helper = null; }
-        }
-        void StartHelperLater()
-        {
-            var t = new System.Windows.Forms.Timer { Interval = 20000 };
-            t.Tick += delegate { t.Stop(); t.Dispose(); StartHelper(); };
-            t.Start();
+            catch (Exception ex) { Program.Log(ex); started = false; reader = null; }
         }
         void StopHelper()
         {
-            var h = helper; helper = null; started = false;
-            if (h == null) return;
-            try { if (!h.HasExited) h.Kill(); } catch { }
-            try { h.Dispose(); } catch { }
+            var r = reader; reader = null; started = false;
+            if (r != null) r.Stop();
         }
 
         // one line from the helper: N (nothing playing) or S <tab> status <tab> title <tab> artist <tab> pos <tab> dur <tab> cover changed (1/0)
@@ -387,61 +369,5 @@ namespace GlassDesk
             }
         }
 
-        // ---------------- the PowerShell helper ----------------
-        const string Script = @"param([int]$owner, [string]$cover)
-$ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = [Text.Encoding]::UTF8
-Add-Type -AssemblyName System.Runtime.WindowsRuntime
-$asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
-function Await($op, [Type]$type) { $t = $asTask.MakeGenericMethod($type).Invoke($null, @($op)); $null = $t.Wait(5000); $t.Result }
-$null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
-$null = [Windows.Storage.Streams.IRandomAccessStreamWithContentType, Windows.Storage.Streams, ContentType = WindowsRuntime]
-$mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-$last = '#'; $tries = 0; $lastHash = ''
-$md5 = [System.Security.Cryptography.MD5]::Create()
-function Clean($s) { if ($s -eq $null) { return '' } return ($s -replace ""[`t`r`n]"", ' ') }
-while ($true) {
-  if (-not (Get-Process -Id $owner -ErrorAction SilentlyContinue)) { exit }
-  try {
-    $s = $mgr.GetCurrentSession()
-    if ($s -eq $null) { [Console]::Out.WriteLine('N') }
-    else {
-      $p = Await ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
-      $info = $s.GetPlaybackInfo(); $tl = $s.GetTimelineProperties()
-      $status = [string]$info.PlaybackStatus
-      $pos = $tl.Position.TotalSeconds
-      if ($status -eq 'Playing' -and $tl.LastUpdatedTime.Year -gt 2000) { $pos += ([DateTimeOffset]::Now - $tl.LastUpdatedTime).TotalSeconds }
-      $dur = ($tl.EndTime - $tl.StartTime).TotalSeconds
-      if ($pos -gt $dur -and $dur -gt 0) { $pos = $dur }
-      $key = $p.Title + '|' + $p.Artist
-      $art = '0'
-      # a new song: apps often send the picture a few seconds after the title, so keep looking for a while
-      if ($key -ne $last) { $last = $key; $tries = 8; $art = '-'; $lastHash = '' }
-      if ($tries -gt 0) {
-        $tries--
-        if ($p.Thumbnail -ne $null) {
-          try {
-            $st = Await ($p.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-            $in = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($st)
-            $ms = New-Object System.IO.MemoryStream; $in.CopyTo($ms); $in.Close()
-            $bytes = $ms.ToArray()
-            $h = [BitConverter]::ToString($md5.ComputeHash($bytes))
-            if ($bytes.Length -gt 100 -and $h -ne $lastHash) {
-              $lastHash = $h
-              $tmp = $cover + '.tmp'
-              [System.IO.File]::WriteAllBytes($tmp, $bytes)
-              Move-Item -Force $tmp $cover
-              $art = '1'
-            }
-          } catch { }
-        }
-      }
-      [Console]::Out.WriteLine('S' + ""`t"" + $status + ""`t"" + (Clean $p.Title) + ""`t"" + (Clean $p.Artist) + ""`t"" + [int][Math]::Max(0, $pos) + ""`t"" + [int][Math]::Max(0, $dur) + ""`t"" + $art)
-    }
-  } catch { [Console]::Out.WriteLine('N') }
-  [Console]::Out.Flush()
-  Start-Sleep -Milliseconds 1500
-}
-";
     }
 }

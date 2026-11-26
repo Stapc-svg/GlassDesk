@@ -937,7 +937,7 @@ namespace GlassDesk
         protected override void WndProc(ref Message m)
         {
             if (m.Msg == WM_MOUSEACTIVATE) { m.Result = new IntPtr(3); return; } // MA_NOACTIVATE
-            if (m.Msg == WM_WINDOWPOSCHANGING && Cfg.KeepBehindWindows && Native.IsWindows)
+            if (m.Msg == WM_WINDOWPOSCHANGING && Cfg.KeepBehindWindows && Native.IsWindows && !App.Peeking)
             {
                 var wp = (Native.WINDOWPOS)Marshal.PtrToStructure(m.LParam, typeof(Native.WINDOWPOS));
                 wp.hwndInsertAfter = Native.HWND_BOTTOM;

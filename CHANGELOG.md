@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.2.0
+
+- **Double-click to hide everything.** Double-click an empty spot on the desktop and every fence, widget and desktop icon fades away, for a clean wallpaper in screenshots or video calls. Double-click again to bring it all back. (Settings › General › Behavior.)
+- **Peek at your desktop (Ctrl + Alt + Space).** Your fences and widgets come up on top of your open apps, with the apps dimmed behind them. Open a file, press Esc, click outside or press the shortcut again and they go back behind your windows.
+- **Quick settings widget.** Volume and brightness sliders, and Wi-Fi, Bluetooth, dark mode and mute buttons, right on the desktop. Scroll over it to change the volume. Brightness works on laptop screens and on monitors that allow it (DDC/CI).
+- **Game stats widget.** Graphics card load (any NVIDIA, AMD or Intel GPU, the same numbers as Task Manager), graphics memory, CPU, a load graph, and the PC's temperature. NVIDIA cards also show GPU temperature and fan speed. Off by default: turn it on in Settings › Widgets.
+- **What's new after every update.** When GlassDesk updates, people who already used it see a window with what's new since the version they had. New users get the welcome screen instead. Settings › About › What's new shows it again.
+- **Important updates pop up.** GlassDesk now looks for updates three times a day. If a release's title says "important update", its window opens straight away instead of a quiet notification, and it can't be skipped.
+- **Smart cleanup — only when you say yes.** GlassDesk can find old screenshots, installers you downloaded weeks ago, desktop files you haven't opened in two months and huge old downloads. Nothing moves until you look at the list and press **Tidy**. Files go to plain folders (Old screenshots, Old installers, Old desktop files), big files to the Recycle Bin, and **Undo** puts everything back. Tray menu › Tidy up old files…, or turn on a weekly reminder in Settings › Organizer › Smart cleanup.
+
+## 2.1.1
+
+- **No more false virus warnings.** Microsoft Defender and some other antivirus apps flagged 2.1.0 as malware. It wasn't: the music widget used a small hidden PowerShell script to read which song is playing, and antivirus apps treat hidden PowerShell scripts as suspicious. GlassDesk now reads the song and its cover itself, with no script and no extra program running. The music widget works the same as before.
+- The old `music-helper.ps1` file is deleted from GlassDesk's settings folder the first time 2.1.1 runs.
+
 ## 2.1.0
 
 - **Quick search in liquid glass.** When you use liquid glass, the search window (Ctrl + Alt + F) is liquid glass too, and every app sits on its own little lens of glass. While the list scrolls, the tiles use the plain look so scrolling stays smooth on slower PCs.
