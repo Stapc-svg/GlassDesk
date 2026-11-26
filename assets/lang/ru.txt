@@ -440,3 +440,59 @@ Choose my clock photos…	Выбрать мои фото для часов…
 Roll up all widgets	Свернуть все виджеты
 Expand all widgets	Развернуть все виджеты
 Your own photos — a new one every 30 minutes	Ваши фото — новое каждые 30 минут
+Quick settings	Быстрые настройки
+Game stats	Игровая статистика
+Wi-Fi	Wi-Fi
+Bluetooth	Bluetooth
+Dark mode	Тёмная тема
+Sound	Звук
+Muted	Без звука
+No sound device	Нет звукового устройства
+This screen can't be dimmed from here	Яркость этого экрана здесь не меняется
+GPU	GPU
+GPU memory	Память GPU
+GPU temp	Темп. GPU
+Fan	Вентилятор
+PC temp	Темп. ПК
+Graphics card	Видеокарта
+Peek at desktop    Ctrl+Alt+Space	Показать рабочий стол    Ctrl+Alt+Пробел
+Tidy up old files…	Убрать старые файлы…
+Tidy up old files	Убрать старые файлы
+Peek shortcut	Сочетание для просмотра
+Press Ctrl + Alt + Space to bring your fences and widgets over your apps	Нажмите Ctrl + Alt + Пробел, чтобы показать панели и виджеты поверх приложений
+Double-click to hide everything	Двойной щелчок — скрыть всё
+Double-click an empty spot on the desktop to hide every panel and icon. Double-click again to bring them back	Дважды щёлкните по пустому месту рабочего стола, чтобы скрыть панели и значки. Ещё раз — чтобы вернуть
+Volume, brightness, Wi-Fi, Bluetooth, dark mode and mute	Громкость, яркость, Wi-Fi, Bluetooth, тёмная тема и без звука
+Graphics card load, memory and temperature, CPU and PC temperature	Загрузка, память и температура видеокарты, CPU и температура ПК
+Smart cleanup	Умная уборка
+Suggest tidying old files	Предлагать убрать старые файлы
+Once a week, if there's a lot to tidy. Nothing moves until you say yes	Раз в неделю, если есть что убрать. Ничего не перемещается без вашего согласия
+Old screenshots	Старые скриншоты
+Old installers	Старые установщики
+Forgotten desktop files	Забытые файлы на рабочем столе
+Big old downloads	Большие старые загрузки
+Look now	Посмотреть сейчас
+Review…	Просмотреть…
+Undo last tidy-up	Отменить последнюю уборку
+Undo	Отменить
+Undone	Отменено
+{0} files are back where they were.	{0} файлов возвращены на место.
+Not now	Не сейчас
+Tidy	Убрать
+files	файлов
+files ticked	файлов отмечено
+Nothing ticked	Ничего не отмечено
+Done	Готово
+Tidied {0} files.	Убрано файлов: {0}.
+{0} went to the Recycle Bin.	{0} отправлено в корзину.
+Nothing has moved. Untick anything you want to keep, then press Tidy.	Ничего не перемещено. Снимите отметку с того, что хотите оставить, и нажмите «Убрать».
+Files go to folders you can open any time, and Undo puts them back.	Файлы попадают в папки, которые всегда можно открыть, а «Отменить» вернёт их.
+Changed your mind? Undo puts every moved file back.	Передумали? «Отменить» вернёт все перемещённые файлы.
+Nothing to tidy	Нечего убирать
+Your desktop, Downloads and screenshots look tidy already.	Рабочий стол, загрузки и скриншоты уже в порядке.
+GlassDesk can tidy {0} old files	GlassDesk может убрать {0} старых файлов
+Nothing moves until you say yes. Click to see them.	Ничего не перемещается без вашего согласия. Нажмите, чтобы посмотреть.
+{0} months old	{0} мес. назад
+{0} weeks old	{0} нед. назад
+{0} days old	{0} дн. назад
+Double-click the desktop	Двойной щелчок по рабочему столу

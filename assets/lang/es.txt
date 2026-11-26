@@ -440,3 +440,59 @@ Choose my clock photos…	Elegir mis fotos del reloj…
 Roll up all widgets	Contraer todos los widgets
 Expand all widgets	Expandir todos los widgets
 Your own photos — a new one every 30 minutes	Tus propias fotos — una nueva cada 30 minutos
+Quick settings	Ajustes rápidos
+Game stats	Estadísticas de juego
+Wi-Fi	Wi-Fi
+Bluetooth	Bluetooth
+Dark mode	Modo oscuro
+Sound	Sonido
+Muted	Silenciado
+No sound device	Sin dispositivo de sonido
+This screen can't be dimmed from here	Esta pantalla no se puede atenuar desde aquí
+GPU	GPU
+GPU memory	Memoria GPU
+GPU temp	Temp. GPU
+Fan	Ventilador
+PC temp	Temp. PC
+Graphics card	Tarjeta gráfica
+Peek at desktop    Ctrl+Alt+Space	Ver el escritorio    Ctrl+Alt+Espacio
+Tidy up old files…	Ordenar archivos viejos…
+Tidy up old files	Ordenar archivos viejos
+Peek shortcut	Atajo para ver el escritorio
+Press Ctrl + Alt + Space to bring your fences and widgets over your apps	Pulsa Ctrl + Alt + Espacio para traer tus cercas y widgets sobre tus apps
+Double-click to hide everything	Doble clic para ocultar todo
+Double-click an empty spot on the desktop to hide every panel and icon. Double-click again to bring them back	Haz doble clic en un espacio vacío del escritorio para ocultar paneles e iconos. Otro doble clic los trae de vuelta
+Volume, brightness, Wi-Fi, Bluetooth, dark mode and mute	Volumen, brillo, Wi-Fi, Bluetooth, modo oscuro y silencio
+Graphics card load, memory and temperature, CPU and PC temperature	Carga, memoria y temperatura de la gráfica, CPU y temperatura del PC
+Smart cleanup	Limpieza inteligente
+Suggest tidying old files	Sugerir ordenar archivos viejos
+Once a week, if there's a lot to tidy. Nothing moves until you say yes	Una vez por semana, si hay mucho por ordenar. Nada se mueve hasta que digas que sí
+Old screenshots	Capturas viejas
+Old installers	Instaladores viejos
+Forgotten desktop files	Archivos olvidados del escritorio
+Big old downloads	Descargas grandes y viejas
+Look now	Mirar ahora
+Review…	Revisar…
+Undo last tidy-up	Deshacer el último orden
+Undo	Deshacer
+Undone	Deshecho
+{0} files are back where they were.	{0} archivos volvieron a su lugar.
+Not now	Ahora no
+Tidy	Ordenar
+files	archivos
+files ticked	archivos marcados
+Nothing ticked	Nada marcado
+Done	Listo
+Tidied {0} files.	Se ordenaron {0} archivos.
+{0} went to the Recycle Bin.	{0} fueron a la Papelera.
+Nothing has moved. Untick anything you want to keep, then press Tidy.	Nada se ha movido. Desmarca lo que quieras conservar y pulsa Ordenar.
+Files go to folders you can open any time, and Undo puts them back.	Los archivos van a carpetas que puedes abrir cuando quieras, y Deshacer los devuelve.
+Changed your mind? Undo puts every moved file back.	¿Cambiaste de idea? Deshacer devuelve cada archivo movido.
+Nothing to tidy	Nada que ordenar
+Your desktop, Downloads and screenshots look tidy already.	Tu escritorio, Descargas y capturas ya están ordenados.
+GlassDesk can tidy {0} old files	GlassDesk puede ordenar {0} archivos viejos
+Nothing moves until you say yes. Click to see them.	Nada se mueve hasta que digas que sí. Haz clic para verlos.
+{0} months old	hace {0} meses
+{0} weeks old	hace {0} semanas
+{0} days old	hace {0} días
+Double-click the desktop	Doble clic en el escritorio

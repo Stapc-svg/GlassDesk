@@ -617,6 +617,7 @@ namespace GlassDesk
         {
             try
             {
+                if (App.Peeking) App.Current.EndPeek();
                 if (it.IsRecycleBin) Process.Start("explorer.exe", "shell:RecycleBinFolder");
                 else Process.Start(new ProcessStartInfo(it.Path) { UseShellExecute = true });
             }

@@ -29,6 +29,7 @@ namespace GlassDesk
         public bool Preview { get { return preview; } }
         public Control Invoker { get { return invoker; } }
         public Updater Updates;
+        public CleanupWatch Cleanup;
         public WeatherWidget WeatherW { get { return weather; } }
         public PhotoWidget PhotosW { get { return photos; } }
         public TodoWidget TodoW { get { return todo; } }
@@ -41,7 +42,7 @@ namespace GlassDesk
 
         ClockWidget clock; SystemWidget system; CalendarWidget calendar; NotesWidget notes;
         WeatherWidget weather; TodoWidget todo; PhotoWidget photos;
-        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music; DayWidget day; ClipWidget clip;
+        CountdownWidget countdown; QuoteWidget quote; GitHubWidget github; NetworkWidget network; FocusWidget focus; MusicWidget music; DayWidget day; ClipWidget clip; QuickWidget quick; GameWidget game;
         internal GitHubWidget GitHubW { get { return github; } } internal FocusWidget FocusW { get { return focus; } }
         public WallpaperChanger Wallpaper;
         readonly Dictionary<string, FenceWindow> fences = new Dictionary<string, FenceWindow>();
@@ -56,7 +57,8 @@ namespace GlassDesk
         readonly HashSet<GlassWindow> dirty = new HashSet<GlassWindow>();
         DateTime lastDay;
 
-        public App(bool preview) { this.preview = preview; }
+        public static App Current;
+        public App(bool preview) { this.preview = preview; Current = this; }
 
         // =============================================================== start
         public void Start()
@@ -99,6 +101,8 @@ namespace GlassDesk
             Updates.Start();
             Wallpaper = new WallpaperChanger(this);
             Safe("backup", delegate { Backup.Daily(this); });
+            Cleanup = new CleanupWatch(this);
+            Safe("what's new", ShowWhatsNew);
 
             // the welcome screen shows once ever: the marker file stays when GlassDesk is updated
             string mark = Path.Combine(Settings.Folder, "welcome-screen-shown");
@@ -133,6 +137,32 @@ namespace GlassDesk
             music = new MusicWidget(this); Windows.Add(music);
             day = new DayWidget(this); Windows.Add(day);
             clip = new ClipWidget(this); Windows.Add(clip);
+            quick = new QuickWidget(this); Windows.Add(quick);
+            game = new GameWidget(this); Windows.Add(game);
+        }
+
+        /// <summary>After updating to 2.2: one notification about what's new (new users get the welcome screen instead).</summary>
+        void ShowWhatsNew()
+        {
+            if (preview) return;
+            string mark = Path.Combine(Settings.Folder, "whats-new-2.2");
+            if (File.Exists(mark)) return;
+            bool updated = File.Exists(Path.Combine(Settings.Folder, "welcome-screen-shown"));
+            try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(mark, Version); } catch { }
+            if (!updated) return;
+            var t = new Timer { Interval = 6000 };
+            t.Tick += delegate
+            {
+                t.Stop(); t.Dispose();
+                Notify("GlassDesk 2.2", Lang.L("Double-click the desktop to hide everything. Ctrl + Alt + Space to peek. New: Quick settings and Game stats widgets, and smart cleanup."), delegate { ShowSettings(); });
+            };
+            t.Start();
+        }
+
+        /// <summary>The list of old files GlassDesk could tidy. Nothing moves until you press Tidy.</summary>
+        public void ShowCleanup(bool fromReminder)
+        {
+            Cleanup.Review(fromReminder);
         }
 
         Action balloonClick;
@@ -418,7 +448,7 @@ namespace GlassDesk
             clock.Wanted = Settings.ShowClock; system.Wanted = Settings.ShowSystem;
             calendar.Wanted = Settings.ShowCalendar; notes.Wanted = Settings.ShowNotes;
             weather.Wanted = Settings.ShowWeather; todo.Wanted = Settings.ShowTodo; photos.Wanted = Settings.ShowPhotos;
-            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic; day.Wanted = Settings.ShowDay; clip.Wanted = Settings.ShowClip;
+            countdown.Wanted = Settings.ShowCountdown; quote.Wanted = Settings.ShowQuote; github.Wanted = Settings.ShowGitHub; network.Wanted = Settings.ShowNetwork; focus.Wanted = Settings.ShowFocus; music.Wanted = Settings.ShowMusic; day.Wanted = Settings.ShowDay; clip.Wanted = Settings.ShowClip; quick.Wanted = Settings.ShowQuick; game.Wanted = Settings.ShowGame;
             ApplyGroups();
             if (!preview) UpdateWatchers();
             PlaceAll();
@@ -693,7 +723,7 @@ namespace GlassDesk
             else Settings.WidgetStyles[id] = style;
             Settings.Save(); ApplySettings();
         }
-        public string[] AllWidgetIds() { return new[] { "clock", "system", "calendar", "notes", "todo", "countdown", "quote", "github", "network", "focus", "music", "day", "clip", "weather", "photos" }; }
+        public string[] AllWidgetIds() { return new[] { "clock", "system", "calendar", "notes", "todo", "countdown", "quote", "github", "network", "focus", "music", "day", "clip", "quick", "game", "weather", "photos" }; }
 
         public void ApplySettings()
         {
@@ -737,7 +767,10 @@ namespace GlassDesk
             catch { }
             // hotkey
             if (hotkey == null && Native.IsWindows) hotkey = new HotkeyWindow(this);
-            if (hotkey != null) { hotkey.Set(1, Settings.Hotkey, Keys.G); hotkey.Set(2, Settings.SearchHotkey, Keys.F); }
+            if (hotkey != null) { hotkey.Set(1, Settings.Hotkey, Keys.G); hotkey.Set(2, Settings.SearchHotkey, Keys.F); hotkey.Set(3, Settings.PeekHotkey, Keys.Space); }
+            // double-click the desktop to hide everything
+            if (dblClick == null && Native.IsWindows && !preview) dblClick = new DesktopDoubleClick(this);
+            if (dblClick != null) dblClick.Enabled = Settings.DoubleClickHide;
             // desktop icons
             if (Settings.HideDesktopIcons) { Native.SetDesktopIconsVisible(false); iconsHiddenByUs = true; }
             else if (iconsHiddenByUs) { Native.SetDesktopIconsVisible(true); iconsHiddenByUs = false; }
@@ -847,6 +880,50 @@ namespace GlassDesk
 
         public void MarkDirty(GlassWindow w) { dirty.Add(w); }
 
+        bool cleanRequest, cleanHidIcons;
+        DesktopDoubleClick dblClick;
+        /// <summary>Double-click on the desktop: hide (or bring back) every panel and the desktop icons.</summary>
+        public void ToggleClean()
+        {
+            if (fadingOut || Peeking) return;
+            cleanRequest = !hiddenByUser;
+            ToggleVisible();
+        }
+
+        // ---- peek: panels on top of your apps for a moment (Ctrl + Alt + Space) ----
+        public static bool Peeking;
+        PeekShade shade;
+        public void Peek()
+        {
+            if (Peeking) { EndPeek(); return; }
+            if (hiddenByUser) { ToggleVisible(); return; }
+            var vis = Windows.FindAll(x => x.Visible && x.IsHandleCreated);
+            if (vis.Count == 0 || !Native.IsWindows) return;
+            Peeking = true;
+            shade = new PeekShade(EndPeek);
+            shade.Show();
+            foreach (var w in vis)
+            {
+                Native.SetOwner(w.Handle, IntPtr.Zero);
+                Native.SetWindowPos(w.Handle, Native.HWND_TOPMOST, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
+            }
+            if (hotkey != null) hotkey.Set(4, true, Keys.Escape, 0);
+        }
+        public void EndPeek()
+        {
+            if (!Peeking) return;
+            Peeking = false;
+            if (hotkey != null) hotkey.Set(4, false, Keys.Escape, 0);
+            foreach (var w in Windows.ToArray())
+            {
+                if (w.IsDisposed || !w.IsHandleCreated) continue;
+                Native.SetWindowPos(w.Handle, Native.HWND_NOTOPMOST, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
+                w.ApplyStyle();
+            }
+            var s = shade; shade = null;
+            if (s != null) { s.Close(); s.Dispose(); }
+        }
+
         bool fadingOut;
         public void ToggleVisible()
         {
@@ -870,6 +947,10 @@ namespace GlassDesk
             hiddenByUser = !hiddenByUser;
             PlaceAll();
             if (Settings.HideDesktopIcons) Native.SetDesktopIconsVisible(hiddenByUser);
+            // a double-click on the desktop hides the Windows icons too, for a clean wallpaper
+            if (hiddenByUser && cleanRequest) { Native.SetDesktopIconsVisible(false); cleanHidIcons = true; }
+            else if (!hiddenByUser && cleanHidIcons) { Native.SetDesktopIconsVisible(!Settings.HideDesktopIcons); cleanHidIcons = false; }
+            cleanRequest = false;
             if (hiddenByUser && Settings.TrimMemory) Native.TrimMemory();
             BuildTrayMenu();
         }
@@ -910,7 +991,7 @@ namespace GlassDesk
         {
             { "clock", "Clock" }, { "system", "System" }, { "calendar", "Calendar" }, { "notes", "Notes" }, { "weather", "Weather" },
             { "todo", "To-do" }, { "photos", "Photos" }, { "countdown", "Countdown" }, { "quote", "Quote" }, { "github", "GitHub" },
-            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" }, { "day", "Today" }, { "clip", "Clipboard" },
+            { "network", "Network" }, { "focus", "Focus timer" }, { "music", "Music" }, { "day", "Today" }, { "clip", "Clipboard" }, { "quick", "Quick settings" }, { "game", "Game stats" },
         };
         public static string WidgetName(string id) { string n; return widgetNames.TryGetValue(id, out n) ? n : id; }
 
@@ -960,7 +1041,7 @@ namespace GlassDesk
             var S = Settings;
             if (w == clock) return S.ShowClock; if (w == system) return S.ShowSystem; if (w == calendar) return S.ShowCalendar; if (w == notes) return S.ShowNotes;
             if (w == countdown) return S.ShowCountdown; if (w == quote) return S.ShowQuote; if (w == github) return S.ShowGitHub; if (w == network) return S.ShowNetwork;
-            if (w == focus) return S.ShowFocus; if (w == music) return S.ShowMusic; if (w == day) return S.ShowDay; if (w == clip) return S.ShowClip;
+            if (w == focus) return S.ShowFocus; if (w == music) return S.ShowMusic; if (w == day) return S.ShowDay; if (w == clip) return S.ShowClip; if (w == quick) return S.ShowQuick; if (w == game) return S.ShowGame;
             if (w == weather) return S.ShowWeather; if (w == todo) return S.ShowTodo; if (w == photos) return S.ShowPhotos;
             return w.Visible;
         }
@@ -970,7 +1051,7 @@ namespace GlassDesk
             var S = Settings;
             if (w == clock) S.ShowClock = on; else if (w == system) S.ShowSystem = on; else if (w == calendar) S.ShowCalendar = on; else if (w == notes) S.ShowNotes = on;
             else if (w == countdown) S.ShowCountdown = on; else if (w == quote) S.ShowQuote = on; else if (w == github) S.ShowGitHub = on; else if (w == network) S.ShowNetwork = on;
-            else if (w == focus) S.ShowFocus = on; else if (w == music) S.ShowMusic = on; else if (w == day) S.ShowDay = on; else if (w == clip) S.ShowClip = on;
+            else if (w == focus) S.ShowFocus = on; else if (w == music) S.ShowMusic = on; else if (w == day) S.ShowDay = on; else if (w == clip) S.ShowClip = on; else if (w == quick) S.ShowQuick = on; else if (w == game) S.ShowGame = on;
             else if (w == weather) S.ShowWeather = on; else if (w == todo) S.ShowTodo = on; else if (w == photos) S.ShowPhotos = on;
             else return;
             S.Save(); ApplySettings();
@@ -1130,10 +1211,12 @@ namespace GlassDesk
             m.Items.Add(Lang.L("Settings"), null, delegate { ShowSettings(); });
             m.Items.Add((hiddenByUser ? "Show" : "Hide") + " panels    Ctrl+Alt+G", null, delegate { ToggleVisible(); });
             m.Items.Add(Lang.L("Find on desktop…    Ctrl+Alt+F"), null, delegate { ShowSearch(); });
+            m.Items.Add(Lang.L("Peek at desktop    Ctrl+Alt+Space"), null, delegate { Peek(); });
             m.Items.Add(Lang.L("New fence…"), null, delegate { NewFence(); });
             m.Items.Add(Lang.L("Add a rule…"), null, delegate { AddRule(null); });
             m.Items.Add(Lang.L("Edit note"), null, delegate { if (!notes.Visible) { Settings.ShowNotes = true; ApplySettings(); } notes.Edit(); });
             m.Items.Add(Lang.L("Organize desktop…"), null, delegate { ShowOrganize(); });
+            m.Items.Add(Lang.L("Tidy up old files…"), null, delegate { ShowCleanup(false); });
             m.Items.Add(Lang.L("Rescan desktop"), null, delegate { Rebuild(); });
             m.Items.Add(Lang.L("Check for updates"), null, delegate { Updates.Check(true); });
             m.Items.Add(new ToolStripSeparator());
@@ -1209,7 +1292,7 @@ namespace GlassDesk
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;
                 else if (w == calendar) Settings.ShowCalendar = false; else if (w == notes) Settings.ShowNotes = false;
-                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false; else if (w == day) Settings.ShowDay = false; else if (w == clip) Settings.ShowClip = false;
+                else if (w == countdown) Settings.ShowCountdown = false; else if (w == quote) Settings.ShowQuote = false; else if (w == github) Settings.ShowGitHub = false; else if (w == network) Settings.ShowNetwork = false; else if (w == focus) Settings.ShowFocus = false; else if (w == music) Settings.ShowMusic = false; else if (w == day) Settings.ShowDay = false; else if (w == clip) Settings.ShowClip = false; else if (w == quick) Settings.ShowQuick = false; else if (w == game) Settings.ShowGame = false;
                 else if (w == weather) Settings.ShowWeather = false; else if (w == todo) Settings.ShowTodo = false; else if (w == photos) Settings.ShowPhotos = false;
                 Settings.Save(); ApplySettings();
             });
@@ -1227,7 +1310,9 @@ namespace GlassDesk
                 SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
                 SystemEvents.UserPreferenceChanged -= OnUserPrefChanged;
                 if (iconsHiddenByUs) Native.SetDesktopIconsVisible(true);
-                if (hotkey != null) { hotkey.Set(1, false, Keys.G); hotkey.Set(2, false, Keys.F); hotkey.Destroy(); }
+                if (Peeking) EndPeek();
+                if (hotkey != null) { hotkey.Set(1, false, Keys.G); hotkey.Set(2, false, Keys.F); hotkey.Set(3, false, Keys.Space); hotkey.Destroy(); }
+                if (dblClick != null) dblClick.Dispose();
                 foreach (var w in watchers) w.Dispose();
                 tray.Visible = false; tray.Dispose();
                 if (settingsForm != null) settingsForm.Close();
@@ -1283,18 +1368,21 @@ namespace GlassDesk
             readonly App app;
             public HotkeyWindow(App app) { this.app = app; CreateControl(); }
             public void Destroy() { Dispose(); }
-            readonly bool[] on = new bool[3];
+            readonly bool[] on = new bool[5];
             /// <summary>Turns Ctrl + Alt + key on or off for the given id.</summary>
-            public void Set(int id, bool want, Keys key)
+            public void Set(int id, bool want, Keys key) { Set(id, want, key, 0x1 | 0x2); }
+            public void Set(int id, bool want, Keys key, uint mods)
             {
                 if (!IsHandleCreated || want == on[id]) return;
-                if (want) on[id] = Native.RegisterHotKey(Handle, id, 0x1 | 0x2 | 0x4000, (uint)key);
+                if (want) on[id] = Native.RegisterHotKey(Handle, id, mods | 0x4000, (uint)key);
                 else { Native.UnregisterHotKey(Handle, id); on[id] = false; }
             }
             protected override void WndProc(ref Message m)
             {
                 if (m.Msg == 0x312 && m.WParam.ToInt32() == 1) app.ToggleVisible();
                 if (m.Msg == 0x312 && m.WParam.ToInt32() == 2) app.ShowSearch();
+                if (m.Msg == 0x312 && m.WParam.ToInt32() == 3) app.Peek();
+                if (m.Msg == 0x312 && m.WParam.ToInt32() == 4) app.EndPeek();
                 base.WndProc(ref m);
             }
         }
@@ -1336,11 +1424,12 @@ namespace GlassDesk
             string rl = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_ROLL");
             if (!string.IsNullOrEmpty(rl)) foreach (var id in rl.Split(',')) Settings.Collapsed.Add("w:" + id);
             Settings.ShowPhotos = true;
+            Settings.ShowGame = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GAME") != "0";
             Settings.TodoText = "[ ] Science project slides\n[ ] Return library books\n[x] Pay phone bill\n[ ] Back up photos\n[x] Install GlassDesk 1.3";
             string grp = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_GROUP");   // e.g. music,quote
             if (!string.IsNullOrEmpty(grp)) Settings.Groups.Add(new List<string>(grp.Split(',')));
             CreateWidgets();
-            weather.SetSample(); clip.SetSample(); calendar.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample();
+            weather.SetSample(); clip.SetSample(); calendar.SetSample(); github.SetSample(); network.SetSample(); focus.SetSample(); music.SetSample(); quick.SetSample(); game.SetSample();
             Rebuild();
             string sample = Environment.GetEnvironmentVariable("GLASSDESK_SAMPLE_PHOTO");
             if (!string.IsNullOrEmpty(sample) && File.Exists(sample)) photos.SetSampleFile(sample);

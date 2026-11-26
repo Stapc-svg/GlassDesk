@@ -289,7 +289,9 @@ namespace GlassDesk
             Row(Lang.L("Start with Windows"), "Launch GlassDesk automatically when you sign in", Toggle(S.StartWithWindows, v => S.StartWithWindows = v));
             Row(Lang.L("Show / hide shortcut"), "Press Ctrl + Alt + G to show or hide every panel", Toggle(S.Hotkey, v => S.Hotkey = v));
             Row(Lang.L("Quick search shortcut"), "Press Ctrl + Alt + F to find anything on your desktop", Toggle(S.SearchHotkey, v => S.SearchHotkey = v));
+            Row(Lang.L("Peek shortcut"), "Press Ctrl + Alt + Space to bring your fences and widgets over your apps", Toggle(S.PeekHotkey, v => S.PeekHotkey = v));
             Section(Lang.L("Behavior"));
+            Row(Lang.L("Double-click to hide everything"), "Double-click an empty spot on the desktop to hide every panel and icon. Double-click again to bring them back", Toggle(S.DoubleClickHide, v => S.DoubleClickHide = v));
             Row(Lang.L("Lock positions"), "Stop panels from being moved or resized by accident", Toggle(S.LockPositions, v => S.LockPositions = v));
             Row(Lang.L("Keep behind windows"), "Panels stay on the desktop, underneath your apps", Toggle(S.KeepBehindWindows, v => S.KeepBehindWindows = v));
             Row(Lang.L("Open with a single click"), "Open fence items with one click instead of a double-click", Toggle(S.SingleClickOpen, v => S.SingleClickOpen = v));
@@ -458,6 +460,8 @@ namespace GlassDesk
             thumbFor = "github"; Row(Lang.L("GitHub stats"), "Stars, followers, repos and your last 14 days" + (string.IsNullOrEmpty(S.GitHubUser) ? "" : " — @" + S.GitHubUser), Toggle(S.ShowGitHub, v => S.ShowGitHub = v));
             Row(Lang.L("GitHub username"), "Public data only, no sign-in needed", Button(Lang.L("Change…"), false, delegate { if (app.GitHubW != null) app.GitHubW.ChooseUser(); }));
             thumbFor = "network"; Row(Lang.L("Network meter"), "Live download and upload speed", Toggle(S.ShowNetwork, v => S.ShowNetwork = v));
+            thumbFor = "quick"; Row(Lang.L("Quick settings"), "Volume, brightness, Wi-Fi, Bluetooth, dark mode and mute", Toggle(S.ShowQuick, v => S.ShowQuick = v));
+            thumbFor = "game"; Row(Lang.L("Game stats"), "Graphics card load, memory and temperature, CPU and PC temperature", Toggle(S.ShowGame, v => S.ShowGame = v));
             thumbFor = "focus"; Row(Lang.L("Focus timer"), "Pomodoro: " + S.FocusMinutes + " min focus, " + S.BreakMinutes + " min break — click the widget to start", Toggle(S.ShowFocus, v => S.ShowFocus = v));
 
             Section(Lang.L("Countdown"));
@@ -525,6 +529,15 @@ namespace GlassDesk
                 Row(rr[0], "goes to " + app.FenceName(rr[1]), Button(Lang.L("Delete"), false, delegate { S.Rules.Remove(rr); S.Save(); app.Rebuild(); Refresh(0); }));
             }
             Row(Lang.L("Add a rule"), "For example: *.pdf goes to School, Screenshot* goes to Images", Button(Lang.L("Add rule…"), true, delegate { app.AddRule(null); }));
+
+            Section(Lang.L("Smart cleanup"));
+            Row(Lang.L("Suggest tidying old files"), "Once a week, if there's a lot to tidy. Nothing moves until you say yes", Toggle(S.SmartCleanup, v => S.SmartCleanup = v));
+            Row(Lang.L("Old screenshots"), "Older than 2 weeks → Pictures › Old screenshots", Toggle(S.CleanShots, v => S.CleanShots = v));
+            Row(Lang.L("Old installers"), "Setup files in Downloads older than 2 weeks → Downloads › Old installers", Toggle(S.CleanInstallers, v => S.CleanInstallers = v));
+            Row(Lang.L("Forgotten desktop files"), "Not opened in 2 months → Desktop › Old desktop files (app shortcuts stay)", Toggle(S.CleanDesktop, v => S.CleanDesktop = v));
+            Row(Lang.L("Big old downloads"), "Over 500 MB and a month old → Recycle Bin, only the ones you tick", Toggle(S.CleanBig, v => S.CleanBig = v));
+            Row(Lang.L("Look now"), "See what could be tidied. You choose what moves", Button(Lang.L("Review…"), true, delegate { app.ShowCleanup(false); }));
+            if (CleanupWatch.CanUndo) Row(Lang.L("Undo last tidy-up"), "Put the files from the last tidy-up back where they were", Button(Lang.L("Undo"), false, delegate { int n = CleanupWatch.Undo(); app.Rebuild(); app.Notify(Lang.L("Undone"), string.Format(Lang.L("{0} files are back where they were."), n), null); Refresh(0); }));
 
             Section(Lang.L("Find & sort"));
             Row(Lang.L("Quick search"), "Press Ctrl + Alt + F, type a few letters and press Enter to open", Button(Lang.L("Open search"), false, delegate { app.ShowSearch(); }));
@@ -637,6 +650,8 @@ namespace GlassDesk
             Row(Lang.L("Double-click a fence title"), "Roll the fence up / down", null);
             Row(Lang.L("Right-click"), "Menus for items, fences and widgets", null);
             Row(Lang.L("Ctrl + Alt + F"), "Find anything on your desktop", null);
+            Row(Lang.L("Ctrl + Alt + Space"), "Peek: your fences and widgets over your apps (Esc to go back)", null);
+            Row(Lang.L("Double-click the desktop"), "Hide everything for a clean wallpaper; double-click again to bring it back", null);
 
             Section(Lang.L("Updates"));
             Row(Lang.L("Version"), "GlassDesk " + App.Version, Button(Lang.L("Check now"), true, delegate { app.Updates.Check(true); }));

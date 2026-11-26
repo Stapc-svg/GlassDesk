@@ -75,6 +75,13 @@ namespace GlassDesk
         public List<string[]> Rules = new List<string[]>();          // { name pattern, fence id }, first match wins
         public Dictionary<string, string> Sort = new Dictionary<string, string>();   // fence id -> name | type | date | size
         public bool SearchHotkey = true;                              // Ctrl + Alt + F
+        // 2.2
+        public bool ShowQuick = true, ShowGame = false;
+        public bool DoubleClickHide = true;                           // double-click the desktop to hide everything
+        public bool PeekHotkey = true;                                // Ctrl + Alt + Space
+        public bool SmartCleanup = false;                             // suggest tidying old files (nothing moves without you)
+        public bool CleanShots = true, CleanInstallers = true, CleanDesktop = true, CleanBig = true;
+        public string CleanLastAsk = "";                              // yyyy-MM-dd of the last reminder
 
         // Updates
         public bool AutoUpdate = true;
@@ -202,6 +209,10 @@ namespace GlassDesk
                 case "PhotoFolder": PhotoFolder = Unesc(v); return;
                 case "PhotoMinutes": PhotoMinutes = Math.Max(1, Math.Min(240, I(v))); return;
                 case "SearchHotkey": SearchHotkey = B(v); return;
+                case "ShowQuick": ShowQuick = B(v); return; case "ShowGame": ShowGame = B(v); return;
+                case "DoubleClickHide": DoubleClickHide = B(v); return; case "PeekHotkey": PeekHotkey = B(v); return;
+                case "SmartCleanup": SmartCleanup = B(v); return; case "CleanShots": CleanShots = B(v); return; case "CleanInstallers": CleanInstallers = B(v); return;
+                case "CleanDesktop": CleanDesktop = B(v); return; case "CleanBig": CleanBig = B(v); return; case "CleanLastAsk": CleanLastAsk = v.Trim(); return;
                 case "AutoUpdate": AutoUpdate = B(v); return;
                 case "UpdateRepo": UpdateRepo = v.Trim(); return;
                 case "LastUpdateCheck": LastUpdateCheck = long.Parse(v.Trim(), CultureInfo.InvariantCulture); return;
@@ -287,6 +298,8 @@ namespace GlassDesk
                 w("ShowTodo", b(ShowTodo)); w("TodoText", Esc(TodoText));
                 w("ShowPhotos", b(ShowPhotos)); w("PhotoFolder", Esc(PhotoFolder)); w("PhotoMinutes", PhotoMinutes.ToString(CultureInfo.InvariantCulture));
                 w("SearchHotkey", b(SearchHotkey));
+                w("ShowQuick", b(ShowQuick)); w("ShowGame", b(ShowGame)); w("DoubleClickHide", b(DoubleClickHide)); w("PeekHotkey", b(PeekHotkey));
+                w("SmartCleanup", b(SmartCleanup)); w("CleanShots", b(CleanShots)); w("CleanInstallers", b(CleanInstallers)); w("CleanDesktop", b(CleanDesktop)); w("CleanBig", b(CleanBig)); w("CleanLastAsk", CleanLastAsk ?? "");
                 w("AutoUpdate", b(AutoUpdate)); w("UpdateRepo", UpdateRepo); w("LastUpdateCheck", LastUpdateCheck.ToString(CultureInfo.InvariantCulture)); w("SkipVersion", SkipVersion);
                 for (int i = 0; i < Rules.Count; i++) w("rule." + i, Rules[i][1] + "|" + Esc(Rules[i][0]));
                 foreach (var kv in Sort) w("sort." + kv.Key, kv.Value);

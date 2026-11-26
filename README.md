@@ -161,6 +161,23 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
   <img src="docs/screenshots/windows-demo.gif" width="100%" alt="GlassDesk fences and widgets appearing on the desktop (animated)">
 </p>
 
+### ✨ New in 2.2
+
+<p align="center">
+  <img src="docs/screenshots/widgets-2.2.jpg" width="100%" alt="The new Quick settings and Game stats widgets, in Glass and Liquid glass">
+</p>
+
+- **🫥 Double-click to hide everything:** double-click an empty spot on the desktop for a clean wallpaper. Double-click again to bring it back.
+- **👀 Peek (Ctrl + Alt + Space):** your fences and widgets come up over your open apps. Esc puts them back.
+- **🎛️ Quick settings widget:** volume, brightness, Wi-Fi, Bluetooth, dark mode and mute.
+- **🎮 Game stats widget:** GPU load, graphics memory, CPU and temperatures.
+- **🧹 Smart cleanup:** finds old screenshots, installers and forgotten files. Nothing moves until you press **Tidy**, and **Undo** puts it all back.
+
+<p align="center">
+  <img src="docs/screenshots/peek-2.2.jpg" width="49%" alt="Peek: fences and widgets over a dimmed app window">
+  <img src="docs/screenshots/cleanup-2.2.jpg" width="49%" alt="The Tidy up old files window">
+</p>
+
 ### ✨ New in 2.1
 
 - **🔍 Quick search in liquid glass:** every app sits on its own little glass tile.

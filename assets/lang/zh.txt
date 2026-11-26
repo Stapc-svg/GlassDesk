@@ -440,3 +440,59 @@ Choose my clock photos…	选择我的时钟照片…
 Roll up all widgets	收起所有小组件
 Expand all widgets	展开所有小组件
 Your own photos — a new one every 30 minutes	你自己的照片 — 每 30 分钟换一张
+Quick settings	快速设置
+Game stats	游戏数据
+Wi-Fi	Wi-Fi
+Bluetooth	蓝牙
+Dark mode	深色模式
+Sound	声音
+Muted	已静音
+No sound device	没有音频设备
+This screen can't be dimmed from here	无法在此调节此屏幕亮度
+GPU	GPU
+GPU memory	显存
+GPU temp	GPU 温度
+Fan	风扇
+PC temp	电脑温度
+Graphics card	显卡
+Peek at desktop    Ctrl+Alt+Space	查看桌面    Ctrl+Alt+空格
+Tidy up old files…	整理旧文件…
+Tidy up old files	整理旧文件
+Peek shortcut	查看桌面快捷键
+Press Ctrl + Alt + Space to bring your fences and widgets over your apps	按 Ctrl + Alt + 空格，将围栏和小组件显示在应用上方
+Double-click to hide everything	双击隐藏所有内容
+Double-click an empty spot on the desktop to hide every panel and icon. Double-click again to bring them back	双击桌面空白处隐藏所有面板和图标，再次双击即可恢复
+Volume, brightness, Wi-Fi, Bluetooth, dark mode and mute	音量、亮度、Wi-Fi、蓝牙、深色模式和静音
+Graphics card load, memory and temperature, CPU and PC temperature	显卡负载、显存和温度，CPU 和电脑温度
+Smart cleanup	智能清理
+Suggest tidying old files	建议整理旧文件
+Once a week, if there's a lot to tidy. Nothing moves until you say yes	每周一次（如果有很多需要整理）。在你同意之前不会移动任何文件
+Old screenshots	旧截图
+Old installers	旧安装程序
+Forgotten desktop files	被遗忘的桌面文件
+Big old downloads	大型旧下载
+Look now	立即查看
+Review…	查看…
+Undo last tidy-up	撤销上次整理
+Undo	撤销
+Undone	已撤销
+{0} files are back where they were.	{0} 个文件已恢复原位。
+Not now	以后再说
+Tidy	整理
+files	个文件
+files ticked	个文件已勾选
+Nothing ticked	未勾选
+Done	完成
+Tidied {0} files.	已整理 {0} 个文件。
+{0} went to the Recycle Bin.	{0} 已移至回收站。
+Nothing has moved. Untick anything you want to keep, then press Tidy.	尚未移动任何文件。取消勾选要保留的文件，然后点击“整理”。
+Files go to folders you can open any time, and Undo puts them back.	文件会移到随时可打开的文件夹，撤销可将其放回。
+Changed your mind? Undo puts every moved file back.	改变主意了？撤销会把所有移动的文件放回。
+Nothing to tidy	无需整理
+Your desktop, Downloads and screenshots look tidy already.	你的桌面、下载和截图已经很整洁了。
+GlassDesk can tidy {0} old files	GlassDesk 可以整理 {0} 个旧文件
+Nothing moves until you say yes. Click to see them.	在你同意之前不会移动任何文件。点击查看。
+{0} months old	{0} 个月前
+{0} weeks old	{0} 周前
+{0} days old	{0} 天前
+Double-click the desktop	双击桌面
