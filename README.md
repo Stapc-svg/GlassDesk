@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/size-~0.8%20MB-B57BFF" alt="About 0.8 MB">
   <a href="../../stargazers"><img src="https://img.shields.io/github/stars/Stapc-svg/GlassDesk?style=flat&color=FFD60A&logo=github" alt="GitHub stars"></a>
   <img src="https://img.shields.io/github/downloads/Stapc-svg/GlassDesk/total?color=5BD68A&label=downloads" alt="Total downloads">
-  <a href="https://www.virustotal.com/gui/file/8979451a0a740616a04678d170435fa83b76dc86170a23b1e0f334e77b294776"><img src="https://img.shields.io/badge/VirusTotal-scan%20results-394EFF?logo=virustotal&logoColor=white" alt="VirusTotal scan of GlassDesk-Setup-2.2.0.msi"></a>
+  <a href="https://www.virustotal.com/gui/file/1ccdec2d8603df9ff61fe251dc178c772f0009f7004d078c3dfdf0a45b4881d5"><img src="https://img.shields.io/badge/VirusTotal-scan%20results-394EFF?logo=virustotal&logoColor=white" alt="VirusTotal scan of GlassDesk-Setup-2.2.0.msi"></a>
 </p>
 
 <p align="center">
@@ -38,7 +38,7 @@
   <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇%20%20Get%20GlassDesk%20free-7C9CFF?style=for-the-badge" height="44" alt="Get GlassDesk free"></a>
 </p>
 
-<p align="center"><sub>Open source · <a href="https://www.virustotal.com/gui/file/8979451a0a740616a04678d170435fa83b76dc86170a23b1e0f334e77b294776">Checked on VirusTotal</a> · Windows 10 &amp; 11 · Linux · Android &nbsp;|&nbsp; Thousands of downloads &nbsp;|&nbsp; If you like it, a ⭐ helps a lot!</sub></p>
+<p align="center"><sub>Open source · <a href="https://www.virustotal.com/gui/file/1ccdec2d8603df9ff61fe251dc178c772f0009f7004d078c3dfdf0a45b4881d5">Checked on VirusTotal</a> · Windows 10 &amp; 11 · Linux · Android &nbsp;|&nbsp; Thousands of downloads &nbsp;|&nbsp; If you like it, a ⭐ helps a lot!</sub></p>
 
 
 
@@ -168,7 +168,7 @@ GlassDesk sorts the icons on your desktop into frosted-glass **fences**, such as
   <img src="docs/screenshots/widgets-2.2.jpg" width="100%" alt="The new Quick settings and Game stats widgets, in Glass and Liquid glass">
 </p>
 
-- **📐 Small, Medium and Large widgets:** like on an iPhone. Weather, Calendar and Clock change their layout for each size.
+- **📐 Small, Medium and Large widgets:** like on an iPhone. Weather, Calendar and Clock change their layout for each size, and fences come in Small (2 × 2), Medium (4 × 2) and Large (4 × 4).
 - **🫥 Double-click to hide everything:** double-click an empty spot on the desktop for a clean wallpaper. Double-click again to bring it back.
 - **👀 Peek (Ctrl + Alt + Space):** your fences and widgets come up over your open apps. Esc puts them back.
 - **🎛️ Quick settings widget:** volume, brightness, Wi-Fi, Bluetooth, dark mode and mute.

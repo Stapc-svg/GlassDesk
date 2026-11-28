@@ -283,9 +283,43 @@ namespace GlassDesk
         protected override void Dispose(bool disposing) { if (disposing && leaveTimer != null) leaveTimer.Dispose(); base.Dispose(disposing); }
         int Gap { get { return T.S(10); } }
 
+        /// <summary>The size of a Small (2 x 2), Medium (4 x 2) or Large (4 x 4) fence with its current icon size.</summary>
+        Size ShapeSize(string kind)
+        {
+            int cols = kind == "small" ? 2 : 4, rows = kind == "large" ? 4 : 2;
+            int w = cols * TileW + 2 * Gap + T.S(4);
+            return new Size(w, TitleH + rows * TileH + Gap);
+        }
+        /// <summary>Which of the three shapes the fence has now (null when you've dragged it to your own size).</summary>
+        string ShapeNow()
+        {
+            var cur = PanelBounds.Size;
+            foreach (var k in new[] { "small", "medium", "large" })
+            {
+                var s = ShapeSize(k);
+                if (Math.Abs(cur.Width - s.Width) <= T.S(6) && (Collapsed || Math.Abs(cur.Height - s.Height) <= T.S(6))) return k;
+            }
+            return null;
+        }
+        void SetShape(string kind)
+        {
+            if (Collapsed) Cfg.Collapsed.Remove(Id);
+            var r = new Rectangle(PanelBounds.Location, ShapeSize(kind));
+            Rectangle wa = Screen.FromRectangle(PanelBounds).WorkingArea;   // keep it on the screen when it grows
+            if (r.Right > wa.Right) r.X = Math.Max(wa.X, wa.Right - r.Width);
+            if (r.Bottom > wa.Bottom) r.Y = Math.Max(wa.Y, wa.Bottom - r.Height);
+            SetPanelBounds(r);
+            App.SavePosition(Id, r);
+            Cfg.Save();
+            ClampScroll(); Redraw();
+        }
+
         public override Size PreferredPanelSize(Size saved)
         {
             Size s = saved;
+            if (App.Preview)   // screenshots: GLASSDESK_PREVIEW_FENCES=cat.images:small,...
+                foreach (string part in (Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_FENCES") ?? "").Split(','))
+                { var kv = part.Split(':'); if (kv.Length == 2 && kv[0] == Id) s = ShapeSize(kv[1]); }
             if (s.Width <= 0)
             {
                 int w = T.S(372);
@@ -816,6 +850,17 @@ namespace GlassDesk
             var m = App.NewMenu();
             App.AddGroupItems(m, this);
             m.Items.Add(Collapsed ? "Expand" : "Roll up", null, delegate { ToggleCollapsed(); });
+            // Small / Medium / Large, the same shapes as widgets on an iPhone: 2 x 2, 4 x 2 and 4 x 4 icons
+            {
+                m.Items.Add(new ToolStripSeparator());
+                string now = ShapeNow();
+                foreach (var o in new[] { new[] { "small", Lang.L("Small") }, new[] { "medium", Lang.L("Medium") }, new[] { "large", Lang.L("Large") } })
+                {
+                    string key = o[0];
+                    m.Items.Add(new ToolStripMenuItem(o[1], null, delegate { SetShape(key); }) { Checked = now == key });
+                }
+                m.Items.Add(new ToolStripSeparator());
+            }
             m.Items.Add(Lang.L("Rename…"), null, delegate
             {
                 string name = InputBox.Ask("Rename fence", Caption, App.Theme);
