@@ -26,7 +26,47 @@ namespace GlassDesk
         System.Windows.Forms.Timer refresh;
 
         public WeatherWidget(App app) : base(app, "weather") { }
-        protected override Size BaseSize { get { return new Size(330, 322); } }
+        public override bool HasLayouts { get { return true; } }
+        protected override string DefaultSize { get { return "large"; } }
+        protected override Size BaseSize { get { return IsSmall ? SmallSize : IsMedium ? MediumSize : new Size(330, 322); } }
+
+        /// <summary>Small: the place, the temperature, an icon and today's high and low (the iPhone's small Weather widget).</summary>
+        void PaintSmall(Graphics g, Rectangle r, Color ink, Color sub, string city)
+        {
+            Txt(g, city, Gfx.F(T.FontName, T.Sf(13), FontStyle.Bold), ink, new RectangleF(r.X, r.Y - T.Sf(1), r.Width, T.Sf(19)), Gfx.Left);
+            Txt(g, Math.Round(temp).ToString(CultureInfo.InvariantCulture) + "°", Gfx.F(T.DisplayFont, T.Sf(42), FontStyle.Regular), ink, new RectangleF(r.X - T.Sf(2), r.Y + T.Sf(14), r.Width, T.Sf(54)), Gfx.Left);
+            WeatherIcon(g, new RectangleF(r.X, r.Bottom - T.Sf(60), T.Sf(26), T.Sf(26)), code, isDay);
+            Txt(g, Describe(code), Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold), ink, new RectangleF(r.X, r.Bottom - T.Sf(34), r.Width, T.Sf(17)), Gfx.Left);
+            if (days.Count > 0)
+                Txt(g, string.Format(Lang.L("H {0}°  L {1}°"), Math.Round(days[0].Max), Math.Round(days[0].Min)), Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), sub, new RectangleF(r.X, r.Bottom - T.Sf(17), r.Width, T.Sf(17)), Gfx.Left);
+        }
+
+        /// <summary>Medium: the small widget's facts in one row, and the next six hours under it.</summary>
+        void PaintMedium(Graphics g, Rectangle r, Color ink, Color sub, string city)
+        {
+            Txt(g, city, Gfx.F(T.FontName, T.Sf(13), FontStyle.Bold), ink, new RectangleF(r.X, r.Y - T.Sf(1), r.Width * 0.6f, T.Sf(19)), Gfx.Left);
+            Txt(g, Math.Round(temp).ToString(CultureInfo.InvariantCulture) + "°", Gfx.F(T.DisplayFont, T.Sf(36), FontStyle.Regular), ink, new RectangleF(r.X - T.Sf(2), r.Y + T.Sf(12), r.Width * 0.5f, T.Sf(46)), Gfx.Left);
+            WeatherIcon(g, new RectangleF(r.Right - T.Sf(24), r.Y - T.Sf(2), T.Sf(24), T.Sf(24)), code, isDay);
+            Txt(g, Describe(code), Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold), ink, new RectangleF(r.X + r.Width * 0.4f, r.Y + T.Sf(24), r.Width * 0.6f, T.Sf(17)), Gfx.Right);
+            if (days.Count > 0)
+                Txt(g, string.Format(Lang.L("H {0}°  L {1}°"), Math.Round(days[0].Max), Math.Round(days[0].Min)), Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), sub, new RectangleF(r.X + r.Width * 0.4f, r.Y + T.Sf(41), r.Width * 0.6f, T.Sf(17)), Gfx.Right);
+            float y = r.Y + T.Sf(66);
+            int n = hours.Count > 0 ? Math.Min(6, hours.Count) : Math.Min(5, days.Count);
+            float colw = r.Width / Math.Max(1f, n);
+            for (int i = 0; i < n; i++)
+            {
+                float x = r.X + i * colw; string top, tv; int c; bool dayAt = true;
+                if (hours.Count > 0)
+                {
+                    var h = hours[i]; top = i == 0 ? Lang.L("Now") : h.Time.ToString("HH", CultureInfo.InvariantCulture); c = h.Code; tv = Math.Round(h.Temp) + "°";
+                    dayAt = sunrise == DateTime.MinValue || (h.Time.TimeOfDay > sunrise.TimeOfDay && h.Time.TimeOfDay < sunset.TimeOfDay);
+                }
+                else { var d = days[i]; top = d.Date.ToString("ddd", CultureInfo.CurrentCulture); c = d.Code; tv = Math.Round(d.Max) + "°"; }
+                Txt(g, top, Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), sub, new RectangleF(x, y, colw, T.Sf(16)), Gfx.Center);
+                WeatherIcon(g, new RectangleF(x + colw / 2 - T.Sf(11), y + T.Sf(17), T.Sf(22), T.Sf(22)), c, dayAt);
+                Txt(g, tv, Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold), ink, new RectangleF(x, y + T.Sf(40), colw, T.Sf(17)), Gfx.Center);
+            }
+        }
 
         protected override void OnHandleCreated(EventArgs e)
         {
@@ -328,6 +368,8 @@ namespace GlassDesk
 
             // ── header: place, today's high / low
             string city = string.IsNullOrEmpty(place) ? Lang.L("Weather") : place.Split(',')[0];
+            if (IsSmall) { PaintSmall(g, r, ink, sub, city); return; }
+            if (IsMedium) { PaintMedium(g, r, ink, sub, city); return; }
             Txt(g, city, Gfx.F(T.FontName, T.Sf(13.5f), FontStyle.Bold), ink, new RectangleF(r.X, r.Y - T.Sf(1), r.Width * .62f, T.Sf(20)), Gfx.Left);
             if (days.Count > 0)
                 Txt(g, string.Format(Lang.L("H {0}°  L {1}°"), Math.Round(days[0].Max), Math.Round(days[0].Min)), Gfx.F(T.FontName, T.Sf(11.5f), FontStyle.Regular), sub, new RectangleF(r.X, r.Y, r.Width, T.Sf(20)), Gfx.Right);

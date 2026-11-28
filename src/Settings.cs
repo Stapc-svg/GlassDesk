@@ -94,6 +94,7 @@ namespace GlassDesk
 
         // Layout: id -> x,y,w,h  and collapsed fences
         public Dictionary<string, Rectangle> Positions = new Dictionary<string, Rectangle>();
+        public Dictionary<string, string> WidgetSizes = new Dictionary<string, string>();   // widget id -> small / medium / large
         public Dictionary<string, int> WidgetZoom = new Dictionary<string, int>();   // widget id -> size in % (60..220)
         public HashSet<string> Collapsed = new HashSet<string>();
         public Dictionary<string, string> Titles = new Dictionary<string, string>();
@@ -253,6 +254,7 @@ namespace GlassDesk
             else if (k.StartsWith("fauto.")) { if (B(v)) AutoHide.Add(k.Substring(6)); }
             else if (k.StartsWith("col.")) { if (B(v)) Collapsed.Add(k.Substring(4)); }
             else if (k.StartsWith("title.")) Titles[k.Substring(6)] = Unesc(v);
+            else if (k.StartsWith("wsize.")) { string z = v.Trim().ToLowerInvariant(); if (z == "small" || z == "medium" || z == "large") WidgetSizes[k.Substring(6)] = z; }
             else if (k.StartsWith("zoom.")) WidgetZoom[k.Substring(5)] = Math.Max(60, Math.Min(220, I(v)));
             else if (k.StartsWith("group.")) { var ids = new List<string>(); foreach (string id in v.Split(',')) if (id.Trim().Length > 0) ids.Add(id.Trim()); if (ids.Count >= 2) Groups.Add(ids); }
             else if (k.StartsWith("lay."))
@@ -318,6 +320,7 @@ namespace GlassDesk
                 foreach (var kv in Pins) w("pin." + (pn++), kv.Value + "|" + Esc(kv.Key));
                 foreach (string c in Collapsed) w("col." + c, "1");
                 foreach (var kv in Titles) w("title." + kv.Key, Esc(kv.Value));
+                foreach (var kv in WidgetSizes) w("wsize." + kv.Key, kv.Value);
                 foreach (var kv in WidgetZoom) if (kv.Value != 100) w("zoom." + kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
                 w("Stacks", b(Stacks)); w("WallAccent", b(WallAccent)); w("ShowDay", b(ShowDay)); w("ShowClip", b(ShowClip)); w("AllDrives", b(AllDrives)); w("CalendarIcs", CalendarIcs ?? ""); w("PerDisplayLayouts", b(PerDisplayLayouts)); w("DisplayKey", DisplayKey ?? "");
                 for (int i = 0; i < Groups.Count; i++) w("group." + i, string.Join(",", Groups[i].ToArray()));

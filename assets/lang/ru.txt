@@ -528,3 +528,5 @@ Small	Маленький
 Medium	Средний
 Large	Большой
 Custom size	Свой размер
+Now	Сейчас
+No more events today	Сегодня больше нет событий

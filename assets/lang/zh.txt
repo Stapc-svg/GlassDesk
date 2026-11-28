@@ -528,3 +528,5 @@ Small	小
 Medium	中
 Large	大
 Custom size	自定义大小
+Now	现在
+No more events today	今天没有更多活动

@@ -94,6 +94,16 @@ namespace GlassDesk
         }
         public bool IsMac { get { return MacLook; } }
         protected abstract Size BaseSize { get; }
+        /// <summary>True for widgets that have their own Small / Medium / Large layouts, like widgets on an iPhone.
+        /// The others get Small and Large by zooming.</summary>
+        public virtual bool HasLayouts { get { return false; } }
+        /// <summary>The size a widget has until you pick one.</summary>
+        protected virtual string DefaultSize { get { return "medium"; } }
+        public string SizeKind { get { string s; return HasLayouts && Cfg.WidgetSizes.TryGetValue(Id, out s) ? s : DefaultSize; } }
+        protected bool IsSmall { get { return HasLayouts && SizeKind == "small"; } }
+        protected bool IsMedium { get { return HasLayouts && SizeKind == "medium"; } }
+        // the iPhone shapes: a square, a wide bar twice as wide, and a big square
+        protected static readonly Size SmallSize = new Size(170, 170), MediumSize = new Size(360, 170), LargeSize = new Size(360, 360);
         public override Size PreferredPanelSize(Size saved)
         {
             int pct;
@@ -175,7 +185,70 @@ namespace GlassDesk
     {
         protected override Color MacColor { get { return Color.FromArgb(255, 255, 149, 0); } }
         public ClockWidget(App app) : base(app, "clock") { }
-        protected override Size BaseSize { get { return new Size(320, 150); } }
+        public override bool HasLayouts { get { return true; } }
+        protected override Size BaseSize { get { return IsSmall ? SmallSize : SizeKind == "large" ? new Size(330, 360) : new Size(320, 150); } }
+
+        /// <summary>A round clock face (used by the Small and Large clocks and the macOS style).</summary>
+        void Dial(Graphics g, RectangleF face, DateTime now, bool numbers)
+        {
+            float d = face.Width, cx = face.X + d / 2, cy = face.Y + d / 2, rad = d / 2;
+            Color dial = T.Dark ? Color.FromArgb(255, 18, 18, 20) : Color.FromArgb(255, 246, 246, 248);
+            Color ink = T.Dark ? Color.White : Color.FromArgb(255, 29, 29, 31);
+            using (var b = new SolidBrush(dial)) g.FillEllipse(b, face);
+            using (var pen = new Pen(T.Dark ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(24, 0, 0, 0), T.Sf(1))) g.DrawEllipse(pen, face);
+            if (numbers)
+            {
+                var nf = Gfx.F(T.DisplayFont, Math.Max(6f, rad * 0.2f), FontStyle.Bold);
+                for (int i = 1; i <= 12; i++)
+                {
+                    double a = Math.PI * 2 * i / 12 - Math.PI / 2;
+                    float nx = cx + (float)Math.Cos(a) * rad * 0.76f, ny = cy + (float)Math.Sin(a) * rad * 0.76f;
+                    Txt(g, i.ToString(), nf, ink, new RectangleF(nx - rad * 0.2f, ny - rad * 0.16f, rad * 0.4f, rad * 0.32f), Gfx.Center);
+                }
+            }
+            for (int i = 0; i < 60; i++)
+            {
+                double a = Math.PI * 2 * i / 60; bool hour = i % 5 == 0;
+                if (hour && numbers) continue;
+                float x1 = cx + (float)Math.Cos(a) * rad * 0.93f, y1 = cy + (float)Math.Sin(a) * rad * 0.93f, dd = hour ? T.Sf(3f) : T.Sf(1.4f);
+                using (var b = new SolidBrush(Color.FromArgb(hour ? 220 : 110, ink))) g.FillEllipse(b, x1 - dd / 2, y1 - dd / 2, dd, dd);
+            }
+            double sec = now.Second, min = now.Minute + sec / 60, hr = now.Hour % 12 + min / 60;
+            Action<double, float, float, Color> hand = (frac, len, w, c) =>
+            {
+                double a = Math.PI * 2 * frac - Math.PI / 2;
+                using (var pen = new Pen(c, w) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                    g.DrawLine(pen, cx - (float)Math.Cos(a) * rad * 0.1f, cy - (float)Math.Sin(a) * rad * 0.1f, cx + (float)Math.Cos(a) * rad * len, cy + (float)Math.Sin(a) * rad * len);
+            };
+            hand(hr / 12, 0.5f, Math.Max(2f, rad * 0.075f), ink);
+            hand(min / 60, 0.78f, Math.Max(1.6f, rad * 0.055f), ink);
+            Color orange = Color.FromArgb(255, 255, 149, 0);
+            if (Cfg.ShowSeconds) hand(sec / 60, 0.86f, Math.Max(1f, rad * 0.02f), orange);
+            using (var b = new SolidBrush(Cfg.ShowSeconds ? orange : ink)) g.FillEllipse(b, cx - rad * 0.06f, cy - rad * 0.06f, rad * 0.12f, rad * 0.12f);
+            using (var b = new SolidBrush(dial)) g.FillEllipse(b, cx - rad * 0.025f, cy - rad * 0.025f, rad * 0.05f, rad * 0.05f);
+        }
+
+        /// <summary>Small: just the clock face, like the iPhone's small Clock widget.</summary>
+        void PaintSmall(Graphics g, DateTime now)
+        {
+            Rectangle r = Inner; g.SmoothingMode = SmoothingMode.AntiAlias;
+            float d = Math.Min(r.Width, r.Height - T.Sf(16));
+            Dial(g, new RectangleF(r.X + (r.Width - d) / 2, r.Y, d, d), now, true);
+            Txt(g, now.ToString("ddd d", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold), Color.FromArgb(255, 255, 149, 0), new RectangleF(r.X, r.Bottom - T.Sf(16), r.Width, T.Sf(18)), Gfx.Center);
+        }
+
+        /// <summary>Large: a big clock face with the time and the date under it.</summary>
+        void PaintLarge(Graphics g, DateTime now)
+        {
+            Rectangle r = Inner; g.SmoothingMode = SmoothingMode.AntiAlias;
+            Color orange = Color.FromArgb(255, 255, 149, 0);
+            Txt(g, now.ToString("dddd", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold), orange, new RectangleF(r.X, r.Y, r.Width, T.Sf(18)), Gfx.Left);
+            Txt(g, now.ToString("d MMMM", CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(12), FontStyle.Regular), T.SubText, new RectangleF(r.X, r.Y, r.Width, T.Sf(18)), Gfx.Right);
+            float d = Math.Min(r.Width - T.Sf(30), r.Height - T.Sf(92));
+            Dial(g, new RectangleF(r.X + (r.Width - d) / 2, r.Y + T.Sf(26), d, d), now, true);
+            string time = Cfg.Clock24 ? now.ToString("HH:mm", CultureInfo.InvariantCulture) : now.ToString("h:mm tt", CultureInfo.InvariantCulture);
+            Txt(g, time, Gfx.F(T.DisplayFont, T.Sf(34), FontStyle.Regular), T.Text, new RectangleF(r.X, r.Bottom - T.Sf(50), r.Width, T.Sf(48)), Gfx.Center);
+        }
         protected override string RolledHint() { return App.Now.ToString(Cfg.Clock24 ? "HH:mm" : "h:mm tt", CultureInfo.CurrentCulture); }
 
         static readonly System.Collections.Generic.Dictionary<string, Bitmap> photos = new System.Collections.Generic.Dictionary<string, Bitmap>();
@@ -399,6 +472,8 @@ namespace GlassDesk
         protected override void PaintContent(Graphics g)
         {
             DateTime now = App.Now;
+            if (IsSmall) { PaintSmall(g, now); return; }
+            if (SizeKind == "large") { PaintLarge(g, now); return; }
             if (MacLook) { PaintMac(g, now); return; }
             Rectangle r = Inner;
             bool scene = Cfg.ClockStyle == "photo" || Cfg.ClockStyle == "mine" || Cfg.ClockStyle == "drawn";
@@ -548,7 +623,83 @@ namespace GlassDesk
         protected override Color MacColor { get { return Color.FromArgb(255, 255, 59, 48); } }
         public CalendarWidget(App app) : base(app, "calendar") { }
         bool HasFeed { get { return Cfg.CalendarFeeds.Count > 0 || App.Preview && events.Count > 0; } }
-        protected override Size BaseSize { get { return new Size(320, HasFeed ? 356 : 288); } }
+        public override bool HasLayouts { get { return true; } }
+        protected override string DefaultSize { get { return "large"; } }
+        protected override Size BaseSize { get { return IsSmall ? SmallSize : IsMedium ? MediumSize : new Size(320, HasFeed ? 356 : 288); } }
+
+        /// <summary>The next events still to come (today's that haven't started, then later days).</summary>
+        List<CalEvent> Upcoming(int max)
+        {
+            var list = new List<CalEvent>(); DateTime now = App.Now;
+            foreach (var e in events)
+            {
+                if (list.Count == max) break;
+                if (e.AllDay ? e.Start.Date < now.Date : e.Start < now.AddMinutes(-30)) continue;
+                list.Add(e);
+            }
+            return list;
+        }
+        string When(CalEvent e)
+        {
+            DateTime now = App.Now;
+            string w = e.Start.Date == now.Date ? Lang.L("Today") : e.Start.Date == now.Date.AddDays(1) ? Lang.L("Tomorrow") : e.Start.ToString("ddd d MMM", CultureInfo.CurrentCulture);
+            if (!e.AllDay) w += " " + e.Start.ToString(Cfg.Clock24 ? "HH:mm" : "h:mm tt", CultureInfo.CurrentCulture);
+            return w;
+        }
+        /// <summary>Day name in red, the big date, and what's next (the iPhone's small Calendar widget).</summary>
+        void PaintToday(Graphics g, RectangleF r, int maxEvents)
+        {
+            Color red = Color.FromArgb(255, 255, 59, 48);
+            DateTime now = App.Now;
+            Txt(g, now.ToString("dddd", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold), red, new RectangleF(r.X, r.Y, r.Width, T.Sf(18)), Gfx.Left);
+            Txt(g, now.Day.ToString(), Gfx.F(T.DisplayFont, T.Sf(44), FontStyle.Regular), T.Text, new RectangleF(r.X - T.Sf(3), r.Y + T.Sf(14), r.Width, T.Sf(56)), Gfx.Left);
+            var up = Upcoming(maxEvents);
+            float y = r.Y + T.Sf(76);
+            if (up.Count == 0)
+            {
+                Txt(g, HasFeed ? Lang.L("No more events today") : now.ToString("MMMM", CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(12.5f), FontStyle.Regular), T.SubText, new RectangleF(r.X, y, r.Width, r.Bottom - y), Gfx.TopLeftWrap);
+                return;
+            }
+            foreach (var e in up)
+            {
+                if (y + T.Sf(34) > r.Bottom + T.Sf(4)) break;
+                using (var b = new SolidBrush(red)) g.FillRectangle(b, r.X, y + T.Sf(2), T.Sf(3), T.Sf(30));
+                Txt(g, e.Title.Length == 0 ? "(no title)" : e.Title, Gfx.F(T.FontName, T.Sf(12), FontStyle.Bold), T.Text, new RectangleF(r.X + T.Sf(9), y, r.Width - T.Sf(9), T.Sf(17)), Gfx.Left);
+                Txt(g, When(e), Gfx.F(T.FontName, T.Sf(11), FontStyle.Regular), T.SubText, new RectangleF(r.X + T.Sf(9), y + T.Sf(16), r.Width - T.Sf(9), T.Sf(16)), Gfx.Left);
+                y += T.Sf(38);
+            }
+        }
+        /// <summary>A small month grid without arrows (the right half of the Medium calendar).</summary>
+        void PaintMiniMonth(Graphics g, RectangleF r)
+        {
+            DateTime today = App.Now.Date, first = new DateTime(today.Year, today.Month, 1);
+            Color red = Color.FromArgb(255, 255, 59, 48);
+            Txt(g, first.ToString("MMMM", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture), Gfx.F(T.FontName, T.Sf(11), FontStyle.Bold), red, new RectangleF(r.X, r.Y, r.Width, T.Sf(16)), Gfx.Left);
+            DayOfWeek fdow = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+            float cw = r.Width / 7f, top = r.Y + T.Sf(18), ch = (r.Bottom - top - T.Sf(14)) / 6f;
+            var hf = Gfx.F(T.FontName, T.Sf(8.5f), FontStyle.Bold); var df = Gfx.F(T.FontName, T.Sf(9.5f), FontStyle.Regular); var db = Gfx.F(T.FontName, T.Sf(9.5f), FontStyle.Bold);
+            for (int i = 0; i < 7; i++)
+            {
+                string n = CultureInfo.CurrentCulture.DateTimeFormat.GetShortestDayName((DayOfWeek)(((int)fdow + i) % 7));
+                Txt(g, n.Substring(0, 1), hf, T.SubText, new RectangleF(r.X + i * cw, top, cw, T.Sf(13)), Gfx.Center);
+            }
+            top += T.Sf(14);
+            int lead = ((int)first.DayOfWeek - (int)fdow + 7) % 7;
+            DateTime d = first.AddDays(-lead);
+            for (int row = 0; row < 6; row++)
+                for (int col = 0; col < 7; col++, d = d.AddDays(1))
+                {
+                    if (d.Month != first.Month) continue;
+                    var cell = new RectangleF(r.X + col * cw, top + row * ch, cw, ch);
+                    if (d == today)
+                    {
+                        float s = Math.Min(cw, ch) + T.Sf(1);
+                        using (var b = new SolidBrush(red)) g.FillEllipse(b, cell.X + (cw - s) / 2, cell.Y + (ch - s) / 2, s, s);
+                        Txt(g, d.Day.ToString(), db, Color.White, cell, Gfx.Center);
+                    }
+                    else Txt(g, d.Day.ToString(), df, T.Text, cell, Gfx.Center);
+                }
+        }
 
         public void SetSample()
         {
@@ -609,10 +760,18 @@ namespace GlassDesk
         Rectangle PrevBtn { get { Rectangle r = Inner; return new Rectangle(r.Right - T.S(56), r.Y - T.S(2), T.S(26), T.S(26)); } }
         Rectangle NextBtn { get { Rectangle r = Inner; return new Rectangle(r.Right - T.S(26), r.Y - T.S(2), T.S(26), T.S(26)); } }
 
-        protected override bool IsDragArea(Point p) { return !PrevBtn.Contains(p) && !NextBtn.Contains(p); }
+        protected override bool IsDragArea(Point p) { return HasLayouts && SizeKind != "large" || !PrevBtn.Contains(p) && !NextBtn.Contains(p); }
 
         protected override void PaintContent(Graphics g)
         {
+            if (IsSmall) { PaintToday(g, Inner, 2); return; }
+            if (IsMedium)
+            {
+                Rectangle ri = Inner; float half = ri.Width * 0.44f;
+                PaintToday(g, new RectangleF(ri.X, ri.Y, half, ri.Height), 2);
+                PaintMiniMonth(g, new RectangleF(ri.X + half + T.Sf(14), ri.Y, ri.Width - half - T.Sf(14), ri.Height));
+                return;
+            }
             DateTime today = App.Now.Date;
             DateTime first = new DateTime(today.Year, today.Month, 1).AddMonths(monthOffset);
             Rectangle r = Inner;
@@ -700,6 +859,7 @@ namespace GlassDesk
 
         protected override void OnClickAt(Point p, MouseButtons b)
         {
+            if (SizeKind != "large") { base.OnClickAt(p, b); return; }
             if (b == MouseButtons.Left && PrevBtn.Contains(p)) { monthOffset--; Redraw(); }
             else if (b == MouseButtons.Left && NextBtn.Contains(p)) { monthOffset++; Redraw(); }
             else base.OnClickAt(p, b);

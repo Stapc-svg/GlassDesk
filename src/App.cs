@@ -678,9 +678,11 @@ namespace GlassDesk
             if (pct == 100) Settings.WidgetZoom.Remove(id); else Settings.WidgetZoom[id] = pct;
         }
 
-        public void SetWidgetSize(Widget w, int pct)
+        /// <summary>Widgets with their own layouts switch layout; the others zoom (Small 80%, Large 130%).</summary>
+        public void SetWidgetSize(Widget w, string kind)
         {
-            if (pct == 100) Settings.WidgetZoom.Remove(w.Id); else Settings.WidgetZoom[w.Id] = pct;
+            if (w.HasLayouts) { Settings.WidgetSizes[w.Id] = kind; Settings.WidgetZoom.Remove(w.Id); }
+            else { int pct = kind == "small" ? 80 : kind == "large" ? 130 : 100; if (pct == 100) Settings.WidgetZoom.Remove(w.Id); else Settings.WidgetZoom[w.Id] = pct; }
             Settings.Save();
             PlaceWindow(w);
             w.Redraw();
@@ -1297,20 +1299,22 @@ namespace GlassDesk
                 style.DropDownItems.Add(it);
             }
             m.Items.Add(style);
-            // Small / Medium / Large, like widgets on a Mac (Medium is the normal size)
+            // Small / Medium / Large, like widgets on an iPhone or a Mac
             {
-                int cur; if (!Settings.WidgetZoom.TryGetValue(w.Id, out cur)) cur = 100;
-                var sizes = new[] { new KeyValuePair<string, int>(Lang.L("Small"), 80), new KeyValuePair<string, int>(Lang.L("Medium"), 100), new KeyValuePair<string, int>(Lang.L("Large"), 130) };
+                var sizes = new[] { new KeyValuePair<string, string>("small", Lang.L("Small")), new KeyValuePair<string, string>("medium", Lang.L("Medium")), new KeyValuePair<string, string>("large", Lang.L("Large")) };
+                int zoom; if (!Settings.WidgetZoom.TryGetValue(w.Id, out zoom)) zoom = 100;
                 m.Items.Add(new ToolStripSeparator());
                 bool any = false;
                 foreach (var sz in sizes)
                 {
-                    int pct = sz.Value; bool on = cur == pct; any |= on;
-                    var it = new ToolStripMenuItem(sz.Key) { Checked = on };
-                    it.Click += delegate { SetWidgetSize(w, pct); };
+                    string kind = sz.Key;
+                    bool on = w.HasLayouts ? w.SizeKind == kind && zoom == 100 : zoom == (kind == "small" ? 80 : kind == "large" ? 130 : 100);
+                    any |= on;
+                    var it = new ToolStripMenuItem(sz.Value) { Checked = on };
+                    it.Click += delegate { SetWidgetSize(w, kind); };
                     m.Items.Add(it);
                 }
-                if (!any) m.Items.Add(new ToolStripMenuItem(Lang.L("Custom size") + " (" + cur + "%)") { Checked = true, Enabled = false });
+                if (!any) m.Items.Add(new ToolStripMenuItem(Lang.L("Custom size") + " (" + zoom + "%)") { Checked = true, Enabled = false });
                 m.Items.Add(new ToolStripSeparator());
             }
             m.Items.Add(Lang.L("Hide this widget"), null, delegate
@@ -1424,6 +1428,8 @@ namespace GlassDesk
             DpiScale = 1f;
             Backdrop.PreviewWallpaper = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_WALL");
             var look = Themes.Find(Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_LOOK") ?? "");
+            string ws = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_SIZES");   // e.g. weather:small,calendar:medium
+            if (!string.IsNullOrEmpty(ws)) foreach (string part in ws.Split(',')) { var kv = part.Split(':'); if (kv.Length == 2) Settings.WidgetSizes[kv[0]] = kv[1]; }
             string zs = Environment.GetEnvironmentVariable("GLASSDESK_PREVIEW_ZOOM");   // e.g. clock:150,todo:70
             if (!string.IsNullOrEmpty(zs)) foreach (string part in zs.Split(',')) { var kv = part.Split(':'); if (kv.Length == 2) Settings.WidgetZoom[kv[0]] = int.Parse(kv[1]); }
             if (look != null) { Settings.Look = look.Id; Settings.Accent = look.Accent; Settings.Radius = look.Radius; Settings.Opacity = look.Tint; }

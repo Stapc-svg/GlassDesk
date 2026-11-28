@@ -528,3 +528,5 @@ Small	Pequeño
 Medium	Mediano
 Large	Grande
 Custom size	Tamaño personalizado
+Now	Ahora
+No more events today	No hay más eventos hoy
