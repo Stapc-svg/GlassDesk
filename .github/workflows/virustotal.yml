@@ -1,0 +1,63 @@
+# Scans every GlassDesk release on VirusTotal and writes the result into the release notes.
+# Setup (once): make a free account at virustotal.com, copy your API key (profile menu > API key),
+# then on GitHub: Settings > Secrets and variables > Actions > New repository secret,
+# name it VT_API_KEY and paste the key.
+name: VirusTotal check
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to scan (for example v2.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan the release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -u
+          if [ -z "${VT_API_KEY:-}" ]; then
+            echo "::warning::No VT_API_KEY secret yet, so nothing was scanned. See the top of this file."
+            exit 0
+          fi
+          mkdir files && cd files
+          gh release download "$TAG" -R "$REPO" -p '*.msi' -p '*.exe' -p '*.apk' -p '*.AppImage' -p '*.deb' || true
+          report="### 🛡️ VirusTotal"$'\n\n'"| File | Result |"$'\n'"|---|---|"
+          flagged=0
+          for f in *; do
+            [ -f "$f" ] || continue
+            sha=$(sha256sum "$f" | cut -d' ' -f1)
+            id=$(curl -s --request POST https://www.virustotal.com/api/v3/files -H "x-apikey: $VT_API_KEY" --form "file=@$f" | jq -r '.data.id')
+            # wait for the scanners (up to about 10 minutes)
+            for i in $(seq 1 40); do
+              sleep 15
+              r=$(curl -s https://www.virustotal.com/api/v3/analyses/$id -H "x-apikey: $VT_API_KEY")
+              [ "$(echo "$r" | jq -r '.data.attributes.status')" = "completed" ] && break
+            done
+            bad=$(echo "$r" | jq '.data.attributes.stats.malicious // 0')
+            total=$(echo "$r" | jq '[.data.attributes.stats | .malicious, .undetected, .harmless, .suspicious] | add // 0')
+            names=$(echo "$r" | jq -r '[.data.attributes.results[] | select(.category=="malicious") | .engine_name] | join(", ")')
+            if [ "$bad" -eq 0 ]; then mark="✅ $bad / $total"; else mark="⚠️ $bad / $total ($names)"; flagged=1; fi
+            report="$report"$'\n'"| [$f](https://www.virustotal.com/gui/file/$sha) | $mark |"
+            echo "$f: $bad / $total $names"
+          done
+          if [ "$flagged" -eq 1 ]; then
+            report="$report"$'\n\n'"_Detections by a few scanners on new, unsigned apps are usually false alarms from machine-learning guesses. GlassDesk is open source: every line is in this repository._"
+          fi
+          old=$(gh release view "$TAG" -R "$REPO" --json body -q .body | sed '/^### 🛡️ VirusTotal/,$d')
+          printf '%s\n\n%s\n' "$old" "$report" > notes.md
+          gh release edit "$TAG" -R "$REPO" --notes-file notes.md
+          echo "$report" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$flagged" -eq 1 ]; then echo "::warning::Some scanners flagged a file. See the summary."; fi
