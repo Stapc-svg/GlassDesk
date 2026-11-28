@@ -1,0 +1,29 @@
+// Windows details shown in File Explorer > Properties > Details, plus the icon and the app manifest.
+// build.sh fills in the version.
+1 ICON "../GlassDesk.ico"
+1 24 "GlassDesk.manifest"
+1 VERSIONINFO
+FILEVERSION VMAJ,VMIN,VPAT,0
+PRODUCTVERSION VMAJ,VMIN,VPAT,0
+FILEOS 0x40004
+FILETYPE 0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "Stapc-svg"
+      VALUE "FileDescription", "GlassDesk - desktop organizer and widgets"
+      VALUE "FileVersion", "VSTR"
+      VALUE "InternalName", "GlassDesk"
+      VALUE "LegalCopyright", "Copyright (c) 2026 Stapc-svg. Open source: github.com/Stapc-svg/GlassDesk"
+      VALUE "OriginalFilename", "GlassDesk.exe"
+      VALUE "ProductName", "GlassDesk"
+      VALUE "ProductVersion", "VSTR"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

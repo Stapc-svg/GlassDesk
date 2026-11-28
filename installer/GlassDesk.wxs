@@ -4,7 +4,7 @@
   <Product Id="*" Name="GlassDesk" Language="1033" Version="2.2.0" Manufacturer="GlassDesk"
            UpgradeCode="792e2b05-a71e-4aa8-821c-740870d15968">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser"
-             Description="GlassDesk - glass desktop organizer and widgets" Comments="Runs on startup" />
+             Description="GlassDesk - glass desktop organizer and widgets" Comments="Desktop organizer and widgets" />
     <Media Id="1" Cabinet="glassdesk.cab" EmbedCab="yes" />
 
     <Property Id="ARPPRODUCTICON" Value="GlassDeskIcon" />

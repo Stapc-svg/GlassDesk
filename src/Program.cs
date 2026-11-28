@@ -8,10 +8,12 @@ using System.Threading;
 using System.Windows.Forms;
 
 [assembly: System.Reflection.AssemblyTitle("GlassDesk")]
+[assembly: System.Reflection.AssemblyCompany("Stapc-svg")]
+[assembly: System.Reflection.AssemblyCopyright("Copyright (c) 2026 Stapc-svg")]
 [assembly: System.Reflection.AssemblyProduct("GlassDesk")]
 [assembly: System.Reflection.AssemblyDescription("Glass desktop organizer with widgets")]
 [assembly: System.Reflection.AssemblyVersion("2.2.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.9.2.0")]
+[assembly: System.Reflection.AssemblyFileVersion("2.2.0.0")]
 
 namespace GlassDesk
 {
