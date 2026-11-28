@@ -524,3 +524,7 @@ And also	Y además
 What's new	Novedades
 See what the last updates added	Mira lo que trajeron las últimas actualizaciones
 Show	Mostrar
+Small	Pequeño
+Medium	Mediano
+Large	Grande
+Custom size	Tamaño personalizado

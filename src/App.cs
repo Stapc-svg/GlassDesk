@@ -678,6 +678,14 @@ namespace GlassDesk
             if (pct == 100) Settings.WidgetZoom.Remove(id); else Settings.WidgetZoom[id] = pct;
         }
 
+        public void SetWidgetSize(Widget w, int pct)
+        {
+            if (pct == 100) Settings.WidgetZoom.Remove(w.Id); else Settings.WidgetZoom[w.Id] = pct;
+            Settings.Save();
+            PlaceWindow(w);
+            w.Redraw();
+        }
+
         public void ResetZoom(Widget w)
         {
             Settings.WidgetZoom.Remove(w.Id);
@@ -1289,7 +1297,22 @@ namespace GlassDesk
                 style.DropDownItems.Add(it);
             }
             m.Items.Add(style);
-            if (Settings.WidgetZoom.ContainsKey(w.Id)) m.Items.Add(Lang.L("Reset size"), null, delegate { ResetZoom(w); });
+            // Small / Medium / Large, like widgets on a Mac (Medium is the normal size)
+            {
+                int cur; if (!Settings.WidgetZoom.TryGetValue(w.Id, out cur)) cur = 100;
+                var sizes = new[] { new KeyValuePair<string, int>(Lang.L("Small"), 80), new KeyValuePair<string, int>(Lang.L("Medium"), 100), new KeyValuePair<string, int>(Lang.L("Large"), 130) };
+                m.Items.Add(new ToolStripSeparator());
+                bool any = false;
+                foreach (var sz in sizes)
+                {
+                    int pct = sz.Value; bool on = cur == pct; any |= on;
+                    var it = new ToolStripMenuItem(sz.Key) { Checked = on };
+                    it.Click += delegate { SetWidgetSize(w, pct); };
+                    m.Items.Add(it);
+                }
+                if (!any) m.Items.Add(new ToolStripMenuItem(Lang.L("Custom size") + " (" + cur + "%)") { Checked = true, Enabled = false });
+                m.Items.Add(new ToolStripSeparator());
+            }
             m.Items.Add(Lang.L("Hide this widget"), null, delegate
             {
                 if (w == clock) Settings.ShowClock = false; else if (w == system) Settings.ShowSystem = false;

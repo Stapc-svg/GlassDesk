@@ -8,6 +8,7 @@
 - **Game stats widget.** Graphics card load (any NVIDIA, AMD or Intel GPU, the same numbers as Task Manager), graphics memory, CPU, a load graph, and the PC's temperature. NVIDIA cards also show GPU temperature and fan speed. Off by default: turn it on in Settings › Widgets.
 - **What's new after every update.** When GlassDesk updates, people who already used it see a window with what's new since the version they had. New users get the welcome screen instead. Settings › About › What's new shows it again.
 - **Important updates pop up.** GlassDesk now looks for updates three times a day. If a release's title says "important update", its window opens straight away instead of a quiet notification, and it can't be skipped.
+- **Small, Medium and Large widgets.** Right-click any widget and pick a size, like widgets on a Mac.
 - **Smart cleanup — only when you say yes.** GlassDesk can find old screenshots, installers you downloaded weeks ago, desktop files you haven't opened in two months and huge old downloads. Nothing moves until you look at the list and press **Tidy**. Files go to plain folders (Old screenshots, Old installers, Old desktop files), big files to the Recycle Bin, and **Undo** puts everything back. Tray menu › Tidy up old files…, or turn on a weekly reminder in Settings › Organizer › Smart cleanup.
 
 ## 2.1.1

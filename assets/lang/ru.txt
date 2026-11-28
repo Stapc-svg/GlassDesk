@@ -524,3 +524,7 @@ And also	А ещё
 What's new	Что нового
 See what the last updates added	Что добавили последние обновления
 Show	Показать
+Small	Маленький
+Medium	Средний
+Large	Большой
+Custom size	Свой размер

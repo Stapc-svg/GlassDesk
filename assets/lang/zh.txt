@@ -524,3 +524,7 @@ And also	另外
 What's new	新功能
 See what the last updates added	查看最近更新的内容
 Show	显示
+Small	小
+Medium	中
+Large	大
+Custom size	自定义大小
